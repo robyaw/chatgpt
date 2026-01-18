@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Physics D6 (Three.js + cannon-es)</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #f6f7fb; font-family: system-ui, sans-serif; }
+    #ui {
+      position: fixed; left: 12px; top: 12px; z-index: 10;
+      display: flex; gap: 10px; align-items: center;
+      background: rgba(255,255,255,.9); border: 1px solid #ddd;
+      border-radius: 12px; padding: 10px 12px; box-shadow: 0 12px 28px rgba(0,0,0,.08);
+    }
+    button {
+      padding: 8px 12px; border-radius: 10px; border: 1px solid #ccc;
+      background: white; cursor: pointer; font-weight: 650;
+    }
+    button:active { transform: translateY(1px); }
+    #result { font-weight: 800; }
+    canvas { display: block; }
+  </style>
+
+  <!-- Import map so we can use 'three' as a bare specifier -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.js",
+      "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+    }
+  }
+  </script>
+</head>
+
+<body>
+  <div id="ui">
+    <button id="roll">Roll 🎲</button>
+    <div>Top face: <span id="result">—</span></div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "three";
+    import * as CANNON from "cannon-es";
+
+    // ---------- Three.js scene ----------
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(6, 6, 8);
+    camera.lookAt(0, 0.8, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(6, 10, 4);
+    scene.add(dir);
+
+    // Floor visual
+    const floorGeo = new THREE.PlaneGeometry(40, 40);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0.0 });
+    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+    floorMesh.rotation.x = -Math.PI / 2;
+    scene.add(floorMesh);
+
+    // ---------- Physics world ----------
+    const world = new CANNON.World({
+      gravity: new CANNON.Vec3(0, -9.82, 0),
+    });
+
+    // Contact material for bounciness/friction
+    const diceMat = new CANNON.Material("dice");
+    const groundMat = new CANNON.Material("ground");
+    world.defaultContactMaterial = new CANNON.ContactMaterial(diceMat, groundMat, {
+      friction: 0.35,
+      restitution: 0.25,
+    });
+
+    // Ground body
+    const groundBody = new CANNON.Body({
+      type: CANNON.Body.STATIC,
+      shape: new CANNON.Plane(),
+      material: groundMat,
+    });
+    groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+    world.addBody(groundBody);
+
+    // Add low walls to keep it on-screen
+    function addWall(px, pz, rx, rz) {
+      const wall = new CANNON.Body({
+        type: CANNON.Body.STATIC,
+        shape: new CANNON.Box(new CANNON.Vec3(20, 1, 0.5)),
+        position: new CANNON.Vec3(px, 1, pz),
+        material: groundMat,
+      });
+      wall.quaternion.setFromEuler(rx, 0, rz);
+      world.addBody(wall);
+    }
+    addWall(0, -10, 0, 0); // back
+    addWall(0,  10, 0, 0); // front
+    // rotate 90° around Y by swapping axes via quaternion from euler:
+    const leftWall = new CANNON.Body({
+      type: CANNON.Body.STATIC,
+      shape: new CANNON.Box(new CANNON.Vec3(20, 1, 0.5)),
+      position: new CANNON.Vec3(-10, 1, 0),
+      material: groundMat,
+    });
+    leftWall.quaternion.setFromEuler(0, Math.PI/2, 0);
+    world.addBody(leftWall);
+
+    const rightWall = new CANNON.Body({
+      type: CANNON.Body.STATIC,
+      shape: new CANNON.Box(new CANNON.Vec3(20, 1, 0.5)),
+      position: new CANNON.Vec3(10, 1, 0),
+      material: groundMat,
+    });
+    rightWall.quaternion.setFromEuler(0, Math.PI/2, 0);
+    world.addBody(rightWall);
+
+    // ---------- Build a simple pip-textured D6 ----------
+    // We’ll use a canvas texture per face so it looks like a real die without external images.
+    function makeFaceTexture(pips) {
+      const size = 256;
+      const c = document.createElement("canvas");
+      c.width = c.height = size;
+      const ctx = c.getContext("2d");
+
+      // background
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+
+      // border
+      ctx.lineWidth = 16;
+      ctx.strokeStyle = "#111";
+      ctx.strokeRect(8, 8, size - 16, size - 16);
+
+      // pips
+      const r = 18;
+      const positions = {
+        tl: [size*0.28, size*0.28],
+        tr: [size*0.72, size*0.28],
+        ml: [size*0.28, size*0.50],
+        mr: [size*0.72, size*0.50],
+        bl: [size*0.28, size*0.72],
+        br: [size*0.72, size*0.72],
+        c:  [size*0.50, size*0.50],
+      };
+
+      const layout = {
+        1: ["c"],
+        2: ["tr", "bl"],
+        3: ["tr", "c", "bl"],
+        4: ["tl", "tr", "bl", "br"],
+        5: ["tl", "tr", "c", "bl", "br"],
+        6: ["tl", "ml", "bl", "tr", "mr", "br"],
+      }[pips];
+
+      ctx.fillStyle = "#111";
+      for (const key of layout) {
+        const [x, y] = positions[key];
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    // IMPORTANT: BoxGeometry material order in Three.js:
+    // [right, left, top, bottom, front, back]
+    // We want a standard die layout:
+    // 1 opposite 6, 2 opposite 5, 3 opposite 4.
+    const materials = [
+      new THREE.MeshStandardMaterial({ map: makeFaceTexture(3), roughness: 0.6 }), // right
+      new THREE.MeshStandardMaterial({ map: makeFaceTexture(4), roughness: 0.6 }), // left
+      new THREE.MeshStandardMaterial({ map: makeFaceTexture(2), roughness: 0.6 }), // top
+      new THREE.MeshStandardMaterial({ map: makeFaceTexture(5), roughness: 0.6 }), // bottom
+      new THREE.MeshStandardMaterial({ map: makeFaceTexture(1), roughness: 0.6 }), // front
+      new THREE.MeshStandardMaterial({ map: makeFaceTexture(6), roughness: 0.6 }), // back
+    ];
+
+    const diceSize = 1; // metres in physics world
+    const diceMesh = new THREE.Mesh(new THREE.BoxGeometry(diceSize, diceSize, diceSize), materials);
+    diceMesh.castShadow = false;
+    scene.add(diceMesh);
+
+    const diceBody = new CANNON.Body({
+      mass: 1,
+      shape: new CANNON.Box(new CANNON.Vec3(diceSize/2, diceSize/2, diceSize/2)),
+      material: diceMat,
+      angularDamping: 0.12,
+      linearDamping: 0.03,
+    });
+    world.addBody(diceBody);
+
+    // ---------- Roll + settle detection ----------
+    const resultEl = document.getElementById("result");
+    const rollBtn = document.getElementById("roll");
+
+    function resetDice() {
+      diceBody.velocity.setZero();
+      diceBody.angularVelocity.setZero();
+      diceBody.position.set(0, 3.5, 0);
+      // random orientation
+      const q = new CANNON.Quaternion();
+      q.setFromEuler(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+      diceBody.quaternion.copy(q);
+    }
+
+    function throwDice() {
+      resetDice();
+
+      // impulse (random horizontal + downward a bit)
+      const impulse = new CANNON.Vec3(
+        (Math.random() - 0.5) * 6,
+        1.5 + Math.random() * 1.5,
+        (Math.random() - 0.5) * 6
+      );
+      diceBody.applyImpulse(impulse, diceBody.position);
+
+      // spin
+      diceBody.angularVelocity.set(
+        (Math.random() - 0.5) * 18,
+        (Math.random() - 0.5) * 18,
+        (Math.random() - 0.5) * 18
+      );
+
+      resultEl.textContent = "…";
+      waitingForSettle = true;
+      settleFrames = 0;
+    }
+
+    // Determine which face is UP by checking which local axis aligns most with world up.
+    // With our material mapping:
+    // +X => 3, -X => 4, +Y => 2, -Y => 5, +Z => 1, -Z => 6
+    function topFaceFromQuaternion(q) {
+      const up = new CANNON.Vec3(0, 1, 0);
+
+      const axes = [
+        { v: new CANNON.Vec3( 1, 0, 0), face: 3 },
+        { v: new CANNON.Vec3(-1, 0, 0), face: 4 },
+        { v: new CANNON.Vec3( 0, 1, 0), face: 2 },
+        { v: new CANNON.Vec3( 0,-1, 0), face: 5 },
+        { v: new CANNON.Vec3( 0, 0, 1), face: 1 },
+        { v: new CANNON.Vec3( 0, 0,-1), face: 6 },
+      ];
+
+      let best = { dot: -Infinity, face: 1 };
+      for (const a of axes) {
+        const worldAxis = q.vmult(a.v);     // rotate local axis into world
+        const dot = worldAxis.dot(up);
+        if (dot > best.dot) best = { dot, face: a.face };
+      }
+      return best.face;
+    }
+
+    let waitingForSettle = false;
+    let settleFrames = 0;
+
+    function checkSettled() {
+      const v = diceBody.velocity.length();
+      const w = diceBody.angularVelocity.length();
+
+      // Tune these for “how still is still”
+      const still = v < 0.08 && w < 0.15;
+
+      if (still) settleFrames++;
+      else settleFrames = 0;
+
+      // Require stillness for ~0.5s (at 60fps)
+      if (waitingForSettle && settleFrames > 30) {
+        waitingForSettle = false;
+        const top = topFaceFromQuaternion(diceBody.quaternion);
+        resultEl.textContent = String(top);
+      }
+    }
+
+    rollBtn.addEventListener("click", throwDice);
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") { e.preventDefault(); throwDice(); }
+    });
+
+    // ---------- Animation loop ----------
+    const clock = new THREE.Clock();
+    const fixedTimeStep = 1 / 60;
+    let accumulator = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Fixed-step physics
+      const dt = Math.min(clock.getDelta(), 0.05);
+      accumulator += dt;
+      while (accumulator >= fixedTimeStep) {
+        world.step(fixedTimeStep);
+        accumulator -= fixedTimeStep;
+        checkSettled();
+      }
+
+      // Sync render objects to physics bodies
+      diceMesh.position.copy(diceBody.position);
+      diceMesh.quaternion.copy(diceBody.quaternion);
+
+      renderer.render(scene, camera);
+    }
+
+    // Start
+    resetDice();
+    animate();
+
+    // Resize
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

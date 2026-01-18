@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sonic Roll – Rules Engine (Dashboards Implemented)</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 16px; background:#0b1020; color:#e8ecff; }
+    h1,h2 { margin: 8px 0; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+    .card { background:#121a33; border:1px solid #23305a; border-radius:14px; padding:12px; box-shadow: 0 8px 25px rgba(0,0,0,.25); }
+    .card h2 { font-size: 14px; letter-spacing:.04em; text-transform:uppercase; color:#b8c6ff; }
+    button, select, input { background:#1a2550; border:1px solid #2d3b73; color:#e8ecff; padding:8px 10px; border-radius:10px; cursor:pointer; }
+    button:hover { filter:brightness(1.1); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .pill { display:inline-flex; gap:8px; padding:6px 10px; border:1px solid #2d3b73; border-radius:999px; background:#0f1733; margin:4px 4px 0 0; align-items:center; }
+    .muted { color:#b0b8e8; }
+    .log { max-height: 300px; overflow:auto; font-size: 13px; line-height:1.35; }
+    .grid { display:grid; grid-template-columns: repeat(3, minmax(240px, 1fr)); gap:10px; }
+    .tiny { font-size: 12px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .badge { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid #2d3b73; background:#0f1733; }
+    .die {
+      width: 44px; height: 44px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;
+      margin:4px; font-weight:700; border:1px solid #2d3b73; background:#0f1733;
+      user-select:none;
+    }
+    .die.blue { outline:2px solid rgba(86,161,255,.65); }
+    .die.yellow { outline:2px solid rgba(255,219,86,.65); }
+    .die.red { outline:2px solid rgba(255,97,97,.65); }
+    .die.black { outline:2px solid rgba(170,170,170,.35); }
+    textarea { width:100%; min-height:120px; border-radius:10px; background:#0f1733; border:1px solid #2d3b73; color:#e8ecff; padding:10px; }
+    .hr { height:1px; background:#23305a; margin:10px 0; }
+    .ok { color:#b8ffcf; }
+    .warn { color:#ffe7a6; }
+  </style>
+</head>
+<body>
+  <h1>Sonic Roll – Rules Engine + Web App (Dashboards Implemented)</h1>
+  <p class="muted tiny">
+    This prototype has the real character dashboard Roll Actions + effects. Zone/Badnik cards are simplified for now so you can test the engine immediately.
+  </p>
+
+  <div class="row">
+    <div class="card" style="flex:1; min-width:340px;">
+      <h2>Game Controls</h2>
+      <div class="row">
+        <button id="newGameBtn">New Game</button>
+        <label class="pill tiny">Players
+          <select id="playerCount">
+            <option>1</option><option selected>2</option><option>3</option><option>4</option>
+          </select>
+        </label>
+        <label class="pill tiny">Seed
+          <input id="seed" value="12345" size="10" />
+        </label>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <label class="pill tiny">Roll Action
+          <select id="rollActionSelect"></select>
+        </label>
+        <button id="btnChooseRollAction">Set Roll Action</button>
+        <button id="btnBuildPool">Roll / Build Dice Pool</button>
+      </div>
+
+      <div class="row" style="margin-top:8px;">
+        <button id="btnBoostAfterRollAction">Spend Boost (After Roll Action)</button>
+        <button id="btnSpendDie">Spend Selected Die</button>
+        <button id="btnRerollStep">Reroll Step</button>
+        <button id="btnBoostInReroll">Spend Boost (Reroll Again)</button>
+        <button id="btnEndTurn">End Turn (Discard + Time)</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="tiny">
+        <div><span class="badge">Phase</span> <span id="phase"></span></div>
+        <div><span class="badge">Active</span> <span id="activePlayer"></span></div>
+        <div><span class="badge">Invulnerable</span> <span id="invuln"></span></div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h2>Dice Pool</h2>
+      <div id="dicePool"></div>
+      <div class="tiny muted">Click a die to select it for spending.</div>
+
+      <div class="hr"></div>
+
+      <h2>Per-Turn Counters</h2>
+      <div id="counters" class="tiny"></div>
+    </div>
+
+    <div class="card" style="flex:1; min-width:340px;">
+      <h2>Zone (Simplified Track)</h2>
+      <p class="tiny muted">
+        For now: each route has a “next challenge” requiring an exact number, sometimes also an exact colour. This is a stand-in until we encode real Zone Cards.
+      </p>
+      <div id="zoneView" class="grid"></div>
+    </div>
+
+    <div class="card" style="flex:1; min-width:340px;">
+      <h2>Badniks (Simplified)</h2>
+      <p class="tiny muted">
+        Badniks attack only dice being rerolled. Destroy/Avoid are simplified (exact match).
+      </p>
+      <div id="badnikView"></div>
+
+      <div class="hr"></div>
+
+      <h2>Log</h2>
+      <div id="log" class="log mono"></div>
+    </div>
+  </div>
+
+<script>
+/* =======================
+   RNG (seeded)
+   ======================= */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function() {
+    a += 0x6D2B79F5;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashSeed(str) {
+  let h = 2166136261 >>> 0;
+  for (let i=0;i<str.length;i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+let __rng = null;
+function initGameRng(seed) { __rng = mulberry32(seed); }
+function rng(){ return __rng; }
+function rollD6(){ return 1 + Math.floor(rng()()*6); }
+
+/* =======================
+   Types / helpers
+   ======================= */
+const DieColor = Object.freeze({ BLUE:"blue", YELLOW:"yellow", RED:"red", BLACK:"black" });
+
+function uuid() {
+  // browser-safe UUID fallback
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return "id-" + Math.random().toString(16).slice(2) + "-" + Date.now();
+}
+
+function makeDie(color, value) { return { id: uuid(), color, value }; }
+function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng()() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function log(state, msg) { state.log.push(msg); return state; }
+function makeVulnerable(p){ p.invulnerable = false; }
+function makeInvulnerable(p){ p.invulnerable = true; }
+
+function isGameOver(state) {
+  if (state.timeTokens <= 0) return "Time ran out (0 Time Tokens)";
+  for (const p of state.players) if (p.lives <= 0) return `${p.name} lost final Life`;
+  return null;
+}
+
+/* =======================
+   Dashboard-accurate config
+   (from the four images you provided)
+   ======================= */
+const BIG_RING_AMOUNT = 5; // "big ring" icon: treat as +5 Rings for now (easy to change globally)
+
+const CONFIG = {
+  characters: {
+    Sonic: {
+      ability: { name:"Insta-Shield", perTurnToken:true },
+      rollActions: [
+        {
+          name:"Super Peel Out",
+          dice:{ blue:6 },
+          // ROLL: Discard the lowest result(s) in your Dice Pool.
+          onBuildPool: (ctx) => {
+            const { p, state } = ctx;
+            const min = Math.min(...p.dicePool.map(d=>d.value));
+            // discard one lowest (if multiple, remove one)
+            const idx = p.dicePool.findIndex(d=>d.value===min);
+            if (idx >= 0) {
+              const removed = p.dicePool.splice(idx,1)[0];
+              log(state, `Sonic Super Peel Out (ROLL): discard lowest die (${removed.color.toUpperCase()}-${removed.value}).`);
+            }
+          }
+        },
+        {
+          name:"Spin Dash",
+          dice:{ blue:1, red:1 },
+          // ROLL: Repeat roll until 2 results in your Dice Pool match.
+          buildMode:"repeatUntilPair"
+        },
+        {
+          name:"Drop Dash",
+          dice:{ yellow:3 },
+          // SPEND: Gain big ring if spent on a Zone Card.
+          onSpend: (ctx) => {
+            const { state, p, spendTarget } = ctx;
+            if (spendTarget?.type === "zone") {
+              p.heldRings += BIG_RING_AMOUNT;
+              log(state, `Sonic Drop Dash (SPEND): +${BIG_RING_AMOUNT} Rings (big ring) for spending on a Zone. Held=${p.heldRings}`);
+            }
+          }
+        }
+      ]
+    },
+
+    Tails: {
+      ability: { name:"Buddy Flight", perTurnToken:false }, // model later
+      rollActions: [
+        {
+          name:"Fly",
+          dice:{ yellow:4 },
+          // x2, ROLL: Save matching pairs, discard the rest.
+          // If no pairs, instead save any 1 die, discard the rest.
+          buildMode:"tailsFlyX2"
+        },
+        {
+          name:"Spin Jump",
+          dice:{ red:3 },
+          // SPEND: Gain yellow die if spent on a Badnik.
+          onSpend: (ctx) => {
+            const { state, p, spendTarget } = ctx;
+            if (spendTarget?.type === "badnik") {
+              const d = makeDie(DieColor.YELLOW, rollD6());
+              p.dicePool.push(d);
+              log(state, `Tails Spin Jump (SPEND): gained a YELLOW die (${d.value}) for spending on a Badnik.`);
+            }
+          }
+        },
+        {
+          name:"Propeller Tail",
+          dice:{ blue:4 },
+          // REROLL: Gain blue die if 2 or more dice were spent since the last Reroll.
+          onRerollStepStart: (ctx) => {
+            const { state, p } = ctx;
+            if (p.spentSinceLastReroll >= 2) {
+              const d = makeDie(DieColor.BLUE, rollD6());
+              p.dicePool.push(d);
+              log(state, `Tails Propeller Tail (REROLL): spent>=2 since last reroll → gained a BLUE die (${d.value}).`);
+            }
+          }
+        }
+      ]
+    },
+
+    Knuckles: {
+      ability: { name:"Secret Passage", perTurnToken:false }, // model later
+      rollActions: [
+        {
+          name:"Wall Climb",
+          dice:{ red:3 },
+          repeats:3,
+          // ROLL: Save a die as long as its result is higher than last saved die. Discard all unsaved dice.
+          buildMode:"knucklesWallClimbX3"
+        },
+        {
+          name:"Spin Attack",
+          dice:{ blue:4 },
+          // AVOID: May change a blue into a red.
+          // For now: we expose a simple "convert selected blue->red" hotkey in UI later if desired.
+          onAvoidConvert: { from: DieColor.BLUE, to: DieColor.RED }
+        },
+        {
+          name:"Glide",
+          dice:{ yellow:4 },
+          // SPEND: May spend another yellow without rerolling if its result is lower than last spent die.
+          onSpendChainRule: { color: DieColor.YELLOW, direction:"lower" }
+        }
+      ]
+    },
+
+    Amy: {
+      ability: { name:"Piko Piko Hammer", perTurnToken:false },
+      rollActions: [
+        {
+          name:"Hammer Throw",
+          dice:{ red:3 },
+          // SPEND red: May spend on any player's Badnik (once per turn).
+          // Engine note: cross-player targeting is not wired into UI yet; placeholder logs when spending on own badnik.
+          onSpend: (ctx) => {
+            const { state, p, spentDie, spendTarget } = ctx;
+            if (spentDie?.color === DieColor.RED && spendTarget?.type === "badnik") {
+              if (p.oncePerTurn?.hammerThrowUsed) return;
+              p.oncePerTurn.hammerThrowUsed = true;
+              log(state, `Amy Hammer Throw (SPEND): would allow targeting any player's Badnik (once/turn). (UI currently spends on own Badnik.)`);
+            }
+          }
+        },
+        {
+          name:"Spin Dash",
+          dice:{ blue:1, red:1 },
+          buildMode:"repeatUntilPair"
+        },
+        {
+          name:"Hammer Rush",
+          dice:{ yellow:3 },
+          // SPEND yellow: Gain red die if spent on a Zone Card.
+          onSpend: (ctx) => {
+            const { state, p, spendTarget } = ctx;
+            if (spendTarget?.type === "zone") {
+              const d = makeDie(DieColor.RED, rollD6());
+              p.dicePool.push(d);
+              log(state, `Amy Hammer Rush (SPEND): gained a RED die (${d.value}) for spending on a Zone.`);
+            }
+          }
+        }
+      ]
+    }
+  },
+
+  // Simplified Badnik deck used just to test attack timing and spend rules
+  badnikDeck: [
+    { name:"Moto Bug", attacks:[{color:"blue", value:6},{color:"blue", value:3}], avoid:{color:"blue", value:1}, destroy:{color:"red", value:1} },
+    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:2} },
+    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:3} }
+  ],
+
+  // Simplified Zone generator (placeholder until we encode real Zone Cards)
+  zoneGenerator: { challengesPerRoute: 7 }
+};
+
+/* =======================
+   Zone (simplified)
+   ======================= */
+function generateZone(genCfg) {
+  const routes = ["Top","Mid","Bot"].map(name => {
+    const challenges = [];
+    for (let i=0;i<genCfg.challengesPerRoute;i++) {
+      const n = rollD6();
+      const r = rng()();
+      const color = r < 0.2 ? DieColor.BLUE : r < 0.4 ? DieColor.YELLOW : r < 0.6 ? DieColor.RED : null;
+
+      const rr = rng()();
+      const reward =
+        rr < 0.55 ? { type:"rings", amount: (rng()()<0.2?5:1) } :
+        rr < 0.7  ? { type:"boost", amount:1 } :
+        rr < 0.85 ? { type:"badnik", amount:1 } :
+                    { type:"hazard", amount:1 };
+
+      challenges.push({ id: uuid(), n, color, cleared:false, reward });
+    }
+    return { id: uuid(), name, challenges };
+  });
+  return { routes };
+}
+
+/* =======================
+   Game creation
+   ======================= */
+function newGame({ playerCount, seedStr }) {
+  const seed = hashSeed(seedStr);
+  initGameRng(seed);
+
+  const charNames = Object.keys(CONFIG.characters);
+  const players = Array.from({length: playerCount}, (_,i) => {
+    const character = charNames[i % charNames.length];
+    const rollActions = CONFIG.characters[character].rollActions;
+    return {
+      id: i,
+      name: `P${i+1}`,
+      character,
+      chosenRollAction: rollActions[0].name,
+
+      lives: 3,
+      boost: 1,
+      heldRings: 0,
+      savedRings: 0,
+
+      badniks: [],
+      dicePool: [],
+      selectedDieId: null,
+
+      invulnerable: false,
+      spentSinceLastReroll: 0,
+      oncePerTurn: {},
+      lastChainSpendRule: null, // used for Glide-like chaining
+    };
+  });
+
+  const badnikDeck = shuffle(clone(CONFIG.badnikDeck));
+  const zone = generateZone(CONFIG.zoneGenerator);
+
+  return {
+    phase: "ROLL_ACTION", // ROLL_ACTION | SPENDING | REROLL | END_TURN | GAME_OVER
+    activePlayer: 0,
+    timeTokens: 7,
+    players,
+    badnikDeck,
+    badnikDiscard: [],
+    zone,
+    log: [`Game started (${playerCount}P), seed="${seedStr}"`]
+  };
+}
+
+/* =======================
+   Core rules: damage / hazard / badnik draw
+   ======================= */
+function takeDamage(state, reason) {
+  const p = state.players[state.activePlayer];
+
+  if (p.invulnerable) {
+    log(state, `No damage (invulnerable): ${reason}`);
+    return state;
+  }
+
+  const lostHeld = p.heldRings;
+  p.heldRings = 0;
+
+  if (lostHeld === 0) {
+    p.lives -= 1;
+    log(state, `💥 DAMAGE (${reason}): No held rings → ${p.name} loses 1 Life (now ${p.lives}).`);
+  } else {
+    log(state, `💥 DAMAGE (${reason}): ${p.name} loses all Held Rings (${lostHeld}).`);
+  }
+
+  // Clear badniks and dice pool, end turn without time token
+  p.badniks = [];
+  p.dicePool = [];
+  p.selectedDieId = null;
+  p.spentSinceLastReroll = 0;
+  p.lastChainSpendRule = null;
+
+  makeInvulnerable(p);
+  state.phase = "END_TURN";
+
+  const over = isGameOver(state);
+  if (over) {
+    state.phase = "GAME_OVER";
+    log(state, `🛑 GAME OVER: ${over}`);
+  } else {
+    log(state, `Turn ends immediately (no Time Token taken).`);
+  }
+  return state;
+}
+
+function hazardRoll(state) {
+  const p = state.players[state.activePlayer];
+  const v = rollD6();
+  log(state, `⚠️ Hazard Die rolled: ${v}`);
+  if (p.dicePool.some(d => d.value === v)) {
+    takeDamage(state, `Hazard matched a die value (${v})`);
+  } else {
+    log(state, `Hazard did not match Dice Pool → no damage.`);
+  }
+}
+
+function drawBadnik(state, targetPlayer) {
+  const p = targetPlayer;
+  if (p.badniks.length >= 3) { log(state, `${p.name} cannot draw more Badniks (already 3).`); return; }
+  if (!state.badnikDeck.length) {
+    state.badnikDeck = shuffle(state.badnikDiscard);
+    state.badnikDiscard = [];
+    log(state, `Badnik deck reshuffled from discard.`);
+  }
+  const b = state.badnikDeck.shift();
+  p.badniks.push(b);
+  log(state, `${p.name} draws Badnik: ${b.name}`);
+}
+
+function applyReward(state, reward) {
+  const p = state.players[state.activePlayer];
+  if (!reward) return;
+  if (reward.type === "rings") {
+    p.heldRings += reward.amount;
+    log(state, `Reward: +${reward.amount} Rings (Held=${p.heldRings})`);
+  } else if (reward.type === "boost") {
+    p.boost += reward.amount;
+    log(state, `Reward: +${reward.amount} Boost (Boost=${p.boost})`);
+  } else if (reward.type === "badnik") {
+    for (let i=0;i<reward.amount;i++) drawBadnik(state, p);
+  } else if (reward.type === "hazard") {
+    for (let i=0;i<reward.amount;i++) hazardRoll(state);
+  }
+}
+
+/* =======================
+   Roll Action lookup
+   ======================= */
+function getActivePlayer(state){ return state.players[state.activePlayer]; }
+function getCharCfg(p){ return CONFIG.characters[p.character]; }
+function getRollActionCfg(p){
+  const c = getCharCfg(p);
+  return c.rollActions.find(r=>r.name===p.chosenRollAction) || c.rollActions[0];
+}
+
+/* =======================
+   Build dice pool (dashboard-accurate)
+   ======================= */
+function buildDicePool(state) {
+  if (state.phase !== "ROLL_ACTION") return log(state, `Cannot build pool: phase=${state.phase}`);
+
+  const p = getActivePlayer(state);
+  p.oncePerTurn = {};                 // refresh "once per turn" flags
+  p.spentSinceLastReroll = 0;
+  p.lastChainSpendRule = null;
+
+  const ra = getRollActionCfg(p);
+
+  p.dicePool = [];
+  p.selectedDieId = null;
+
+  function rollBatch(diceSpec) {
+    const out = [];
+    for (const [color, count] of Object.entries(diceSpec)) {
+      for (let i=0;i<count;i++) out.push(makeDie(color, rollD6()));
+    }
+    return out;
+  }
+
+  if (ra.buildMode === "repeatUntilPair") {
+    // Roll the action dice repeatedly, add all rolled dice, stop once any pair of values matches in pool.
+    let safety = 50;
+    while (safety-- > 0) {
+      const batch = rollBatch(ra.dice);
+      p.dicePool.push(...batch);
+      const counts = new Map();
+      let hasPair = false;
+      for (const d of p.dicePool) {
+        counts.set(d.value, (counts.get(d.value)||0)+1);
+        if (counts.get(d.value) >= 2) { hasPair = true; break; }
+      }
+      log(state, `${p.name} Spin Dash roll: ${batch.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")} → pool size ${p.dicePool.length}`);
+      if (hasPair) { log(state, `Spin Dash condition met: at least one matching pair exists in Dice Pool.`); break; }
+    }
+  }
+  else if (ra.buildMode === "tailsFlyX2") {
+    // x2: each time roll 4 yellows; save matching pairs else save any 1; discard rest.
+    for (let rep=1; rep<=2; rep++) {
+      const batch = rollBatch(ra.dice); // 4 yellows
+      const byVal = new Map();
+      for (const d of batch) byVal.set(d.value, (byVal.get(d.value)||[]).concat([d]));
+      const pairs = [];
+      for (const [val, arr] of byVal.entries()) {
+        if (arr.length >= 2) pairs.push(...arr.slice(0,2));
+      }
+      if (pairs.length > 0) {
+        p.dicePool.push(...pairs);
+        log(state, `${p.name} Fly (x${rep}): rolled ${batch.map(d=>`Y${d.value}`).join(" ")} → saved pairs ${pairs.map(d=>`Y${d.value}`).join(" ")}.`);
+      } else {
+        // save any 1 die (choose highest to be practical)
+        batch.sort((a,b)=>b.value-a.value);
+        p.dicePool.push(batch[0]);
+        log(state, `${p.name} Fly (x${rep}): rolled ${batch.map(d=>`Y${d.value}`).join(" ")} → no pairs; saved one die Y${batch[0].value}.`);
+      }
+    }
+  }
+  else if (ra.buildMode === "knucklesWallClimbX3") {
+    // x3: each repeat roll 3 reds; greedily save ascending sequence (smallest possible > lastSaved), discard rest.
+    let last = 0;
+    for (let rep=1; rep<=3; rep++) {
+      const batch = rollBatch(ra.dice); // 3 reds
+      batch.sort((a,b)=>a.value-b.value);
+
+      const savedThisRep = [];
+      for (const d of batch) {
+        if (d.value > last) { savedThisRep.push(d); last = d.value; }
+      }
+      if (savedThisRep.length === 0) {
+        // if none higher, save the highest anyway (keeps game moving; adjust if you prefer strict failure)
+        const fallback = batch[batch.length-1];
+        savedThisRep.push(fallback);
+        last = fallback.value;
+      }
+      p.dicePool.push(...savedThisRep);
+      log(state, `${p.name} Wall Climb (x${rep}): rolled ${batch.map(d=>`R${d.value}`).join(" ")} → saved ${savedThisRep.map(d=>`R${d.value}`).join(" ")}.`);
+    }
+  }
+  else {
+    // Standard: roll once, add all dice
+    const batch = rollBatch(ra.dice);
+    p.dicePool.push(...batch);
+    log(state, `${p.name} rolled: ${batch.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")}`);
+  }
+
+  // Apply any ROLL effect after building pool
+  if (typeof ra.onBuildPool === "function") {
+    ra.onBuildPool({ state, p });
+  }
+
+  makeVulnerable(p); // unless damage happened previously
+  state.phase = "SPENDING";
+  log(state, `${p.name} Dice Pool built: ${p.dicePool.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")}`);
+  return state;
+}
+
+/* =======================
+   Boost after Roll Action
+   ======================= */
+function boostAfterRollAction(state) {
+  const p = getActivePlayer(state);
+  if (p.boost <= 0) return log(state, `${p.name} has no Boost tokens.`);
+  if (state.phase !== "SPENDING" || p.dicePool.length === 0) return log(state, `Boost-after-roll-action must be used right after building a Dice Pool.`);
+
+  p.boost -= 1;
+  log(state, `${p.name} spends 1 Boost (after Roll Action): reroll Dice Pool and enter REROLL step (Badnik-vulnerable).`);
+  state.phase = "REROLL";
+  return rerollStep(state);
+}
+
+/* =======================
+   Spending
+   ======================= */
+function spendSelectedDie(state) {
+  const p = getActivePlayer(state);
+  if (state.phase !== "SPENDING") return log(state, `Cannot spend: phase=${state.phase}`);
+
+  if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice left → End Turn`); }
+
+  const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
+
+  // Simplified legal zone target: leftmost uncleared on any route that matches exact n and (if colored) exact color.
+  const legalZoneTargets = [];
+  for (const route of state.zone.routes) {
+    const ch = route.challenges.find(x=>!x.cleared);
+    if (!ch) continue;
+    const colorOk = (ch.color == null) || (ch.color === die.color);
+    const numOk = (ch.n === die.value);
+    if (colorOk && numOk) legalZoneTargets.push({ route, ch });
+  }
+
+  // Simplified legal badnik target: match avoid/destroy exactly (destroy requires red).
+  const legalBadnikTargets = [];
+  for (let i=0;i<p.badniks.length;i++) {
+    const b = p.badniks[i];
+    const avoidOk = b.avoid && (b.avoid.color === die.color && b.avoid.value === die.value);
+    const destroyOk = b.destroy && (die.color === DieColor.RED && b.destroy.value === die.value);
+    if (avoidOk || destroyOk) legalBadnikTargets.push({ idx:i, badnik:b, mode: destroyOk ? "destroy" : "avoid" });
+  }
+
+  // Chain-spend rule (Knuckles Glide): if active action defines it, allow spending another same-colour without reroll if condition met.
+  // We'll enforce the condition only for the extra spend; base spend follows normal rules.
+  // (You can expand this to match the exact “lower than last spent die” behaviour on the dashboard.)
+  const ra = getRollActionCfg(p);
+
+  if (!legalZoneTargets.length && !legalBadnikTargets.length) {
+    return takeDamage(state, "Could not spend a die during Spending Step");
+  }
+
+  // Decide target: prefer zone, else badnik
+  let spendTarget = null;
+  if (legalZoneTargets.length) {
+    const { route, ch } = legalZoneTargets[0];
+    ch.cleared = true;
+    spendTarget = { type:"zone", route: route.name, challengeId: ch.id };
+    log(state, `${p.name} spends ${die.color.toUpperCase()}-${die.value} to clear ${route.name} challenge (${ch.color?ch.color.toUpperCase()+"-":""}${ch.n}).`);
+    applyReward(state, ch.reward);
+  } else {
+    const t = legalBadnikTargets[0];
+    const b = t.badnik;
+    spendTarget = { type:"badnik", name: b.name, mode: t.mode };
+    if (t.mode === "destroy") {
+      log(state, `${p.name} DESTROYS Badnik "${b.name}" with RED-${die.value} (would gain Animal Token in full rules).`);
+    } else {
+      log(state, `${p.name} AVOIDS Badnik "${b.name}" with ${die.color.toUpperCase()}-${die.value}.`);
+    }
+    p.badniks.splice(t.idx, 1);
+  }
+
+  // Remove die from pool
+  p.dicePool = p.dicePool.filter(d => d.id !== die.id);
+  p.selectedDieId = null;
+
+  // Spending ends invulnerability window
+  makeVulnerable(p);
+
+  // Update counters for “since last reroll”
+  p.spentSinceLastReroll += 1;
+
+  // Core dice properties (from rulebook)
+  const spentDie = die;
+
+  if (spentDie.color === DieColor.YELLOW) {
+    p.heldRings += 1;
+    log(state, `Jump die property: +1 Ring (Held=${p.heldRings}).`);
+  }
+
+  // Dashboard special ability: Amy Piko Piko Hammer (SPEND red): may raise result by 1 (6->1).
+  // Not interactive yet; add later as a toggle. For now, we just log reminder.
+  if (p.character === "Amy" && spentDie.color === DieColor.RED) {
+    log(state, `Amy ability reminder: Piko Piko Hammer could raise a spent RED die by +1 (6→1) before spending.`);
+  }
+
+  // Apply roll-action SPEND effect hooks
+  if (typeof ra.onSpend === "function") {
+    ra.onSpend({ state, p, spentDie, spendTarget });
+  }
+
+  // Knuckles Glide chaining rule: if the action specifies a chain rule, set it up for potential extra spend.
+  if (ra.onSpendChainRule && spentDie.color === ra.onSpendChainRule.color) {
+    p.lastChainSpendRule = { ...ra.onSpendChainRule, lastSpentValue: spentDie.value };
+  } else {
+    p.lastChainSpendRule = null;
+  }
+
+  // If pool empty -> end turn
+  if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `Dice Pool empty → End Turn`); }
+
+  // Run die standard property: may spend another die without reroll
+  if (spentDie.color === DieColor.BLUE) {
+    log(state, `Run die property: ${p.name} may spend another die without rerolling.`);
+    state.phase = "SPENDING";
+    return state;
+  }
+
+  // Knuckles Glide (dashboard): may spend another yellow without reroll if its result is lower than last spent die.
+  if (p.lastChainSpendRule?.color === DieColor.YELLOW && ra.name === "Glide") {
+    const canChain = p.dicePool.some(d => d.color === DieColor.YELLOW && d.value < p.lastChainSpendRule.lastSpentValue);
+    if (canChain) {
+      log(state, `Knuckles Glide (SPEND): may spend another YELLOW without reroll if it is lower than last spent (${p.lastChainSpendRule.lastSpentValue}).`);
+      state.phase = "SPENDING";
+      return state;
+    }
+  }
+
+  // Otherwise must reroll
+  state.phase = "REROLL";
+  log(state, `Must REROLL remaining dice before next spend.`);
+  return state;
+}
+
+/* =======================
+   Reroll step
+   ======================= */
+function rerollStep(state) {
+  const p = getActivePlayer(state);
+  if (state.phase !== "REROLL") return log(state, `Cannot reroll: phase=${state.phase}`);
+  if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice to reroll → End Turn`); }
+
+  const ra = getRollActionCfg(p);
+
+  // Apply REROLL effects at the beginning of the reroll step
+  if (typeof ra.onRerollStepStart === "function") {
+    ra.onRerollStepStart({ state, p });
+  }
+
+  // Reroll all remaining dice
+  for (const d of p.dicePool) d.value = rollD6();
+  log(state, `${p.name} rerolls Dice Pool: ${p.dicePool.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")}`);
+
+  // Reroll ends invulnerability
+  makeVulnerable(p);
+
+  // Badnik attacks: if any rerolled die matches an attack, take damage.
+  if (p.badniks.length) {
+    const hits = [];
+    for (const b of p.badniks) {
+      for (const atk of (b.attacks||[])) {
+        if (p.dicePool.some(d => d.color === atk.color && d.value === atk.value)) hits.push({ b, atk });
+      }
+    }
+    if (hits.length) {
+      log(state, `🟥 Badnik attack hits: ${hits.map(h=>`${h.b.name}(${h.atk.color[0].toUpperCase()}${h.atk.value})`).join(", ")}`);
+      takeDamage(state, "Badnik attack");
+      return state;
+    } else {
+      log(state, `No Badnik attacks hit.`);
+    }
+  } else {
+    log(state, `No Badniks in front of ${p.name}.`);
+  }
+
+  // Reset counters after a reroll happens
+  p.spentSinceLastReroll = 0;
+  p.lastChainSpendRule = null;
+
+  state.phase = "SPENDING";
+  return state;
+}
+
+function boostInReroll(state) {
+  const p = getActivePlayer(state);
+  if (state.phase !== "REROLL") return log(state, `Boost-in-reroll only usable in REROLL phase.`);
+  if (p.boost <= 0) return log(state, `${p.name} has no Boost tokens.`);
+  p.boost -= 1;
+  log(state, `${p.name} spends 1 Boost → immediately reroll Dice Pool again.`);
+  return rerollStep(state);
+}
+
+/* =======================
+   End turn
+   ======================= */
+function endTurn(state) {
+  const p = getActivePlayer(state);
+  if (state.phase === "GAME_OVER") return state;
+
+  // If dice remain and player ends normally → discard + take time
+  if (p.dicePool.length) {
+    p.dicePool = [];
+    p.selectedDieId = null;
+    state.timeTokens -= 1;
+    log(state, `${p.name} ends turn with dice remaining → discard dice and take 1 Time Token (Time left: ${state.timeTokens}).`);
+  } else {
+    log(state, `${p.name} ends turn.`);
+  }
+
+  makeVulnerable(p);
+  p.spentSinceLastReroll = 0;
+  p.lastChainSpendRule = null;
+
+  const over = isGameOver(state);
+  if (over) {
+    state.phase = "GAME_OVER";
+    log(state, `🛑 GAME OVER: ${over}`);
+    return state;
+  }
+
+  state.activePlayer = (state.activePlayer + 1) % state.players.length;
+  const np = getActivePlayer(state);
+  np.oncePerTurn = {};
+  state.phase = "ROLL_ACTION";
+  log(state, `➡️ Turn passes to ${np.name} (${np.character}).`);
+  return state;
+}
+
+/* =======================
+   UI
+   ======================= */
+let STATE = null;
+
+function escapeHtml(str) {
+  return str.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+
+function render() {
+  const s = STATE;
+  if (!s) return;
+
+  const p = getActivePlayer(s);
+  const ra = getRollActionCfg(p);
+
+  document.getElementById("phase").textContent = s.phase;
+  document.getElementById("activePlayer").textContent =
+    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | Badniks=${p.badniks.length} | Time=${s.timeTokens}`;
+
+  document.getElementById("invuln").textContent = p.invulnerable ? "YES" : "NO";
+
+  const counters = document.getElementById("counters");
+  counters.innerHTML = `
+    <div class="pill tiny"><b>spentSinceLastReroll</b> ${p.spentSinceLastReroll}</div>
+    <div class="pill tiny"><b>Roll Action</b> ${escapeHtml(ra.name)}</div>
+    ${p.lastChainSpendRule ? `<div class="pill tiny warn"><b>Chain rule</b> ${p.lastChainSpendRule.color.toUpperCase()} must be lower than ${p.lastChainSpendRule.lastSpentValue}</div>` : ""}
+  `;
+
+  // Buttons
+  const dis = (id, v) => document.getElementById(id).disabled = !!v;
+  dis("btnChooseRollAction", s.phase !== "ROLL_ACTION");
+  dis("btnBuildPool", s.phase !== "ROLL_ACTION");
+  dis("btnSpendDie", s.phase !== "SPENDING");
+  dis("btnRerollStep", s.phase !== "REROLL");
+  dis("btnBoostInReroll", !(s.phase==="REROLL" && p.boost>0));
+  dis("btnBoostAfterRollAction", !(s.phase==="SPENDING" && p.boost>0 && p.dicePool.length>0));
+  dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN"));
+
+  // Roll action select
+  const sel = document.getElementById("rollActionSelect");
+  sel.innerHTML = "";
+  for (const a of getCharCfg(p).rollActions) {
+    const opt = document.createElement("option");
+    opt.value = a.name;
+    opt.textContent = a.name;
+    sel.appendChild(opt);
+  }
+  sel.value = p.chosenRollAction;
+
+  // Dice pool
+  const dp = document.getElementById("dicePool");
+  dp.innerHTML = "";
+  for (const d of p.dicePool) {
+    const el = document.createElement("div");
+    el.className = `die ${d.color}`;
+    el.textContent = d.value;
+    el.title = d.color;
+    el.style.opacity = (p.selectedDieId === d.id) ? "1" : "0.82";
+    el.style.transform = (p.selectedDieId === d.id) ? "scale(1.05)" : "scale(1)";
+    el.addEventListener("click", () => { p.selectedDieId = d.id; render(); });
+    dp.appendChild(el);
+  }
+
+  // Zone view
+  const zv = document.getElementById("zoneView");
+  zv.innerHTML = "";
+  for (const route of s.zone.routes) {
+    const next = route.challenges.find(x=>!x.cleared);
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <h2>${route.name} Route</h2>
+      <div class="tiny">
+        Next: ${
+          next
+            ? `<span class="pill">${next.color ? next.color.toUpperCase()+"-" : ""}${next.n}</span>
+               <span class="muted">Reward:</span> <span class="pill">${next.reward.type}${next.reward.amount?(" x"+next.reward.amount):""}</span>`
+            : `<span class="ok">Completed</span>`
+        }
+      </div>
+      <div class="tiny muted" style="margin-top:8px;">Track:</div>
+      <div class="tiny mono">${route.challenges.map(ch => ch.cleared ? "✓" : (ch.color?ch.color[0].toUpperCase():"_")+ch.n).join("  ")}</div>
+    `;
+    zv.appendChild(card);
+  }
+
+  // Badniks
+  const bv = document.getElementById("badnikView");
+  bv.innerHTML = "";
+  if (!p.badniks.length) {
+    bv.innerHTML = `<div class="tiny muted">No Badniks.</div>`;
+  } else {
+    for (const b of p.badniks) {
+      const el = document.createElement("div");
+      el.className = "pill tiny";
+      el.innerHTML = `<b>${escapeHtml(b.name)}</b>
+        <span class="muted">attacks:</span> ${b.attacks.map(a=>`${a.color[0].toUpperCase()}${a.value}`).join(", ")}
+        <span class="muted">avoid:</span> ${b.avoid.color[0].toUpperCase()}${b.avoid.value}
+        <span class="muted">destroy:</span> R${b.destroy.value}`;
+      bv.appendChild(el);
+    }
+  }
+
+  // Log
+  const logEl = document.getElementById("log");
+  logEl.innerHTML = s.log.slice(-400).map(line => `<div>${escapeHtml(line)}</div>`).join("");
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* =======================
+   UI events
+   ======================= */
+document.getElementById("newGameBtn").addEventListener("click", () => {
+  const playerCount = parseInt(document.getElementById("playerCount").value, 10);
+  const seedStr = document.getElementById("seed").value || "12345";
+  STATE = newGame({ playerCount, seedStr });
+  render();
+});
+
+document.getElementById("btnChooseRollAction").addEventListener("click", () => {
+  const p = getActivePlayer(STATE);
+  p.chosenRollAction = document.getElementById("rollActionSelect").value;
+  log(STATE, `${p.name} set Roll Action to: ${p.chosenRollAction}`);
+  render();
+});
+
+document.getElementById("btnBuildPool").addEventListener("click", () => {
+  buildDicePool(STATE);
+  render();
+});
+
+document.getElementById("btnBoostAfterRollAction").addEventListener("click", () => {
+  boostAfterRollAction(STATE);
+  render();
+});
+
+document.getElementById("btnSpendDie").addEventListener("click", () => {
+  spendSelectedDie(STATE);
+  render();
+});
+
+document.getElementById("btnRerollStep").addEventListener("click", () => {
+  rerollStep(STATE);
+  render();
+});
+
+document.getElementById("btnBoostInReroll").addEventListener("click", () => {
+  boostInReroll(STATE);
+  render();
+});
+
+document.getElementById("btnEndTurn").addEventListener("click", () => {
+  endTurn(STATE);
+  render();
+});
+
+// Auto-start
+document.getElementById("newGameBtn").click();
+</script>
+</body>
+</html>
