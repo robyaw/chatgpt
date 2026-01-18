@@ -34,6 +34,10 @@
     .hr { height:1px; background:#23305a; margin:10px 0; }
     .ok { color:#b8ffcf; }
     .warn { color:#ffe7a6; }
+    .target-list { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+    .target-item { padding:6px 8px; border:1px solid #2d3b73; border-radius:10px; background:#0f1733; cursor:pointer; }
+    .target-item.selected { outline:2px solid rgba(120,200,255,.6); background:#15234a; }
+    .target-actions { margin-top:8px; }
   </style>
 </head>
 <body>
@@ -88,6 +92,11 @@
       <h2>Dice Pool</h2>
       <div id="dicePool"></div>
       <div class="tiny muted">Click a die to select it for spending.</div>
+
+      <div class="hr"></div>
+
+      <h2>Spend Target</h2>
+      <div id="spendTargetPanel" class="tiny muted">Select a die and click "Spend Selected Die" to choose a target.</div>
 
       <div class="hr"></div>
 
@@ -405,6 +414,7 @@ function newGame({ playerCount, seedStr }) {
     badnikDeck,
     badnikDiscard: [],
     zone,
+    ui: { spend: null },
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
 }
@@ -419,6 +429,8 @@ function takeDamage(state, reason) {
     log(state, `No damage (invulnerable): ${reason}`);
     return state;
   }
+
+  clearSpendUi(state);
 
   const lostHeld = p.heldRings;
   p.heldRings = 0;
@@ -490,6 +502,65 @@ function applyReward(state, reward) {
   }
 }
 
+function clearSpendUi(state) {
+  if (state?.ui) state.ui.spend = null;
+}
+
+function formatRewardLabel(reward) {
+  if (!reward) return "none";
+  if (reward.amount != null) return `${reward.type} x${reward.amount}`;
+  return `${reward.type}`;
+}
+
+function buildSpendTargets(state, die) {
+  const p = getActivePlayer(state);
+  const targets = [];
+
+  for (const route of state.zone.routes) {
+    const ch = route.challenges.find(x=>!x.cleared);
+    if (!ch) continue;
+    const colorOk = (ch.color == null) || (ch.color === die.color);
+    const numOk = (ch.n === die.value);
+    if (colorOk && numOk) {
+      const rewardLabel = formatRewardLabel(ch.reward);
+      const label = `Zone: ${route.name} ${ch.color ? ch.color.toUpperCase()+"-" : ""}${ch.n} (reward: ${rewardLabel})`;
+      targets.push({
+        id: uuid(),
+        type: "zone",
+        routeId: route.id,
+        challengeId: ch.id,
+        label
+      });
+    }
+  }
+
+  for (let i=0;i<p.badniks.length;i++) {
+    const b = p.badniks[i];
+    const avoidOk = b.avoid && (b.avoid.color === die.color && b.avoid.value === die.value);
+    const destroyOk = b.destroy && (die.color === DieColor.RED && b.destroy.value === die.value);
+    if (avoidOk) {
+      targets.push({
+        id: uuid(),
+        type: "badnik",
+        badnikIndex: i,
+        mode: "avoid",
+        label: `Badnik: avoid ${b.name} (${b.avoid.color[0].toUpperCase()}${b.avoid.value})`
+      });
+    }
+    if (destroyOk) {
+      targets.push({
+        id: uuid(),
+        type: "badnik",
+        badnikIndex: i,
+        mode: "destroy",
+        label: `Badnik: destroy ${b.name} (R${b.destroy.value})`
+      });
+    }
+  }
+
+  return targets;
+}
+
 /* =======================
    Roll Action lookup
    ======================= */
@@ -505,6 +576,8 @@ function getRollActionCfg(p){
    ======================= */
 function buildDicePool(state) {
   if (state.phase !== "ROLL_ACTION") return log(state, `Cannot build pool: phase=${state.phase}`);
+
+  clearSpendUi(state);
 
   const p = getActivePlayer(state);
   p.oncePerTurn = {};                 // refresh "once per turn" flags
@@ -610,6 +683,7 @@ function boostAfterRollAction(state) {
 
   p.boost -= 1;
   log(state, `${p.name} spends 1 Boost (after Roll Action): reroll Dice Pool and enter REROLL step (Badnik-vulnerable).`);
+  clearSpendUi(state);
   state.phase = "REROLL";
   return rerollStep(state);
 }
@@ -624,6 +698,20 @@ function spendSelectedDie(state) {
   if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice left → End Turn`); }
 
   const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
+
+  if (!state.ui) state.ui = { spend: null };
+  const targets = buildSpendTargets(state, die);
+  if (!targets.length) {
+    clearSpendUi(state);
+    return takeDamage(state, "Could not spend a die during Spending Step");
+  }
+  state.ui.spend = {
+    open: true,
+    dieId: die.id,
+    targets,
+    selectedTargetId: targets[0].id
+  };
+  return state;
 
   // Simplified legal zone target: leftmost uncleared on any route that matches exact n and (if colored) exact color.
   const legalZoneTargets = [];
@@ -735,12 +823,149 @@ function spendSelectedDie(state) {
   return state;
 }
 
+function confirmSpendSelection(state) {
+  const p = getActivePlayer(state);
+  const spendUi = state.ui?.spend;
+  if (state.phase !== "SPENDING") { clearSpendUi(state); return state; }
+  if (!spendUi || !spendUi.open) return state;
+
+  const die = p.dicePool.find(d => d.id === spendUi.dieId);
+  if (!die) {
+    log(state, "Spend canceled: selected die is no longer available.");
+    clearSpendUi(state);
+    return state;
+  }
+
+  const target = spendUi.targets.find(t => t.id === spendUi.selectedTargetId);
+  if (!target) {
+    log(state, "Spend canceled: no target selected.");
+    clearSpendUi(state);
+    return state;
+  }
+
+  clearSpendUi(state);
+  return spendDieOnTarget(state, die, target);
+}
+
+function cancelSpendSelection(state) {
+  clearSpendUi(state);
+  return state;
+}
+
+function spendDieOnTarget(state, die, target) {
+  const p = getActivePlayer(state);
+  const ra = getRollActionCfg(p);
+  let spendTarget = null;
+
+  if (target.type === "zone") {
+    const route = state.zone.routes.find(r => r.id === target.routeId);
+    const ch = route?.challenges.find(c => c.id === target.challengeId);
+    const next = route?.challenges.find(x => !x.cleared);
+    const colorOk = ch && ((ch.color == null) || (ch.color === die.color));
+    const numOk = ch && (ch.n === die.value);
+    if (!route || !ch || !next || next.id !== ch.id || !colorOk || !numOk) {
+      log(state, "Spend failed: zone target no longer legal.");
+      return state;
+    }
+    ch.cleared = true;
+    spendTarget = { type:"zone", route: route.name, challengeId: ch.id };
+    log(state, `${p.name} spends ${die.color.toUpperCase()}-${die.value} to clear ${route.name} challenge (${ch.color?ch.color.toUpperCase()+"-":""}${ch.n}).`);
+    applyReward(state, ch.reward);
+  } else if (target.type === "badnik") {
+    const b = p.badniks[target.badnikIndex];
+    if (!b) {
+      log(state, "Spend failed: badnik target no longer exists.");
+      return state;
+    }
+    const avoidOk = b.avoid && (b.avoid.color === die.color && b.avoid.value === die.value);
+    const destroyOk = b.destroy && (die.color === DieColor.RED && b.destroy.value === die.value);
+    if (target.mode === "avoid" && !avoidOk) {
+      log(state, "Spend failed: avoid target no longer legal.");
+      return state;
+    }
+    if (target.mode === "destroy" && !destroyOk) {
+      log(state, "Spend failed: destroy target no longer legal.");
+      return state;
+    }
+    spendTarget = { type:"badnik", name: b.name, mode: target.mode };
+    if (target.mode === "destroy") {
+      log(state, `${p.name} DESTROYS Badnik "${b.name}" with RED-${die.value} (would gain Animal Token in full rules).`);
+    } else {
+      log(state, `${p.name} AVOIDS Badnik "${b.name}" with ${die.color.toUpperCase()}-${die.value}.`);
+    }
+    p.badniks.splice(target.badnikIndex, 1);
+  } else {
+    return state;
+  }
+
+  // Remove die from pool
+  p.dicePool = p.dicePool.filter(d => d.id !== die.id);
+  p.selectedDieId = null;
+
+  // Spending ends invulnerability window
+  makeVulnerable(p);
+
+  // Update counters for "since last reroll"
+  p.spentSinceLastReroll += 1;
+
+  // Core dice properties (from rulebook)
+  const spentDie = die;
+
+  if (spentDie.color === DieColor.YELLOW) {
+    p.heldRings += 1;
+    log(state, `Jump die property: +1 Ring (Held=${p.heldRings}).`);
+  }
+
+  // Dashboard special ability: Amy Piko Piko Hammer (SPEND red): may raise result by 1 (6->1).
+  if (p.character === "Amy" && spentDie.color === DieColor.RED) {
+    log(state, "Amy ability reminder: Piko Piko Hammer could raise a spent RED die by +1 (6->1) before spending.");
+  }
+
+  // Apply roll-action SPEND effect hooks
+  if (typeof ra.onSpend === "function") {
+    ra.onSpend({ state, p, spentDie, spendTarget });
+  }
+
+  // Knuckles Glide chaining rule: if the action specifies a chain rule, set it up for potential extra spend.
+  if (ra.onSpendChainRule && spentDie.color === ra.onSpendChainRule.color) {
+    p.lastChainSpendRule = { ...ra.onSpendChainRule, lastSpentValue: spentDie.value };
+  } else {
+    p.lastChainSpendRule = null;
+  }
+
+  // If pool empty -> end turn
+  if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, "Dice Pool empty -> End Turn"); }
+
+  // Run die property: may spend another die without reroll
+  if (spentDie.color === DieColor.BLUE) {
+    log(state, `Run die property: ${p.name} may spend another die without rerolling.`);
+    state.phase = "SPENDING";
+    return state;
+  }
+
+  // Knuckles Glide (dashboard): may spend another yellow without reroll if its result is lower than last spent die.
+  if (p.lastChainSpendRule?.color === DieColor.YELLOW && ra.name === "Glide") {
+    const canChain = p.dicePool.some(d => d.color === DieColor.YELLOW && d.value < p.lastChainSpendRule.lastSpentValue);
+    if (canChain) {
+      log(state, `Knuckles Glide (SPEND): may spend another YELLOW without reroll if it is lower than last spent (${p.lastChainSpendRule.lastSpentValue}).`);
+      state.phase = "SPENDING";
+      return state;
+    }
+  }
+
+  // Otherwise must reroll
+  state.phase = "REROLL";
+  log(state, "Must REROLL remaining dice before next spend.");
+  return state;
+}
+
 /* =======================
    Reroll step
    ======================= */
 function rerollStep(state) {
   const p = getActivePlayer(state);
   if (state.phase !== "REROLL") return log(state, `Cannot reroll: phase=${state.phase}`);
+  clearSpendUi(state);
   if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice to reroll → End Turn`); }
 
   const ra = getRollActionCfg(p);
@@ -799,6 +1024,7 @@ function boostInReroll(state) {
 function endTurn(state) {
   const p = getActivePlayer(state);
   if (state.phase === "GAME_OVER") return state;
+  clearSpendUi(state);
 
   // If dice remain and player ends normally → discard + take time
   if (p.dicePool.length) {
@@ -845,6 +1071,11 @@ function render() {
   const p = getActivePlayer(s);
   const ra = getRollActionCfg(p);
 
+  if (s.ui?.spend?.open) {
+    const hasDie = p.dicePool.some(d => d.id === s.ui.spend.dieId);
+    if (s.phase !== "SPENDING" || !hasDie) clearSpendUi(s);
+  }
+
   document.getElementById("phase").textContent = s.phase;
   document.getElementById("activePlayer").textContent =
     `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | Badniks=${p.badniks.length} | Time=${s.timeTokens}`;
@@ -862,7 +1093,7 @@ function render() {
   const dis = (id, v) => document.getElementById(id).disabled = !!v;
   dis("btnChooseRollAction", s.phase !== "ROLL_ACTION");
   dis("btnBuildPool", s.phase !== "ROLL_ACTION");
-  dis("btnSpendDie", s.phase !== "SPENDING");
+  dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length);
   dis("btnRerollStep", s.phase !== "REROLL");
   dis("btnBoostInReroll", !(s.phase==="REROLL" && p.boost>0));
   dis("btnBoostAfterRollAction", !(s.phase==="SPENDING" && p.boost>0 && p.dicePool.length>0));
@@ -891,6 +1122,41 @@ function render() {
     el.style.transform = (p.selectedDieId === d.id) ? "scale(1.05)" : "scale(1)";
     el.addEventListener("click", () => { p.selectedDieId = d.id; render(); });
     dp.appendChild(el);
+  }
+
+  // Spend target selection
+  const spendPanel = document.getElementById("spendTargetPanel");
+  const spendUi = s.ui?.spend;
+  if (!spendUi || !spendUi.open) {
+    spendPanel.textContent = `Select a die and click "Spend Selected Die" to choose a target.`;
+  } else {
+    const die = p.dicePool.find(d => d.id === spendUi.dieId);
+    const dieLabel = die ? `${die.color.toUpperCase()}-${die.value}` : "Unknown";
+    spendPanel.innerHTML = `
+      <div class="pill tiny">Die: ${dieLabel}</div>
+      <div class="target-list"></div>
+      <div class="row target-actions">
+        <button id="btnConfirmSpend">Confirm Spend</button>
+        <button id="btnCancelSpend">Cancel</button>
+      </div>
+    `;
+    const list = spendPanel.querySelector(".target-list");
+    for (const t of spendUi.targets) {
+      const item = document.createElement("div");
+      item.className = `target-item ${t.id === spendUi.selectedTargetId ? "selected" : ""}`;
+      item.textContent = t.label;
+      item.addEventListener("click", () => { spendUi.selectedTargetId = t.id; render(); });
+      list.appendChild(item);
+    }
+    const btnConfirm = spendPanel.querySelector("#btnConfirmSpend");
+    const btnCancel = spendPanel.querySelector("#btnCancelSpend");
+    if (btnConfirm) {
+      btnConfirm.disabled = !die || !spendUi.selectedTargetId;
+      btnConfirm.addEventListener("click", () => { confirmSpendSelection(STATE); render(); });
+    }
+    if (btnCancel) {
+      btnCancel.addEventListener("click", () => { cancelSpendSelection(STATE); render(); });
+    }
   }
 
   // Zone view
