@@ -34,6 +34,8 @@
     .hr { height:1px; background:#23305a; margin:10px 0; }
     .ok { color:#b8ffcf; }
     .warn { color:#ffe7a6; }
+    .clickable { cursor:pointer; }
+    .clickable:hover { filter:brightness(1.08); }
     .target-list { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
     .target-item { padding:6px 8px; border:1px solid #2d3b73; border-radius:10px; background:#0f1733; cursor:pointer; }
     .target-item.selected { outline:2px solid rgba(120,200,255,.6); background:#15234a; }
@@ -70,6 +72,7 @@
         <button id="btnChooseRollAction">Set Roll Action</button>
         <button id="btnBuildPool">Roll / Build Dice Pool</button>
       </div>
+      <div id="rollActionDiceHint" class="tiny muted" style="margin-top:6px;"></div>
 
       <div class="row" style="margin-top:8px;">
         <button id="btnBoostAfterRollAction">Spend Boost (After Roll Action)</button>
@@ -96,7 +99,7 @@
       <div class="hr"></div>
 
       <h2>Spend Target</h2>
-      <div id="spendTargetPanel" class="tiny muted">Select a die and click "Spend Selected Die" to choose a target.</div>
+      <div id="spendTargetPanel" class="tiny muted">Select a die and click "Spend Selected Die" to choose a target. Tip: click a Zone/Badnik card to preselect.</div>
 
       <div class="hr"></div>
 
@@ -561,6 +564,59 @@ function buildSpendTargets(state, die) {
   return targets;
 }
 
+function openSpendUiForDie(state, die) {
+  if (!state.ui) state.ui = { spend: null };
+  const targets = buildSpendTargets(state, die);
+  if (!targets.length) return false;
+  state.ui.spend = {
+    open: true,
+    dieId: die.id,
+    targets,
+    selectedTargetId: targets[0].id
+  };
+  return true;
+}
+
+function preselectSpendTarget(state, targetInfo) {
+  const p = getActivePlayer(state);
+  if (state.phase !== "SPENDING") return log(state, "Cannot select spend target outside SPENDING.");
+  const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
+  if (!die) return log(state, "Select a die before targeting.");
+
+  if (!openSpendUiForDie(state, die)) {
+    return log(state, "No legal spend targets for that die.");
+  }
+
+  const spendUi = state.ui?.spend;
+  if (!spendUi) return state;
+
+  let match = null;
+  if (targetInfo.type === "zone") {
+    match = spendUi.targets.find(t =>
+      t.type === "zone" &&
+      t.routeId === targetInfo.routeId &&
+      t.challengeId === targetInfo.challengeId
+    );
+  } else if (targetInfo.type === "badnik") {
+    const candidates = spendUi.targets.filter(t =>
+      t.type === "badnik" && t.badnikIndex === targetInfo.badnikIndex
+    );
+    if (targetInfo.mode) {
+      match = candidates.find(t => t.mode === targetInfo.mode);
+    }
+    if (!match) {
+      match = candidates.find(t => t.mode === "destroy") || candidates[0];
+    }
+  }
+
+  if (!match) {
+    return log(state, "That target is not legal for the selected die.");
+  }
+
+  spendUi.selectedTargetId = match.id;
+  return state;
+}
+
 /* =======================
    Roll Action lookup
    ======================= */
@@ -699,18 +755,10 @@ function spendSelectedDie(state) {
 
   const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
 
-  if (!state.ui) state.ui = { spend: null };
-  const targets = buildSpendTargets(state, die);
-  if (!targets.length) {
+  if (!openSpendUiForDie(state, die)) {
     clearSpendUi(state);
     return takeDamage(state, "Could not spend a die during Spending Step");
   }
-  state.ui.spend = {
-    open: true,
-    dieId: die.id,
-    targets,
-    selectedTargetId: targets[0].id
-  };
   return state;
 
   // Simplified legal zone target: leftmost uncleared on any route that matches exact n and (if colored) exact color.
@@ -1128,7 +1176,7 @@ function render() {
   const spendPanel = document.getElementById("spendTargetPanel");
   const spendUi = s.ui?.spend;
   if (!spendUi || !spendUi.open) {
-    spendPanel.textContent = `Select a die and click "Spend Selected Die" to choose a target.`;
+    spendPanel.textContent = `Select a die and click "Spend Selected Die" to choose a target. Tip: click a Zone/Badnik card to preselect.`;
   } else {
     const die = p.dicePool.find(d => d.id === spendUi.dieId);
     const dieLabel = die ? `${die.color.toUpperCase()}-${die.value}` : "Unknown";
@@ -1165,7 +1213,7 @@ function render() {
   for (const route of s.zone.routes) {
     const next = route.challenges.find(x=>!x.cleared);
     const card = document.createElement("div");
-    card.className = "card";
+    card.className = `card ${next ? "clickable" : ""}`;
     card.innerHTML = `
       <h2>${route.name} Route</h2>
       <div class="tiny">
@@ -1179,6 +1227,13 @@ function render() {
       <div class="tiny muted" style="margin-top:8px;">Track:</div>
       <div class="tiny mono">${route.challenges.map(ch => ch.cleared ? "✓" : (ch.color?ch.color[0].toUpperCase():"_")+ch.n).join("  ")}</div>
     `;
+    if (next) {
+      card.title = "Click to preselect spend target";
+      card.addEventListener("click", () => {
+        preselectSpendTarget(STATE, { type:"zone", routeId: route.id, challengeId: next.id });
+        render();
+      });
+    }
     zv.appendChild(card);
   }
 
@@ -1188,13 +1243,19 @@ function render() {
   if (!p.badniks.length) {
     bv.innerHTML = `<div class="tiny muted">No Badniks.</div>`;
   } else {
-    for (const b of p.badniks) {
+    for (let i = 0; i < p.badniks.length; i++) {
+      const b = p.badniks[i];
       const el = document.createElement("div");
-      el.className = "pill tiny";
+      el.className = "pill tiny clickable";
       el.innerHTML = `<b>${escapeHtml(b.name)}</b>
         <span class="muted">attacks:</span> ${b.attacks.map(a=>`${a.color[0].toUpperCase()}${a.value}`).join(", ")}
         <span class="muted">avoid:</span> ${b.avoid.color[0].toUpperCase()}${b.avoid.value}
         <span class="muted">destroy:</span> R${b.destroy.value}`;
+      el.title = "Click to preselect spend target";
+      el.addEventListener("click", () => {
+        preselectSpendTarget(STATE, { type:"badnik", badnikIndex: i });
+        render();
+      });
       bv.appendChild(el);
     }
   }
