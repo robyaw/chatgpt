@@ -11,6 +11,13 @@
     .row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
     .card { background:#121a33; border:1px solid #23305a; border-radius:14px; padding:12px; box-shadow: 0 8px 25px rgba(0,0,0,.25); }
     .card h2 { font-size: 14px; letter-spacing:.04em; text-transform:uppercase; color:#b8c6ff; }
+    .controls-card { background:#121a33; border-color:#23305a; }
+    .controls-card[data-character="Sonic"] { background:#0f2347; border-color:#2a4f96; }
+    .controls-card[data-character="Tails"] { background:#3a220f; border-color:#8b5b2a; }
+    .controls-card[data-character="Knuckles"] { background:#3a0f12; border-color:#8a2a2a; }
+    .controls-card[data-character="Amy"] { background:#351126; border-color:#7a2d53; }
+    .character-heading { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:18px; font-weight:700; margin:0 0 6px; color:#e8ecff; }
+    .badge-tight { padding:2px 6px; font-size:11px; }
     button, select, input { background:#1a2550; border:1px solid #2d3b73; color:#e8ecff; padding:8px 10px; border-radius:10px; cursor:pointer; }
     button:hover { filter:brightness(1.1); }
     button:disabled { opacity:.5; cursor:not-allowed; }
@@ -49,7 +56,8 @@
   </p>
 
   <div class="row">
-    <div class="card" style="flex:1; min-width:340px;">
+    <div id="controlsCard" class="card controls-card" style="flex:1; min-width:340px;">
+      <div id="characterHeading" class="character-heading"></div>
       <h2>Game Controls</h2>
       <div class="row">
         <button id="newGameBtn">New Game</button>
@@ -69,16 +77,14 @@
         <label class="pill tiny">Roll Action
           <select id="rollActionSelect"></select>
         </label>
-        <button id="btnChooseRollAction">Set Roll Action</button>
         <button id="btnBuildPool">Roll / Build Dice Pool</button>
       </div>
       <div id="rollActionDiceHint" class="tiny muted" style="margin-top:6px;"></div>
 
       <div class="row" style="margin-top:8px;">
-        <button id="btnBoostAfterRollAction">Spend Boost (After Roll Action)</button>
+        <button id="btnUseBoostToken">Use Boost Token</button>
         <button id="btnSpendDie">Spend Selected Die</button>
         <button id="btnRerollStep">Reroll Step</button>
-        <button id="btnBoostInReroll">Spend Boost (Reroll Again)</button>
         <button id="btnEndTurn">End Turn (Discard + Time)</button>
       </div>
 
@@ -204,11 +210,11 @@ const CONFIG = {
           onBuildPool: (ctx) => {
             const { p, state } = ctx;
             const min = Math.min(...p.dicePool.map(d=>d.value));
-            // discard one lowest (if multiple, remove one)
-            const idx = p.dicePool.findIndex(d=>d.value===min);
-            if (idx >= 0) {
-              const removed = p.dicePool.splice(idx,1)[0];
-              log(state, `Sonic Super Peel Out (ROLL): discard lowest die (${removed.color.toUpperCase()}-${removed.value}).`);
+            const removed = p.dicePool.filter(d => d.value === min);
+            if (removed.length) {
+              p.dicePool = p.dicePool.filter(d => d.value !== min);
+              const label = removed.map(d => `${d.color.toUpperCase()}-${d.value}`).join(" ");
+              log(state, `Sonic Super Peel Out (ROLL): discard lowest dice (${label}).`);
             }
           }
         },
@@ -357,7 +363,7 @@ function generateZone(genCfg) {
     for (let i=0;i<genCfg.challengesPerRoute;i++) {
       const n = rollD6();
       const r = rng()();
-      const color = r < 0.2 ? DieColor.BLUE : r < 0.4 ? DieColor.YELLOW : r < 0.6 ? DieColor.RED : null;
+      const color = r < 0.1 ? DieColor.BLUE : r < 0.2 ? DieColor.YELLOW : r < 0.3 ? DieColor.RED : null;
 
       const rr = rng()();
       const reward =
@@ -1012,7 +1018,8 @@ function spendDieOnTarget(state, die, target) {
    ======================= */
 function rerollStep(state) {
   const p = getActivePlayer(state);
-  if (state.phase !== "REROLL") return log(state, `Cannot reroll: phase=${state.phase}`);
+  const canRerollNow = state.phase === "REROLL" || (state.phase === "SPENDING" && p.spentSinceLastReroll > 0);
+  if (!canRerollNow) return log(state, `Cannot reroll: phase=${state.phase}`);
   clearSpendUi(state);
   if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice to reroll → End Turn`); }
 
@@ -1134,6 +1141,17 @@ function render() {
   const p = getActivePlayer(s);
   const ra = getRollActionCfg(p);
 
+  const controlsCard = document.getElementById("controlsCard");
+  if (controlsCard) controlsCard.dataset.character = p.character;
+  const characterHeading = document.getElementById("characterHeading");
+  if (characterHeading) {
+    const label = `${p.name} — ${p.character}`;
+    characterHeading.innerHTML = `
+      <span>${escapeHtml(label)}</span>
+      <span class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Rings ${p.heldRings}</span>
+    `;
+  }
+
   if (s.ui?.spend?.open) {
     const hasDie = p.dicePool.some(d => d.id === s.ui.spend.dieId);
     if (s.phase !== "SPENDING" || !hasDie) clearSpendUi(s);
@@ -1154,12 +1172,14 @@ function render() {
 
   // Buttons
   const dis = (id, v) => document.getElementById(id).disabled = !!v;
-  dis("btnChooseRollAction", s.phase !== "ROLL_ACTION");
   dis("btnBuildPool", s.phase !== "ROLL_ACTION");
   dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length);
-  dis("btnRerollStep", s.phase !== "REROLL");
-  dis("btnBoostInReroll", !(s.phase==="REROLL" && p.boost>0));
-  dis("btnBoostAfterRollAction", !(s.phase==="SPENDING" && p.boost>0 && p.dicePool.length>0));
+  const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
+  dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll));
+  const canUseBoost =
+    (s.phase === "SPENDING" && p.boost > 0 && p.dicePool.length > 0) ||
+    (s.phase === "REROLL" && p.boost > 0);
+  dis("btnUseBoostToken", !canUseBoost);
   dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN"));
 
   // Roll action select
@@ -1173,6 +1193,7 @@ function render() {
     sel.appendChild(opt);
   }
   sel.value = p.chosenRollAction;
+  sel.disabled = s.phase !== "ROLL_ACTION";
   const hintEl = document.getElementById("rollActionDiceHint");
   if (hintEl) {
     hintEl.textContent = `Dice for ${ra.name}: ${buildRollActionDiceHint(ra.dice)}`;
@@ -1296,9 +1317,10 @@ document.getElementById("newGameBtn").addEventListener("click", () => {
   render();
 });
 
-document.getElementById("btnChooseRollAction").addEventListener("click", () => {
+document.getElementById("rollActionSelect").addEventListener("change", (event) => {
+  if (!STATE) return;
   const p = getActivePlayer(STATE);
-  p.chosenRollAction = document.getElementById("rollActionSelect").value;
+  p.chosenRollAction = event.target.value;
   log(STATE, `${p.name} set Roll Action to: ${p.chosenRollAction}`);
   render();
 });
@@ -1308,8 +1330,12 @@ document.getElementById("btnBuildPool").addEventListener("click", () => {
   render();
 });
 
-document.getElementById("btnBoostAfterRollAction").addEventListener("click", () => {
-  boostAfterRollAction(STATE);
+document.getElementById("btnUseBoostToken").addEventListener("click", () => {
+  if (STATE?.phase === "REROLL") {
+    boostInReroll(STATE);
+  } else {
+    boostAfterRollAction(STATE);
+  }
   render();
 });
 
@@ -1320,11 +1346,6 @@ document.getElementById("btnSpendDie").addEventListener("click", () => {
 
 document.getElementById("btnRerollStep").addEventListener("click", () => {
   rerollStep(STATE);
-  render();
-});
-
-document.getElementById("btnBoostInReroll").addEventListener("click", () => {
-  boostInReroll(STATE);
   render();
 });
 
