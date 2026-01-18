@@ -1112,6 +1112,21 @@ function escapeHtml(str) {
   return str.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
 }
 
+function buildRollActionDiceHint(diceSpec) {
+  if (!diceSpec) return "none";
+  const order = [
+    { key: "blue", emoji: "🟦" },
+    { key: "red", emoji: "🟥" },
+    { key: "yellow", emoji: "🟨" }
+  ];
+  let out = "";
+  for (const item of order) {
+    const count = diceSpec[item.key] || 0;
+    if (count > 0) out += item.emoji.repeat(count);
+  }
+  return out || "none";
+}
+
 function render() {
   const s = STATE;
   if (!s) return;
@@ -1153,10 +1168,15 @@ function render() {
   for (const a of getCharCfg(p).rollActions) {
     const opt = document.createElement("option");
     opt.value = a.name;
-    opt.textContent = a.name;
+    const hint = buildRollActionDiceHint(a.dice);
+    opt.textContent = hint === "none" ? a.name : `${a.name} ${hint}`;
     sel.appendChild(opt);
   }
   sel.value = p.chosenRollAction;
+  const hintEl = document.getElementById("rollActionDiceHint");
+  if (hintEl) {
+    hintEl.textContent = `Dice for ${ra.name}: ${buildRollActionDiceHint(ra.dice)}`;
+  }
 
   // Dice pool
   const dp = document.getElementById("dicePool");
