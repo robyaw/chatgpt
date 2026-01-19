@@ -270,13 +270,14 @@ const CONFIG = {
         {
           name:"Propeller Tail",
           dice:{ blue:4 },
-          // REROLL: Gain blue die if 2 or more dice were spent since the last Reroll.
+          // REROLL: Gain yellow die if 2 or more dice were spent since the last Reroll.
           onRerollStepStart: (ctx) => {
             const { state, p } = ctx;
-            if (p.spentSinceLastReroll >= 2) {
-              const d = makeDie(DieColor.BLUE, rollD6());
+            if (p.spentSinceLastReroll >= 2 && !p.propellerTailBonusGivenSinceReroll) {
+              const d = makeDie(DieColor.YELLOW, rollD6());
               p.dicePool.push(d);
-              log(state, `Tails Propeller Tail (REROLL): spent>=2 since last reroll → gained a BLUE die (${d.value}).`);
+              p.propellerTailBonusGivenSinceReroll = true;
+              log(state, `Tails Propeller Tail (REROLL): spent>=2 since last reroll -> gained a YELLOW die (${d.value}).`);
             }
           }
         }
@@ -491,6 +492,8 @@ function newGame({ playerCount, seedStr }) {
 
       invulnerable: false,
       spentSinceLastReroll: 0,
+      hasRerolledThisTurn: false,
+      propellerTailBonusGivenSinceReroll: false,
       oncePerTurn: {},
       lastChainSpendRule: null, // used for Glide-like chaining
     };
@@ -542,6 +545,8 @@ function takeDamage(state, reason) {
   p.dicePool = [];
   p.selectedDieId = null;
   p.spentSinceLastReroll = 0;
+  p.hasRerolledThisTurn = false;
+  p.propellerTailBonusGivenSinceReroll = false;
   p.lastChainSpendRule = null;
 
   makeInvulnerable(p);
@@ -798,6 +803,8 @@ function buildDicePool(state) {
   const p = getActivePlayer(state);
   p.oncePerTurn = {};                 // refresh "once per turn" flags
   p.spentSinceLastReroll = 0;
+  p.hasRerolledThisTurn = false;
+  p.propellerTailBonusGivenSinceReroll = false;
   p.lastChainSpendRule = null;
 
   const ra = getRollActionCfg(p);
@@ -1010,6 +1017,13 @@ function spendDieOnTarget(state, die, target) {
   // Update counters for "since last reroll"
   p.spentSinceLastReroll += 1;
 
+  if (ra.name === "Propeller Tail" && !p.hasRerolledThisTurn && p.spentSinceLastReroll >= 2 && !p.propellerTailBonusGivenSinceReroll) {
+    const bonusDie = makeDie(DieColor.YELLOW, rollD6());
+    p.dicePool.push(bonusDie);
+    p.propellerTailBonusGivenSinceReroll = true;
+    log(state, `Tails Propeller Tail (SPEND): spent>=2 after initial roll -> gained a YELLOW die (${bonusDie.value}).`);
+  }
+
   // Core dice properties (from rulebook)
   const spentDie = die;
 
@@ -1072,6 +1086,7 @@ function rerollStep(state) {
   if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice to reroll → End Turn`); }
 
   const ra = getRollActionCfg(p);
+  p.hasRerolledThisTurn = true;
 
   // Apply REROLL effects at the beginning of the reroll step
   if (typeof ra.onRerollStepStart === "function") {
@@ -1106,6 +1121,7 @@ function rerollStep(state) {
 
   // Reset counters after a reroll happens
   p.spentSinceLastReroll = 0;
+  p.propellerTailBonusGivenSinceReroll = false;
   p.lastChainSpendRule = null;
 
   state.phase = "SPENDING";
