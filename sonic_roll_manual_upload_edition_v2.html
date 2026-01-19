@@ -52,6 +52,14 @@
     .track-item.cleared { opacity:.55; text-decoration: line-through; }
     .track-label { font-weight:600; font-size:14px; }
     .track-reward { color:#b0b8e8; font-size:12px; }
+    .player-setup { display:flex; flex-direction:column; gap:6px; }
+    .player-setup-row { display:flex; align-items:center; gap:8px; }
+    .player-setup-row select { min-width:150px; }
+    .portrait { width:28px; height:28px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; border:1px solid #2d3b73; background:#1a2550; color:#e8ecff; }
+    .portrait.sonic { background:#1a4fa3; }
+    .portrait.tails { background:#b56a1f; }
+    .portrait.knuckles { background:#a33131; }
+    .portrait.amy { background:#8e2f60; }
   </style>
 </head>
 <body>
@@ -75,6 +83,12 @@
           <input id="seed" value="12345" size="10" />
         </label>
       </div>
+
+      <div class="hr"></div>
+
+      <h2>Characters</h2>
+      <div id="playerSetup" class="player-setup tiny"></div>
+      <div class="tiny muted">Each character can only be used once per game.</div>
 
       <div class="hr"></div>
 
@@ -109,6 +123,8 @@
 
       <div class="hr"></div>
 
+      <h2>Discard a Die</h2>
+      <div id="discardPanel" class="tiny muted">No pending discard.</div>
       <h2>Spend Target</h2>
       <div id="spendTargetPanel" class="tiny muted">Select a die and click "Spend Selected Die" to choose a target. Tip: click a Zone/Badnik card to preselect.</div>
 
@@ -172,6 +188,8 @@ function rollD6(){ return 1 + Math.floor(rng()()*6); }
    ======================= */
 const DieColor = Object.freeze({ BLUE:"blue", YELLOW:"yellow", RED:"red", BLACK:"black" });
 
+let PRE_GAME_CHARACTERS = [];
+
 function uuid() {
   // browser-safe UUID fallback
   if (crypto?.randomUUID) return crypto.randomUUID();
@@ -195,6 +213,115 @@ function isGameOver(state) {
   if (state.timeTokens <= 0) return "Time ran out (0 Time Tokens)";
   for (const p of state.players) if (p.lives <= 0) return `${p.name} lost final Life`;
   return null;
+}
+
+function getDefaultCharacterOrder() {
+  return Object.keys(CONFIG.characters);
+}
+
+const CHARACTER_PORTRAITS = {
+  Sonic: { label: "S", className: "sonic" },
+  Tails: { label: "T", className: "tails" },
+  Knuckles: { label: "K", className: "knuckles" },
+  Amy: { label: "A", className: "amy" }
+};
+
+function applyPortrait(el, character) {
+  if (!el) return;
+  const def = CHARACTER_PORTRAITS[character] || { label: "?", className: "" };
+  el.textContent = def.label;
+  el.className = `portrait ${def.className}`;
+  el.title = character || "Unknown";
+}
+
+function updatePortraitsFromSelectors() {
+  const selects = Array.from(document.querySelectorAll("[id^='playerCharSelect-']"));
+  for (const sel of selects) {
+    const idx = sel.id.split("-")[1];
+    const portrait = document.getElementById(`playerPortrait-${idx}`);
+    applyPortrait(portrait, sel.value);
+  }
+}
+
+function getPreGameCharacterSelections(playerCount) {
+  const allChars = getDefaultCharacterOrder();
+  const used = new Set();
+  const out = [];
+  for (let i = 0; i < playerCount; i++) {
+    let choice = PRE_GAME_CHARACTERS[i];
+    if (!allChars.includes(choice) || used.has(choice)) {
+      choice = allChars.find(c => !used.has(c)) || allChars[i % allChars.length];
+    }
+    out.push(choice);
+    used.add(choice);
+  }
+  PRE_GAME_CHARACTERS = out.slice();
+  return out;
+}
+
+function enforceUniqueCharacterSelections() {
+  const selects = Array.from(document.querySelectorAll("[id^='playerCharSelect-']"));
+  const allChars = getDefaultCharacterOrder();
+  const used = new Set();
+  for (const sel of selects) {
+    let choice = sel.value;
+    if (!allChars.includes(choice) || used.has(choice)) {
+      choice = allChars.find(c => !used.has(c)) || allChars[0];
+      sel.value = choice;
+    }
+    used.add(choice);
+  }
+  for (const sel of selects) {
+    for (const opt of sel.options) {
+      opt.disabled = used.has(opt.value) && opt.value !== sel.value;
+    }
+  }
+  PRE_GAME_CHARACTERS = selects.map(s => s.value);
+  updatePortraitsFromSelectors();
+}
+
+function renderCharacterSelectors() {
+  const container = document.getElementById("playerSetup");
+  if (!container) return;
+  const playerCount = parseInt(document.getElementById("playerCount").value, 10);
+  const selections = getPreGameCharacterSelections(playerCount);
+  const allChars = getDefaultCharacterOrder();
+  container.innerHTML = "";
+
+  for (let i = 0; i < playerCount; i++) {
+    const row = document.createElement("div");
+    row.className = "player-setup-row";
+    row.innerHTML = `
+      <span class="badge">P${i+1}</span>
+      <span id="playerPortrait-${i}" class="portrait"></span>
+      <select id="playerCharSelect-${i}"></select>
+    `;
+    const sel = row.querySelector("select");
+    for (const name of allChars) {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    }
+    sel.value = selections[i] || allChars[i % allChars.length];
+    sel.addEventListener("change", () => {
+      PRE_GAME_CHARACTERS[i] = sel.value;
+      enforceUniqueCharacterSelections();
+    });
+    const portrait = row.querySelector(`#playerPortrait-${i}`);
+    applyPortrait(portrait, sel.value);
+    container.appendChild(row);
+  }
+  enforceUniqueCharacterSelections();
+}
+
+function readCharacterSelections(playerCount) {
+  const selections = [];
+  for (let i = 0; i < playerCount; i++) {
+    const sel = document.getElementById(`playerCharSelect-${i}`);
+    selections.push(sel ? sel.value : null);
+  }
+  return selections;
 }
 
 /* =======================
@@ -367,7 +494,7 @@ const CONFIG = {
       Bot: { type:"badnik", amount:1 }
     },
     bumper: {
-      maxGroups: 2,
+      maxGroups: 1,
       groupChance: 0.55,
       tripleChance: 0.35,
       colorChance: 0.5
@@ -397,10 +524,11 @@ function generateZoneCard(genCfg) {
 
   function rollReward() {
     const rr = rng()();
-    return rr < 0.55 ? { type:"rings", amount: (rng()()<0.2?5:1) } :
-           rr < 0.7  ? { type:"boost", amount:1 } :
-           rr < 0.85 ? { type:"badnik", amount:1 } :
-                       { type:"hazard", amount:1 };
+    return rr < 0.5  ? { type:"rings", amount: (rng()()<0.2?5:1) } :
+           rr < 0.65 ? { type:"boost", amount:1 } :
+           rr < 0.8  ? { type:"badnik", amount:1 } :
+           rr < 0.9  ? { type:"hazard", amount:1 } :
+                       { type:"lose_die", amount:1 };
   }
 
   const challenges = [];
@@ -466,13 +594,25 @@ function generateActBoard(genCfg) {
 /* =======================
    Game creation
    ======================= */
-function newGame({ playerCount, seedStr }) {
+function newGame({ playerCount, seedStr, characterSelections }) {
   const seed = hashSeed(seedStr);
   initGameRng(seed);
 
   const charNames = Object.keys(CONFIG.characters);
+  const requested = Array.isArray(characterSelections) ? characterSelections : [];
+  const used = new Set();
+  const finalChars = [];
+  for (let i = 0; i < playerCount; i++) {
+    let choice = requested[i];
+    if (!charNames.includes(choice) || used.has(choice)) {
+      choice = charNames.find(c => !used.has(c)) || charNames[i % charNames.length];
+    }
+    finalChars.push(choice);
+    used.add(choice);
+  }
+
   const players = Array.from({length: playerCount}, (_,i) => {
-    const character = charNames[i % charNames.length];
+    const character = finalChars[i];
     const rollActions = CONFIG.characters[character].rollActions;
     return {
       id: i,
@@ -512,7 +652,7 @@ function newGame({ playerCount, seedStr }) {
     badnikDiscard: [],
     zone,
     actBoard,
-    ui: { spend: null },
+    ui: { spend: null, discard: null, starPost: null },
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
 }
@@ -599,6 +739,8 @@ function applyReward(state, reward) {
     for (let i=0;i<reward.amount;i++) drawBadnik(state, p);
   } else if (reward.type === "hazard") {
     for (let i=0;i<reward.amount;i++) hazardRoll(state);
+  } else if (reward.type === "lose_die") {
+    queueLoseDieReward(state, "reward");
   }
 }
 
@@ -631,8 +773,13 @@ function clearSpendUi(state) {
   if (state?.ui) state.ui.spend = null;
 }
 
+function clearDiscardUi(state) {
+  if (state?.ui) state.ui.discard = null;
+}
+
 function formatRewardLabel(reward) {
   if (!reward) return "none";
+  if (reward.type === "lose_die") return "lose die";
   if (reward.amount != null) return `${reward.type} x${reward.amount}`;
   return `${reward.type}`;
 }
@@ -640,6 +787,32 @@ function formatRewardLabel(reward) {
 function getActBoardReward(state, routeName) {
   const route = state?.actBoard?.routes?.find(r => r.name === routeName);
   return route?.reward || null;
+}
+
+function queueLoseDieReward(state, reason) {
+  const p = getActivePlayer(state);
+  if (!state.ui) state.ui = { spend: null, discard: null, starPost: null };
+  if (state.ui.discard?.open) {
+    log(state, `Lose a die (${reason}): discard already pending.`);
+    return;
+  }
+  if (!p.dicePool.length) {
+    log(state, `Lose a die (${reason}): no dice in pool.`);
+    return;
+  }
+  if (p.dicePool.length === 1) {
+    const removed = p.dicePool.pop();
+    log(state, `Lose a die (${reason}): discarded ${removed.color.toUpperCase()}-${removed.value}.`);
+    p.selectedDieId = null;
+    return;
+  }
+  state.ui.discard = {
+    open: true,
+    reason,
+    selectedDieId: null,
+    postSpend: null
+  };
+  log(state, `Lose a die (${reason}): choose a die to discard.`);
 }
 
 function getBumperLock(card, groupId) {
@@ -730,7 +903,7 @@ function buildSpendTargets(state, die) {
 }
 
 function openSpendUiForDie(state, die) {
-  if (!state.ui) state.ui = { spend: null };
+  if (!state.ui) state.ui = { spend: null, discard: null, starPost: null };
   const targets = buildSpendTargets(state, die);
   if (!targets.length) return false;
   state.ui.spend = {
@@ -745,6 +918,7 @@ function openSpendUiForDie(state, die) {
 function preselectSpendTarget(state, targetInfo) {
   const p = getActivePlayer(state);
   if (state.phase !== "SPENDING") return log(state, "Cannot select spend target outside SPENDING.");
+  if (state.ui?.discard?.open) return log(state, "Resolve the discard before selecting a spend target.");
   const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
   if (!die) return log(state, "Select a die before targeting.");
 
@@ -799,6 +973,7 @@ function buildDicePool(state) {
   if (state.phase !== "ROLL_ACTION") return log(state, `Cannot build pool: phase=${state.phase}`);
 
   clearSpendUi(state);
+  clearDiscardUi(state);
 
   const p = getActivePlayer(state);
   p.oncePerTurn = {};                 // refresh "once per turn" flags
@@ -907,6 +1082,7 @@ function boostAfterRollAction(state) {
   p.boost -= 1;
   log(state, `${p.name} spends 1 Boost (after Roll Action): reroll Dice Pool and enter REROLL step (Badnik-vulnerable).`);
   clearSpendUi(state);
+  clearDiscardUi(state);
   state.phase = "REROLL";
   return rerollStep(state);
 }
@@ -958,10 +1134,61 @@ function cancelSpendSelection(state) {
   return state;
 }
 
+function finalizePostSpend(state, spentDie, ra) {
+  const p = getActivePlayer(state);
+  if (!spentDie) return state;
+
+  if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, "Dice Pool empty -> End Turn"); }
+
+  if (spentDie.color === DieColor.BLUE) {
+    log(state, `Run die property: ${p.name} may spend another die without rerolling.`);
+    state.phase = "SPENDING";
+    return state;
+  }
+
+  if (p.lastChainSpendRule?.color === DieColor.YELLOW && ra?.name === "Glide") {
+    const canChain = p.dicePool.some(d => d.color === DieColor.YELLOW && d.value < p.lastChainSpendRule.lastSpentValue);
+    if (canChain) {
+      log(state, `Knuckles Glide (SPEND): may spend another YELLOW without reroll if it is lower than last spent (${p.lastChainSpendRule.lastSpentValue}).`);
+      state.phase = "SPENDING";
+      return state;
+    }
+  }
+
+  state.phase = "REROLL";
+  log(state, "Must REROLL remaining dice before next spend.");
+  return state;
+}
+
+function confirmDiscardSelection(state) {
+  const p = getActivePlayer(state);
+  const discardUi = state.ui?.discard;
+  if (!discardUi?.open) return state;
+  const die = p.dicePool.find(d => d.id === discardUi.selectedDieId);
+  if (!die) {
+    log(state, "Discard canceled: no die selected.");
+    return state;
+  }
+
+  p.dicePool = p.dicePool.filter(d => d.id !== die.id);
+  p.selectedDieId = null;
+  log(state, `Lose a die (${discardUi.reason}): discarded ${die.color.toUpperCase()}-${die.value}.`);
+
+  const post = discardUi.postSpend;
+  clearDiscardUi(state);
+  if (post?.spentDieColor) {
+    const ra = getRollActionCfg(p);
+    return finalizePostSpend(state, { color: post.spentDieColor }, ra);
+  }
+  return state;
+}
+
 function spendDieOnTarget(state, die, target) {
   const p = getActivePlayer(state);
   const ra = getRollActionCfg(p);
   let spendTarget = null;
+  let challengeReward = null;
+  let completedRoute = null;
 
   if (target.type === "zone") {
     const route = state.zone.routes.find(r => r.id === target.routeId);
@@ -978,8 +1205,8 @@ function spendDieOnTarget(state, die, target) {
     spendTarget = { type:"zone", route: route.name, challengeId: ch.id };
     const reqLabel = formatChallengeRequirement(ch, card);
     log(state, `${p.name} spends ${die.color.toUpperCase()}-${die.value} to clear ${route.name} challenge (${reqLabel}).`);
-    applyReward(state, ch.reward);
-    completeZoneCard(state, route);
+    challengeReward = ch.reward;
+    completedRoute = route;
   } else if (target.type === "badnik") {
     const b = p.badniks[target.badnikIndex];
     if (!b) {
@@ -1049,30 +1276,14 @@ function spendDieOnTarget(state, die, target) {
     p.lastChainSpendRule = null;
   }
 
-  // If pool empty -> end turn
-  if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, "Dice Pool empty -> End Turn"); }
-
-  // Run die property: may spend another die without reroll
-  if (spentDie.color === DieColor.BLUE) {
-    log(state, `Run die property: ${p.name} may spend another die without rerolling.`);
-    state.phase = "SPENDING";
+  if (challengeReward) applyReward(state, challengeReward);
+  if (completedRoute) completeZoneCard(state, completedRoute);
+  if (state.ui?.discard?.open) {
+    state.ui.discard.postSpend = { spentDieColor: spentDie.color };
     return state;
   }
-
-  // Knuckles Glide (dashboard): may spend another yellow without reroll if its result is lower than last spent die.
-  if (p.lastChainSpendRule?.color === DieColor.YELLOW && ra.name === "Glide") {
-    const canChain = p.dicePool.some(d => d.color === DieColor.YELLOW && d.value < p.lastChainSpendRule.lastSpentValue);
-    if (canChain) {
-      log(state, `Knuckles Glide (SPEND): may spend another YELLOW without reroll if it is lower than last spent (${p.lastChainSpendRule.lastSpentValue}).`);
-      state.phase = "SPENDING";
-      return state;
-    }
-  }
-
-  // Otherwise must reroll
-  state.phase = "REROLL";
-  log(state, "Must REROLL remaining dice before next spend.");
-  return state;
+  if (state.phase === "END_TURN" || state.phase === "GAME_OVER") return state;
+  return finalizePostSpend(state, spentDie, ra);
 }
 
 /* =======================
@@ -1083,6 +1294,7 @@ function rerollStep(state) {
   const canRerollNow = state.phase === "REROLL" || (state.phase === "SPENDING" && p.spentSinceLastReroll > 0);
   if (!canRerollNow) return log(state, `Cannot reroll: phase=${state.phase}`);
   clearSpendUi(state);
+  clearDiscardUi(state);
   if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice to reroll → End Turn`); }
 
   const ra = getRollActionCfg(p);
@@ -1144,6 +1356,7 @@ function endTurn(state) {
   const p = getActivePlayer(state);
   if (state.phase === "GAME_OVER") return state;
   clearSpendUi(state);
+  clearDiscardUi(state);
 
   // If dice remain and player ends normally → discard + take time
   if (p.dicePool.length) {
@@ -1220,6 +1433,9 @@ function render() {
     const hasDie = p.dicePool.some(d => d.id === s.ui.spend.dieId);
     if (s.phase !== "SPENDING" || !hasDie) clearSpendUi(s);
   }
+  if (s.ui?.discard?.open) {
+    if (s.phase !== "SPENDING" || p.dicePool.length < 2) clearDiscardUi(s);
+  }
 
   document.getElementById("phase").textContent = s.phase;
   document.getElementById("activePlayer").textContent =
@@ -1236,15 +1452,16 @@ function render() {
 
   // Buttons
   const dis = (id, v) => document.getElementById(id).disabled = !!v;
+  const discardOpen = !!s.ui?.discard?.open;
   dis("btnBuildPool", s.phase !== "ROLL_ACTION");
-  dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length);
+  dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || discardOpen);
   const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
-  dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll));
+  dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll) || discardOpen);
   const canUseBoost =
     (s.phase === "SPENDING" && p.boost > 0 && p.dicePool.length > 0) ||
     (s.phase === "REROLL" && p.boost > 0);
-  dis("btnUseBoostToken", !canUseBoost);
-  dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN"));
+  dis("btnUseBoostToken", !canUseBoost || discardOpen);
+  dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN") || discardOpen);
 
   // Roll action select
   const sel = document.getElementById("rollActionSelect");
@@ -1266,15 +1483,46 @@ function render() {
   // Dice pool
   const dp = document.getElementById("dicePool");
   dp.innerHTML = "";
+  const discardUi = s.ui?.discard;
+  const selectedDieId = discardUi?.open ? discardUi.selectedDieId : p.selectedDieId;
   for (const d of p.dicePool) {
     const el = document.createElement("div");
     el.className = `die ${d.color}`;
     el.textContent = d.value;
     el.title = d.color;
-    el.style.opacity = (p.selectedDieId === d.id) ? "1" : "0.82";
-    el.style.transform = (p.selectedDieId === d.id) ? "scale(1.05)" : "scale(1)";
-    el.addEventListener("click", () => { p.selectedDieId = d.id; render(); });
+    el.style.opacity = (selectedDieId === d.id) ? "1" : "0.82";
+    el.style.transform = (selectedDieId === d.id) ? "scale(1.05)" : "scale(1)";
+    el.addEventListener("click", () => {
+      if (discardUi?.open) {
+        discardUi.selectedDieId = d.id;
+      } else {
+        p.selectedDieId = d.id;
+      }
+      render();
+    });
     dp.appendChild(el);
+  }
+
+  // Discard panel
+  const discardPanel = document.getElementById("discardPanel");
+  if (discardPanel) {
+    if (!discardUi || !discardUi.open) {
+      discardPanel.textContent = "No pending discard.";
+    } else {
+      const selected = p.dicePool.find(d => d.id === discardUi.selectedDieId);
+      const label = selected ? `${selected.color.toUpperCase()}-${selected.value}` : "Select a die to discard.";
+      discardPanel.innerHTML = `
+        <div class="pill tiny">Discard: ${label}</div>
+        <div class="row target-actions">
+          <button id="btnConfirmDiscard">Discard Selected Die</button>
+        </div>
+      `;
+      const btn = discardPanel.querySelector("#btnConfirmDiscard");
+      if (btn) {
+        btn.disabled = !selected;
+        btn.addEventListener("click", () => { confirmDiscardSelection(STATE); render(); });
+      }
+    }
   }
 
   // Spend target selection
@@ -1394,8 +1642,13 @@ function render() {
 document.getElementById("newGameBtn").addEventListener("click", () => {
   const playerCount = parseInt(document.getElementById("playerCount").value, 10);
   const seedStr = document.getElementById("seed").value || "12345";
-  STATE = newGame({ playerCount, seedStr });
+  const characterSelections = readCharacterSelections(playerCount);
+  STATE = newGame({ playerCount, seedStr, characterSelections });
   render();
+});
+
+document.getElementById("playerCount").addEventListener("change", () => {
+  renderCharacterSelectors();
 });
 
 document.getElementById("rollActionSelect").addEventListener("change", (event) => {
@@ -1436,6 +1689,7 @@ document.getElementById("btnEndTurn").addEventListener("click", () => {
 });
 
 // Auto-start
+renderCharacterSelectors();
 document.getElementById("newGameBtn").click();
 </script>
 </body>
