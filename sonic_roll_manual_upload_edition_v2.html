@@ -359,10 +359,17 @@ const CONFIG = {
   zoneGenerator: {
     challengesPerCard: 7,
     deckCounts: { 1: 8, 2: 8, 3: 9, 4: 10 },
-    routeRewards: {
+    actBoardName: "Green Hill Zone (Act 1)",
+    actBoardRewards: {
       Top: { type:"rings", amount:2 },
       Mid: { type:"boost", amount:1 },
       Bot: { type:"badnik", amount:1 }
+    },
+    bumper: {
+      maxGroups: 2,
+      groupChance: 0.55,
+      tripleChance: 0.35,
+      colorChance: 0.5
     }
   }
 };
@@ -371,22 +378,64 @@ const CONFIG = {
    Zone (simplified)
    ======================= */
 function generateZoneCard(genCfg) {
+  const bumperCfg = genCfg.bumper || {};
+  const maxGroups = bumperCfg.maxGroups ?? 0;
+  const groupChance = bumperCfg.groupChance ?? 0;
+  const tripleChance = bumperCfg.tripleChance ?? 0.3;
+  const colorChance = bumperCfg.colorChance ?? 0.4;
+
+  function rollBaseColor() {
+    const r = rng()();
+    return r < 0.1 ? DieColor.BLUE : r < 0.2 ? DieColor.YELLOW : r < 0.3 ? DieColor.RED : null;
+  }
+
+  function rollBumperColor() {
+    const r = rng()();
+    return r < 0.34 ? DieColor.BLUE : r < 0.67 ? DieColor.YELLOW : DieColor.RED;
+  }
+
+  function rollReward() {
+    const rr = rng()();
+    return rr < 0.55 ? { type:"rings", amount: (rng()()<0.2?5:1) } :
+           rr < 0.7  ? { type:"boost", amount:1 } :
+           rr < 0.85 ? { type:"badnik", amount:1 } :
+                       { type:"hazard", amount:1 };
+  }
+
   const challenges = [];
   for (let i=0;i<genCfg.challengesPerCard;i++) {
     const n = rollD6();
-    const r = rng()();
-    const color = r < 0.1 ? DieColor.BLUE : r < 0.2 ? DieColor.YELLOW : r < 0.3 ? DieColor.RED : null;
-
-    const rr = rng()();
-    const reward =
-      rr < 0.55 ? { type:"rings", amount: (rng()()<0.2?5:1) } :
-      rr < 0.7  ? { type:"boost", amount:1 } :
-      rr < 0.85 ? { type:"badnik", amount:1 } :
-                  { type:"hazard", amount:1 };
-
+    const color = rollBaseColor();
+    const reward = rollReward();
     challenges.push({ id: uuid(), n, color, cleared:false, reward });
   }
-  return { id: uuid(), challenges };
+
+  const occupied = Array(challenges.length).fill(false);
+  const groupCount = Math.min(maxGroups, challenges.length > 2 ? maxGroups : 0);
+  for (let g=0; g<groupCount; g++) {
+    if (rng()() > groupChance) continue;
+    const length = rng()() < tripleChance ? 3 : 2;
+    if (length > challenges.length) continue;
+    let placed = false;
+    for (let attempts=0; attempts<25; attempts++) {
+      const start = Math.floor(rng()() * (challenges.length - length + 1));
+      if (occupied.slice(start, start + length).some(Boolean)) continue;
+      const groupId = uuid();
+      const bumperColor = rng()() < colorChance ? rollBumperColor() : null;
+      for (let i=0;i<length;i++) {
+        const ch = challenges[start + i];
+        ch.bumper = { id: groupId, index: i, length };
+        ch.n = null;
+        ch.color = bumperColor;
+        occupied[start + i] = true;
+      }
+      placed = true;
+      break;
+    }
+    if (!placed) break;
+  }
+
+  return { id: uuid(), challenges, bumperLocks: {} };
 }
 
 function generateZone(genCfg, playerCount) {
@@ -398,11 +447,19 @@ function generateZone(genCfg, playerCount) {
   const routes = ["Top","Mid","Bot"].map(name => ({
     id: uuid(),
     name,
-    reward: genCfg.routeRewards?.[name] || { type:"rings", amount:1 },
     activeCard: deck.shift() || null
   }));
 
   return { routes, deck, bossFightReady:false };
+}
+
+function generateActBoard(genCfg) {
+  const routes = ["Top","Mid","Bot"].map(name => ({
+    id: uuid(),
+    name,
+    reward: genCfg.actBoardRewards?.[name] || { type:"rings", amount:1 }
+  }));
+  return { name: genCfg.actBoardName || "Act 1", routes };
 }
 
 /* =======================
@@ -441,6 +498,7 @@ function newGame({ playerCount, seedStr }) {
 
   const badnikDeck = shuffle(clone(CONFIG.badnikDeck));
   const zone = generateZone(CONFIG.zoneGenerator, playerCount);
+  const actBoard = generateActBoard(CONFIG.zoneGenerator);
 
   return {
     phase: "ROLL_ACTION", // ROLL_ACTION | SPENDING | REROLL | END_TURN | GAME_OVER
@@ -450,6 +508,7 @@ function newGame({ playerCount, seedStr }) {
     badnikDeck,
     badnikDiscard: [],
     zone,
+    actBoard,
     ui: { spend: null },
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
@@ -547,7 +606,11 @@ function completeZoneCard(state, route) {
   p.zoneCardsCompleted = (p.zoneCardsCompleted || 0) + 1;
   log(state, `${p.name} completed a Zone Card on ${route.name} Route (total ${p.zoneCardsCompleted}).`);
 
-  if (route.reward) applyReward(state, route.reward);
+  const actReward = getActBoardReward(state, route.name);
+  if (actReward) {
+    applyReward(state, actReward);
+    log(state, `Act Board reward for ${route.name} Route: ${formatRewardLabel(actReward)}.`);
+  }
 
   if (state.zone.deck.length) {
     route.activeCard = state.zone.deck.shift();
@@ -569,6 +632,49 @@ function formatRewardLabel(reward) {
   return `${reward.type}`;
 }
 
+function getActBoardReward(state, routeName) {
+  const route = state?.actBoard?.routes?.find(r => r.name === routeName);
+  return route?.reward || null;
+}
+
+function getBumperLock(card, groupId) {
+  if (!card) return null;
+  if (!card.bumperLocks) card.bumperLocks = {};
+  const value = card.bumperLocks[groupId];
+  return value == null ? null : value;
+}
+
+function formatChallengeRequirement(ch, card) {
+  if (!ch) return "NONE";
+  const colorPrefix = ch.color ? `${ch.color.toUpperCase()}-` : "";
+  if (ch.bumper) {
+    const lock = getBumperLock(card, ch.bumper.id);
+    return `${colorPrefix}BUMP-${lock == null ? "ANY" : lock}`;
+  }
+  const value = ch.n != null ? ch.n : "ANY";
+  return `${colorPrefix || "ANY-"}${value}`;
+}
+
+function isDieLegalForChallenge(ch, card, die) {
+  if (!ch || !die) return false;
+  if (ch.color && ch.color !== die.color) return false;
+  if (ch.bumper) {
+    if (ch.bumper.index === 0) return true;
+    const lock = getBumperLock(card, ch.bumper.id);
+    return lock != null && lock === die.value;
+  }
+  return ch.n === die.value;
+}
+
+function applyBumperLock(ch, card, die) {
+  if (!ch?.bumper || !card) return;
+  if (!card.bumperLocks) card.bumperLocks = {};
+  const lock = card.bumperLocks[ch.bumper.id];
+  if (lock == null && ch.bumper.index === 0) {
+    card.bumperLocks[ch.bumper.id] = die.value;
+  }
+}
+
 function buildSpendTargets(state, die) {
   const p = getActivePlayer(state);
   const targets = [];
@@ -577,11 +683,10 @@ function buildSpendTargets(state, die) {
     const card = route.activeCard;
     const ch = card?.challenges.find(x=>!x.cleared);
     if (!ch) continue;
-    const colorOk = (ch.color == null) || (ch.color === die.color);
-    const numOk = (ch.n === die.value);
-    if (colorOk && numOk) {
+    if (isDieLegalForChallenge(ch, card, die)) {
       const rewardLabel = formatRewardLabel(ch.reward);
-      const label = `Zone: ${route.name} ${ch.color ? ch.color.toUpperCase()+"-" : ""}${ch.n} (reward: ${rewardLabel})`;
+      const reqLabel = formatChallengeRequirement(ch, card);
+      const label = `Zone: ${route.name} ${reqLabel} (reward: ${rewardLabel})`;
       targets.push({
         id: uuid(),
         type: "zone",
@@ -856,15 +961,16 @@ function spendDieOnTarget(state, die, target) {
     const card = route?.activeCard;
     const ch = card?.challenges.find(c => c.id === target.challengeId);
     const next = card?.challenges.find(x => !x.cleared);
-    const colorOk = ch && ((ch.color == null) || (ch.color === die.color));
-    const numOk = ch && (ch.n === die.value);
-    if (!route || !ch || !next || next.id !== ch.id || !colorOk || !numOk) {
+    const legal = ch && isDieLegalForChallenge(ch, card, die);
+    if (!route || !ch || !next || next.id !== ch.id || !legal) {
       log(state, "Spend failed: zone target no longer legal.");
       return state;
     }
     ch.cleared = true;
+    applyBumperLock(ch, card, die);
     spendTarget = { type:"zone", route: route.name, challengeId: ch.id };
-    log(state, `${p.name} spends ${die.color.toUpperCase()}-${die.value} to clear ${route.name} challenge (${ch.color?ch.color.toUpperCase()+"-":""}${ch.n}).`);
+    const reqLabel = formatChallengeRequirement(ch, card);
+    log(state, `${p.name} spends ${die.color.toUpperCase()}-${die.value} to clear ${route.name} challenge (${reqLabel}).`);
     applyReward(state, ch.reward);
     completeZoneCard(state, route);
   } else if (target.type === "badnik") {
@@ -1101,7 +1207,7 @@ function render() {
 
   document.getElementById("phase").textContent = s.phase;
   document.getElementById("activePlayer").textContent =
-    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | Badniks=${p.badniks.length} | Time=${s.timeTokens}`;
+    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | ZoneCards=${p.zoneCardsCompleted} | Badniks=${p.badniks.length} | Time=${s.timeTokens}`;
 
   document.getElementById("invuln").textContent = p.invulnerable ? "YES" : "NO";
 
@@ -1109,7 +1215,6 @@ function render() {
   counters.innerHTML = `
     <div class="pill tiny"><b>spentSinceLastReroll</b> ${p.spentSinceLastReroll}</div>
     <div class="pill tiny"><b>Roll Action</b> ${escapeHtml(ra.name)}</div>
-    <div class="pill tiny"><b>Zone cards</b> ${p.zoneCardsCompleted}</div>
     ${p.lastChainSpendRule ? `<div class="pill tiny warn"><b>Chain rule</b> ${p.lastChainSpendRule.color.toUpperCase()} must be lower than ${p.lastChainSpendRule.lastSpentValue}</div>` : ""}
   `;
 
@@ -1201,14 +1306,14 @@ function render() {
     card.className = `card ${next ? "clickable" : ""}`;
     const nextHtml = cardData
       ? (next
-          ? `<span class="pill">${next.color ? next.color.toUpperCase()+"-" : ""}${next.n}</span>
-             <span class="muted">Reward:</span> <span class="pill">${next.reward.type}${next.reward.amount?(" x"+next.reward.amount):""}</span>`
+          ? `<span class="pill">${formatChallengeRequirement(next, cardData)}</span>
+             <span class="muted">Reward:</span> <span class="pill">${formatRewardLabel(next.reward)}</span>`
           : `<span class="ok">Completed</span>`)
       : `<span class="muted">No Zone Card</span>`;
     const trackHtml = cardData
       ? `<div class="track-list">
           ${cardData.challenges.map(ch => {
-            const req = ch.color ? `${ch.color.toUpperCase()}-${ch.n}` : `ANY-${ch.n}`;
+            const req = formatChallengeRequirement(ch, cardData);
             const reward = formatRewardLabel(ch.reward);
             return `<div class="track-item ${ch.cleared ? "cleared" : ""}">
               <div class="track-label">${req}</div>
@@ -1220,7 +1325,7 @@ function render() {
     card.innerHTML = `
       <h2>${route.name} Route</h2>
       <div class="tiny">
-        Card reward: <span class="pill">${formatRewardLabel(route.reward)}</span>
+        Act Board reward: <span class="pill">${formatRewardLabel(getActBoardReward(s, route.name))}</span>
       </div>
       <div class="tiny" style="margin-top:6px;">
         Next: ${nextHtml}
