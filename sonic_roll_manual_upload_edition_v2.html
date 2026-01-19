@@ -125,6 +125,14 @@
 
       <h2>Discard a Die</h2>
       <div id="discardPanel" class="tiny muted">No pending discard.</div>
+
+      <div class="hr"></div>
+
+      <h2>Star Post</h2>
+      <div id="starPostPanel" class="tiny muted">No pending Star Post.</div>
+
+      <div class="hr"></div>
+
       <h2>Spend Target</h2>
       <div id="spendTargetPanel" class="tiny muted">Select a die and click "Spend Selected Die" to choose a target. Tip: click a Zone/Badnik card to preselect.</div>
 
@@ -524,11 +532,12 @@ function generateZoneCard(genCfg) {
 
   function rollReward() {
     const rr = rng()();
-    return rr < 0.5  ? { type:"rings", amount: (rng()()<0.2?5:1) } :
-           rr < 0.65 ? { type:"boost", amount:1 } :
-           rr < 0.8  ? { type:"badnik", amount:1 } :
-           rr < 0.9  ? { type:"hazard", amount:1 } :
-                       { type:"lose_die", amount:1 };
+    return rr < 0.48 ? { type:"rings", amount: (rng()()<0.2?5:1) } :
+           rr < 0.62 ? { type:"boost", amount:1 } :
+           rr < 0.76 ? { type:"badnik", amount:1 } :
+           rr < 0.88 ? { type:"hazard", amount:1 } :
+           rr < 0.94 ? { type:"lose_die", amount:1 } :
+                       { type:"star_post", amount:1 };
   }
 
   const challenges = [];
@@ -688,6 +697,7 @@ function takeDamage(state, reason) {
   p.hasRerolledThisTurn = false;
   p.propellerTailBonusGivenSinceReroll = false;
   p.lastChainSpendRule = null;
+  clearStarPostUi(state);
 
   makeInvulnerable(p);
   state.phase = "END_TURN";
@@ -741,6 +751,8 @@ function applyReward(state, reward) {
     for (let i=0;i<reward.amount;i++) hazardRoll(state);
   } else if (reward.type === "lose_die") {
     queueLoseDieReward(state, "reward");
+  } else if (reward.type === "star_post") {
+    queueStarPostReward(state, "reward");
   }
 }
 
@@ -777,9 +789,14 @@ function clearDiscardUi(state) {
   if (state?.ui) state.ui.discard = null;
 }
 
+function clearStarPostUi(state) {
+  if (state?.ui) state.ui.starPost = null;
+}
+
 function formatRewardLabel(reward) {
   if (!reward) return "none";
   if (reward.type === "lose_die") return "lose die";
+  if (reward.type === "star_post") return "star post";
   if (reward.amount != null) return `${reward.type} x${reward.amount}`;
   return `${reward.type}`;
 }
@@ -813,6 +830,25 @@ function queueLoseDieReward(state, reason) {
     postSpend: null
   };
   log(state, `Lose a die (${reason}): choose a die to discard.`);
+}
+
+function queueStarPostReward(state, reason) {
+  const p = getActivePlayer(state);
+  if (!state.ui) state.ui = { spend: null, discard: null, starPost: null };
+  if (state.ui.starPost?.open) {
+    log(state, `Star Post (${reason}): choice already pending.`);
+    return;
+  }
+  if (p.heldRings <= 0) {
+    log(state, `Star Post (${reason}): no held rings to save.`);
+    return;
+  }
+  state.ui.starPost = {
+    open: true,
+    reason,
+    postSpend: null
+  };
+  log(state, `Star Post (${reason}): choose to save all held rings or keep them held.`);
 }
 
 function getBumperLock(card, groupId) {
@@ -919,6 +955,7 @@ function preselectSpendTarget(state, targetInfo) {
   const p = getActivePlayer(state);
   if (state.phase !== "SPENDING") return log(state, "Cannot select spend target outside SPENDING.");
   if (state.ui?.discard?.open) return log(state, "Resolve the discard before selecting a spend target.");
+  if (state.ui?.starPost?.open) return log(state, "Resolve the Star Post before selecting a spend target.");
   const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
   if (!die) return log(state, "Select a die before targeting.");
 
@@ -974,6 +1011,7 @@ function buildDicePool(state) {
 
   clearSpendUi(state);
   clearDiscardUi(state);
+  clearStarPostUi(state);
 
   const p = getActivePlayer(state);
   p.oncePerTurn = {};                 // refresh "once per turn" flags
@@ -1083,6 +1121,7 @@ function boostAfterRollAction(state) {
   log(state, `${p.name} spends 1 Boost (after Roll Action): reroll Dice Pool and enter REROLL step (Badnik-vulnerable).`);
   clearSpendUi(state);
   clearDiscardUi(state);
+  clearStarPostUi(state);
   state.phase = "REROLL";
   return rerollStep(state);
 }
@@ -1176,6 +1215,42 @@ function confirmDiscardSelection(state) {
 
   const post = discardUi.postSpend;
   clearDiscardUi(state);
+  if (post?.spentDieColor) {
+    const ra = getRollActionCfg(p);
+    return finalizePostSpend(state, { color: post.spentDieColor }, ra);
+  }
+  return state;
+}
+
+function confirmStarPostSave(state) {
+  const p = getActivePlayer(state);
+  const starUi = state.ui?.starPost;
+  if (!starUi?.open) return state;
+
+  const savedNow = p.heldRings;
+  p.heldRings = 0;
+  p.savedRings += savedNow;
+  log(state, `Star Post (${starUi.reason}): saved ${savedNow} Rings (Saved=${p.savedRings}).`);
+  if (savedNow >= 5) {
+    log(state, "Bonus Stage triggered (not implemented).");
+  }
+
+  const post = starUi.postSpend;
+  clearStarPostUi(state);
+  if (post?.spentDieColor) {
+    const ra = getRollActionCfg(p);
+    return finalizePostSpend(state, { color: post.spentDieColor }, ra);
+  }
+  return state;
+}
+
+function confirmStarPostKeep(state) {
+  const p = getActivePlayer(state);
+  const starUi = state.ui?.starPost;
+  if (!starUi?.open) return state;
+  log(state, `Star Post (${starUi.reason}): kept ${p.heldRings} Rings held.`);
+  const post = starUi.postSpend;
+  clearStarPostUi(state);
   if (post?.spentDieColor) {
     const ra = getRollActionCfg(p);
     return finalizePostSpend(state, { color: post.spentDieColor }, ra);
@@ -1282,6 +1357,10 @@ function spendDieOnTarget(state, die, target) {
     state.ui.discard.postSpend = { spentDieColor: spentDie.color };
     return state;
   }
+  if (state.ui?.starPost?.open) {
+    state.ui.starPost.postSpend = { spentDieColor: spentDie.color };
+    return state;
+  }
   if (state.phase === "END_TURN" || state.phase === "GAME_OVER") return state;
   return finalizePostSpend(state, spentDie, ra);
 }
@@ -1295,6 +1374,7 @@ function rerollStep(state) {
   if (!canRerollNow) return log(state, `Cannot reroll: phase=${state.phase}`);
   clearSpendUi(state);
   clearDiscardUi(state);
+  clearStarPostUi(state);
   if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice to reroll → End Turn`); }
 
   const ra = getRollActionCfg(p);
@@ -1357,6 +1437,7 @@ function endTurn(state) {
   if (state.phase === "GAME_OVER") return state;
   clearSpendUi(state);
   clearDiscardUi(state);
+  clearStarPostUi(state);
 
   // If dice remain and player ends normally → discard + take time
   if (p.dicePool.length) {
@@ -1425,7 +1506,7 @@ function render() {
     const label = `${p.name} — ${p.character}`;
     characterHeading.innerHTML = `
       <span>${escapeHtml(label)}</span>
-      <span class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Rings ${p.heldRings}</span>
+      <span class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings}</span>
     `;
   }
 
@@ -1436,10 +1517,13 @@ function render() {
   if (s.ui?.discard?.open) {
     if (s.phase !== "SPENDING" || p.dicePool.length < 2) clearDiscardUi(s);
   }
+  if (s.ui?.starPost?.open) {
+    if (p.heldRings <= 0) clearStarPostUi(s);
+  }
 
   document.getElementById("phase").textContent = s.phase;
   document.getElementById("activePlayer").textContent =
-    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | ZoneCards=${p.zoneCardsCompleted} | Badniks=${p.badniks.length} | Time=${s.timeTokens}`;
+    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | SavedRings=${p.savedRings} | ZoneCards=${p.zoneCardsCompleted} | Badniks=${p.badniks.length} | Time=${s.timeTokens}`;
 
   document.getElementById("invuln").textContent = p.invulnerable ? "YES" : "NO";
 
@@ -1453,15 +1537,16 @@ function render() {
   // Buttons
   const dis = (id, v) => document.getElementById(id).disabled = !!v;
   const discardOpen = !!s.ui?.discard?.open;
+  const starPostOpen = !!s.ui?.starPost?.open;
   dis("btnBuildPool", s.phase !== "ROLL_ACTION");
-  dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || discardOpen);
+  dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || discardOpen || starPostOpen);
   const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
-  dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll) || discardOpen);
+  dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll) || discardOpen || starPostOpen);
   const canUseBoost =
     (s.phase === "SPENDING" && p.boost > 0 && p.dicePool.length > 0) ||
     (s.phase === "REROLL" && p.boost > 0);
-  dis("btnUseBoostToken", !canUseBoost || discardOpen);
-  dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN") || discardOpen);
+  dis("btnUseBoostToken", !canUseBoost || discardOpen || starPostOpen);
+  dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN") || discardOpen || starPostOpen);
 
   // Roll action select
   const sel = document.getElementById("rollActionSelect");
@@ -1522,6 +1607,27 @@ function render() {
         btn.disabled = !selected;
         btn.addEventListener("click", () => { confirmDiscardSelection(STATE); render(); });
       }
+    }
+  }
+
+  // Star Post panel
+  const starPostPanel = document.getElementById("starPostPanel");
+  const starUi = s.ui?.starPost;
+  if (starPostPanel) {
+    if (!starUi || !starUi.open) {
+      starPostPanel.textContent = "No pending Star Post.";
+    } else {
+      starPostPanel.innerHTML = `
+        <div class="pill tiny">Held Rings: ${p.heldRings}</div>
+        <div class="row target-actions">
+          <button id="btnStarPostSave">Save All Rings</button>
+          <button id="btnStarPostKeep">Keep Held Rings</button>
+        </div>
+      `;
+      const btnSave = starPostPanel.querySelector("#btnStarPostSave");
+      const btnKeep = starPostPanel.querySelector("#btnStarPostKeep");
+      if (btnSave) btnSave.addEventListener("click", () => { confirmStarPostSave(STATE); render(); });
+      if (btnKeep) btnKeep.addEventListener("click", () => { confirmStarPostKeep(STATE); render(); });
     }
   }
 
