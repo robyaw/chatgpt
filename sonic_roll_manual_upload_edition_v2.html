@@ -470,10 +470,10 @@ const CONFIG = {
         {
           name:"Hammer Rush",
           dice:{ yellow:3 },
-          // SPEND yellow: Gain red die if spent on a Zone Card.
+          // SPEND yellow: Gain red die if a yellow die is spent on a Zone Card.
           onSpend: (ctx) => {
-            const { state, p, spendTarget } = ctx;
-            if (spendTarget?.type === "zone") {
+            const { state, p, spendTarget, spentDie } = ctx;
+            if (spendTarget?.type === "zone" && spentDie?.color === DieColor.YELLOW) {
               const d = makeDie(DieColor.RED, rollD6());
               p.dicePool.push(d);
               log(state, `Amy Hammer Rush (SPEND): gained a RED die (${d.value}) for spending on a Zone.`);
