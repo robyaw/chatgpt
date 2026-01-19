@@ -37,6 +37,7 @@
     .die.yellow { outline:2px solid rgba(255,219,86,.65); }
     .die.red { outline:2px solid rgba(255,97,97,.65); }
     .die.black { outline:2px solid rgba(170,170,170,.35); }
+    .die.selected { box-shadow: 0 0 0 2px #b8c6ff; }
     textarea { width:100%; min-height:120px; border-radius:10px; background:#0f1733; border:1px solid #2d3b73; color:#e8ecff; padding:10px; }
     .hr { height:1px; background:#23305a; margin:10px 0; }
     .ok { color:#b8ffcf; }
@@ -140,6 +141,12 @@
 
       <h2>Per-Turn Counters</h2>
       <div id="counters" class="tiny"></div>
+
+      <div class="hr"></div>
+
+      <h2>Power Ups</h2>
+      <div id="powerUpStatus" class="tiny"></div>
+      <div id="powerUpPanel" class="tiny muted">No pending Power Ups.</div>
     </div>
 
     <div class="card" style="flex:1; min-width:340px;">
@@ -510,6 +517,43 @@ const CONFIG = {
   }
 };
 
+const POWER_UPS = [
+  { id: "super_ring", label: "Super Ring" },
+  { id: "hyper_ring", label: "Hyper Ring" },
+  { id: "eggman_mark", label: "Eggman Mark" },
+  { id: "power_sneakers", label: "Power Sneakers" },
+  { id: "invincible", label: "Invincible" },
+  { id: "shield_flame", label: "Flame Shield" },
+  { id: "shield_bubble", label: "Bubble Shield" },
+  { id: "shield_lightning", label: "Lightning Shield" },
+  { id: "shield_blue", label: "Blue Shield" }
+];
+
+function randomPowerUpId() {
+  return POWER_UPS[Math.floor(rng()() * POWER_UPS.length)].id;
+}
+
+function getPowerUpLabel(id) {
+  const entry = POWER_UPS.find(p => p.id === id);
+  return entry ? entry.label : id;
+}
+
+function getShieldLabel(type) {
+  if (type === "flame") return "Flame Shield";
+  if (type === "bubble") return "Bubble Shield";
+  if (type === "lightning") return "Lightning Shield";
+  if (type === "blue") return "Blue Shield";
+  return type;
+}
+
+function isShieldPowerUp(id) {
+  return id && id.startsWith("shield_");
+}
+
+function getShieldTypeFromPowerUp(id) {
+  return id.replace("shield_", "");
+}
+
 /* =======================
    Zone (simplified)
    ======================= */
@@ -532,12 +576,13 @@ function generateZoneCard(genCfg) {
 
   function rollReward() {
     const rr = rng()();
-    return rr < 0.48 ? { type:"rings", amount: (rng()()<0.2?5:1) } :
-           rr < 0.62 ? { type:"boost", amount:1 } :
-           rr < 0.76 ? { type:"badnik", amount:1 } :
-           rr < 0.88 ? { type:"hazard", amount:1 } :
-           rr < 0.94 ? { type:"lose_die", amount:1 } :
-                       { type:"star_post", amount:1 };
+    return rr < 0.46 ? { type:"rings", amount: (rng()()<0.2?5:1) } :
+           rr < 0.6  ? { type:"boost", amount:1 } :
+           rr < 0.74 ? { type:"badnik", amount:1 } :
+           rr < 0.86 ? { type:"hazard", amount:1 } :
+           rr < 0.92 ? { type:"lose_die", amount:1 } :
+           rr < 0.97 ? { type:"star_post", amount:1 } :
+                       { type:"power_up", powerUp: randomPowerUpId() };
   }
 
   const challenges = [];
@@ -634,6 +679,12 @@ function newGame({ playerCount, seedStr, characterSelections }) {
       heldRings: 0,
       savedRings: 0,
       zoneCardsCompleted: 0,
+      hyperRing: false,
+      invincibleTokens: 0,
+      shield: null,
+      flameShieldArmed: false,
+      lightningShieldArmed: false,
+      blueShieldLostThisTurn: false,
 
       badniks: [],
       dicePool: [],
@@ -662,6 +713,9 @@ function newGame({ playerCount, seedStr, characterSelections }) {
     zone,
     actBoard,
     ui: { spend: null, discard: null, starPost: null },
+    pendingPowerUp: null,
+    pendingPowerUpQueue: [],
+    pendingDamage: null,
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
 }
@@ -670,6 +724,89 @@ function newGame({ playerCount, seedStr, characterSelections }) {
    Core rules: damage / hazard / badnik draw
    ======================= */
 function takeDamage(state, reason) {
+  const p = state.players[state.activePlayer];
+
+  if (p.invulnerable) {
+    log(state, `No damage (invulnerable): ${reason}`);
+    return state;
+  }
+
+  if (p.shield) {
+    const shieldType = p.shield.type;
+    p.shield = null;
+    if (shieldType === "blue") p.blueShieldLostThisTurn = true;
+    log(state, `${p.name} ignores damage with ${getShieldLabel(shieldType)} (shield discarded).`);
+    return state;
+  }
+
+  if (p.invincibleTokens > 0 && p.dicePool.length > 0) {
+    clearSpendUi(state);
+    clearDiscardUi(state);
+    clearStarPostUi(state);
+    state.pendingDamage = {
+      reason,
+      selectedDieId: null,
+      resumePhase: state.phase,
+      resetAfterReroll: state.phase === "REROLL"
+    };
+    log(state, `${p.name} may discard a die to ignore damage (Invincible).`);
+    return state;
+  }
+
+  return applyDamage(state, reason);
+}
+
+function applyDamage(state, reason) {
+  const p = state.players[state.activePlayer];
+  clearSpendUi(state);
+  clearDiscardUi(state);
+  clearStarPostUi(state);
+
+  const heldBefore = p.heldRings;
+  if (heldBefore > 0 && p.hyperRing) {
+    const kept = Math.ceil(heldBefore / 2);
+    const lost = heldBefore - kept;
+    p.heldRings = kept;
+    log(state, `DAMAGE (${reason}): Hyper Ring keeps ${kept} Held Rings (lost ${lost}).`);
+  } else {
+    p.heldRings = 0;
+    if (heldBefore > 0) {
+      log(state, `DAMAGE (${reason}): ${p.name} loses all Held Rings (${heldBefore}).`);
+    }
+  }
+
+  if (heldBefore === 0) {
+    p.lives -= 1;
+    log(state, `DAMAGE (${reason}): No held rings -> ${p.name} loses 1 Life (now ${p.lives}).`);
+  }
+
+  // Clear badniks and dice pool, end turn without time token
+  p.badniks = [];
+  p.dicePool = [];
+  p.selectedDieId = null;
+  p.spentSinceLastReroll = 0;
+  p.hasRerolledThisTurn = false;
+  p.propellerTailBonusGivenSinceReroll = false;
+  p.lastChainSpendRule = null;
+  p.invincibleTokens = 0;
+  p.flameShieldArmed = false;
+  p.lightningShieldArmed = false;
+  state.pendingDamage = null;
+
+  makeInvulnerable(p);
+  state.phase = "END_TURN";
+
+  const over = isGameOver(state);
+  if (over) {
+    state.phase = "GAME_OVER";
+    log(state, `GAME OVER: ${over}`);
+  } else {
+    log(state, "Turn ends immediately (no Time Token taken).");
+  }
+  return state;
+}
+
+function takeDamageLegacy(state, reason) {
   const p = state.players[state.activePlayer];
 
   if (p.invulnerable) {
@@ -736,23 +873,145 @@ function drawBadnik(state, targetPlayer) {
   log(state, `${p.name} draws Badnik: ${b.name}`);
 }
 
+function queuePowerUp(state, powerUpId) {
+  state.pendingPowerUpQueue.push(powerUpId);
+  log(state, `Power Up queued: ${getPowerUpLabel(powerUpId)}.`);
+}
+
+function processQueuedPowerUps(state) {
+  if (state.pendingPowerUp || !state.pendingPowerUpQueue.length) return;
+  const next = state.pendingPowerUpQueue.shift();
+  applyPowerUp(state, next);
+}
+
+function applyPowerUp(state, powerUpId) {
+  const p = state.players[state.activePlayer];
+  if (powerUpId === "super_ring") {
+    p.heldRings += 5;
+    log(state, `Power Up: Super Ring (+5 Rings). Held=${p.heldRings}`);
+    return;
+  }
+  if (powerUpId === "hyper_ring") {
+    p.hyperRing = true;
+    log(state, "Power Up: Hyper Ring (keep half held Rings when damaged).");
+    return;
+  }
+  if (powerUpId === "power_sneakers") {
+    p.boost += 2;
+    log(state, `Power Up: Power Sneakers (+2 Boost). Boost=${p.boost}`);
+    return;
+  }
+  if (powerUpId === "invincible") {
+    p.invincibleTokens += 1;
+    log(state, "Power Up: Invincible (discard a die to ignore damage this turn).");
+    return;
+  }
+  if (powerUpId === "eggman_mark") {
+    if (state.pendingPowerUp) return queuePowerUp(state, powerUpId);
+    state.pendingPowerUp = { kind: "eggman_mark" };
+    log(state, "Power Up: Eggman Mark. Choose a player to receive a Badnik.");
+    return;
+  }
+  if (isShieldPowerUp(powerUpId)) {
+    const newShield = getShieldTypeFromPowerUp(powerUpId);
+    if (!p.shield) {
+      p.shield = { type: newShield };
+      log(state, `Power Up: ${getShieldLabel(newShield)} equipped.`);
+      return;
+    }
+    if (state.pendingPowerUp) return queuePowerUp(state, powerUpId);
+    state.pendingPowerUp = { kind: "shield_swap", newShield };
+    log(state, `${p.name} drew ${getShieldLabel(newShield)} but already has ${getShieldLabel(p.shield.type)}.`);
+    return;
+  }
+  log(state, `Unknown Power Up: ${powerUpId}`);
+}
+
+function resolveEggmanMark(state, targetPlayerId) {
+  const target = state.players.find(pl => pl.id === targetPlayerId);
+  if (!target) return;
+  drawBadnik(state, target);
+  state.pendingPowerUp = null;
+  processQueuedPowerUps(state);
+}
+
+function resolveShieldSwap(state, keepCurrent) {
+  const p = state.players[state.activePlayer];
+  const pending = state.pendingPowerUp;
+  if (!pending || pending.kind !== "shield_swap") return;
+  if (keepCurrent) {
+    log(state, `${p.name} keeps ${getShieldLabel(p.shield.type)} and discards ${getShieldLabel(pending.newShield)}.`);
+  } else {
+    log(state, `${p.name} swaps to ${getShieldLabel(pending.newShield)} (discarded ${getShieldLabel(p.shield.type)}).`);
+    p.shield = { type: pending.newShield };
+  }
+  state.pendingPowerUp = null;
+  processQueuedPowerUps(state);
+}
+
+function maybeApplyLightningShield(state, reward) {
+  const p = state.players[state.activePlayer];
+  if (!p.shield || p.shield.type !== "lightning") return reward;
+  if (!p.lightningShieldArmed || p.oncePerTurn.lightningShieldUsed) return reward;
+  p.lightningShieldArmed = false;
+  p.oncePerTurn.lightningShieldUsed = true;
+  const amount = reward.type === "rings" ? reward.amount * 2 : 2;
+  log(state, `${p.name} Lightning Shield: reward changed to rings x2 (${amount}).`);
+  return { type:"rings", amount };
+}
+
+function confirmInvincibleDiscard(state) {
+  const p = state.players[state.activePlayer];
+  const pending = state.pendingDamage;
+  if (!pending || !pending.selectedDieId) return;
+  const idx = p.dicePool.findIndex(d => d.id === pending.selectedDieId);
+  if (idx < 0) return;
+  const removed = p.dicePool.splice(idx, 1)[0];
+  if (p.selectedDieId === removed.id) p.selectedDieId = null;
+  p.invincibleTokens = Math.max(0, p.invincibleTokens - 1);
+  state.pendingDamage = null;
+  log(state, `${p.name} uses Invincible: discards ${removed.color.toUpperCase()}-${removed.value} to ignore damage.`);
+  if (pending.resetAfterReroll) {
+    p.spentSinceLastReroll = 0;
+    p.propellerTailBonusGivenSinceReroll = false;
+    p.lastChainSpendRule = null;
+    state.phase = "SPENDING";
+  } else if (pending.resumePhase) {
+    state.phase = pending.resumePhase;
+  }
+}
+
+function declineInvincible(state) {
+  const pending = state.pendingDamage;
+  if (!pending) return;
+  state.pendingDamage = null;
+  applyDamage(state, pending.reason);
+}
+
 function applyReward(state, reward) {
   const p = state.players[state.activePlayer];
   if (!reward) return;
-  if (reward.type === "rings") {
-    p.heldRings += reward.amount;
-    log(state, `Reward: +${reward.amount} Rings (Held=${p.heldRings})`);
-  } else if (reward.type === "boost") {
-    p.boost += reward.amount;
-    log(state, `Reward: +${reward.amount} Boost (Boost=${p.boost})`);
-  } else if (reward.type === "badnik") {
-    for (let i=0;i<reward.amount;i++) drawBadnik(state, p);
-  } else if (reward.type === "hazard") {
-    for (let i=0;i<reward.amount;i++) hazardRoll(state);
-  } else if (reward.type === "lose_die") {
+  const effectiveReward = maybeApplyLightningShield(state, reward);
+  if (effectiveReward.type === "rings") {
+    p.heldRings += effectiveReward.amount;
+    log(state, `Reward: +${effectiveReward.amount} Rings (Held=${p.heldRings})`);
+  } else if (effectiveReward.type === "boost") {
+    p.boost += effectiveReward.amount;
+    log(state, `Reward: +${effectiveReward.amount} Boost (Boost=${p.boost})`);
+  } else if (effectiveReward.type === "badnik") {
+    for (let i=0;i<effectiveReward.amount;i++) drawBadnik(state, p);
+  } else if (effectiveReward.type === "hazard") {
+    for (let i=0;i<effectiveReward.amount;i++) hazardRoll(state);
+  } else if (effectiveReward.type === "lose_die") {
     queueLoseDieReward(state, "reward");
-  } else if (reward.type === "star_post") {
+  } else if (effectiveReward.type === "star_post") {
     queueStarPostReward(state, "reward");
+  } else if (effectiveReward.type === "power_up") {
+    if (state.pendingPowerUp) {
+      queuePowerUp(state, effectiveReward.powerUp);
+    } else {
+      applyPowerUp(state, effectiveReward.powerUp);
+    }
   }
 }
 
@@ -797,6 +1056,7 @@ function formatRewardLabel(reward) {
   if (!reward) return "none";
   if (reward.type === "lose_die") return "lose die";
   if (reward.type === "star_post") return "star post";
+  if (reward.type === "power_up") return `power up: ${getPowerUpLabel(reward.powerUp)}`;
   if (reward.amount != null) return `${reward.type} x${reward.amount}`;
   return `${reward.type}`;
 }
@@ -889,6 +1149,14 @@ function applyBumperLock(ch, card, die) {
   }
 }
 
+function getEffectiveSpendDie(p, die, useFlameShieldOverride) {
+  const canUseFlame = p.shield?.type === "flame" && !p.oncePerTurn.flameShieldUsed;
+  const wantsFlame = useFlameShieldOverride ?? p.flameShieldArmed;
+  const useFlameShield = canUseFlame && wantsFlame && die.color !== DieColor.RED;
+  const effectiveDie = useFlameShield ? { ...die, color: DieColor.RED } : die;
+  return { effectiveDie, useFlameShield };
+}
+
 function buildSpendTargets(state, die) {
   const p = getActivePlayer(state);
   const targets = [];
@@ -940,13 +1208,16 @@ function buildSpendTargets(state, die) {
 
 function openSpendUiForDie(state, die) {
   if (!state.ui) state.ui = { spend: null, discard: null, starPost: null };
-  const targets = buildSpendTargets(state, die);
+  const p = getActivePlayer(state);
+  const { effectiveDie, useFlameShield } = getEffectiveSpendDie(p, die);
+  const targets = buildSpendTargets(state, effectiveDie);
   if (!targets.length) return false;
   state.ui.spend = {
     open: true,
     dieId: die.id,
     targets,
-    selectedTargetId: targets[0].id
+    selectedTargetId: targets[0].id,
+    useFlameShield
   };
   return true;
 }
@@ -956,6 +1227,7 @@ function preselectSpendTarget(state, targetInfo) {
   if (state.phase !== "SPENDING") return log(state, "Cannot select spend target outside SPENDING.");
   if (state.ui?.discard?.open) return log(state, "Resolve the discard before selecting a spend target.");
   if (state.ui?.starPost?.open) return log(state, "Resolve the Star Post before selecting a spend target.");
+  if (state.pendingPowerUp || state.pendingDamage) return log(state, "Resolve the pending Power Up before selecting a target.");
   const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
   if (!die) return log(state, "Select a die before targeting.");
 
@@ -1132,6 +1404,7 @@ function boostAfterRollAction(state) {
 function spendSelectedDie(state) {
   const p = getActivePlayer(state);
   if (state.phase !== "SPENDING") return log(state, `Cannot spend: phase=${state.phase}`);
+  if (state.pendingPowerUp || state.pendingDamage) return log(state, "Resolve the pending Power Up before spending.");
 
   if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice left → End Turn`); }
 
@@ -1164,8 +1437,9 @@ function confirmSpendSelection(state) {
     return state;
   }
 
+  const spendMeta = { useFlameShield: spendUi.useFlameShield };
   clearSpendUi(state);
-  return spendDieOnTarget(state, die, target);
+  return spendDieOnTarget(state, die, target, spendMeta);
 }
 
 function cancelSpendSelection(state) {
@@ -1258,9 +1532,10 @@ function confirmStarPostKeep(state) {
   return state;
 }
 
-function spendDieOnTarget(state, die, target) {
+function spendDieOnTarget(state, die, target, spendMeta) {
   const p = getActivePlayer(state);
   const ra = getRollActionCfg(p);
+  const { effectiveDie, useFlameShield } = getEffectiveSpendDie(p, die, spendMeta?.useFlameShield);
   let spendTarget = null;
   let challengeReward = null;
   let completedRoute = null;
@@ -1270,13 +1545,13 @@ function spendDieOnTarget(state, die, target) {
     const card = route?.activeCard;
     const ch = card?.challenges.find(c => c.id === target.challengeId);
     const next = card?.challenges.find(x => !x.cleared);
-    const legal = ch && isDieLegalForChallenge(ch, card, die);
+    const legal = ch && isDieLegalForChallenge(ch, card, effectiveDie);
     if (!route || !ch || !next || next.id !== ch.id || !legal) {
       log(state, "Spend failed: zone target no longer legal.");
       return state;
     }
     ch.cleared = true;
-    applyBumperLock(ch, card, die);
+    applyBumperLock(ch, card, effectiveDie);
     spendTarget = { type:"zone", route: route.name, challengeId: ch.id };
     const reqLabel = formatChallengeRequirement(ch, card);
     log(state, `${p.name} spends ${die.color.toUpperCase()}-${die.value} to clear ${route.name} challenge (${reqLabel}).`);
@@ -1288,8 +1563,8 @@ function spendDieOnTarget(state, die, target) {
       log(state, "Spend failed: badnik target no longer exists.");
       return state;
     }
-    const avoidOk = b.avoid && (b.avoid.color === die.color && b.avoid.value === die.value);
-    const destroyOk = b.destroy && (die.color === DieColor.RED && b.destroy.value === die.value);
+    const avoidOk = b.avoid && (b.avoid.color === effectiveDie.color && b.avoid.value === effectiveDie.value);
+    const destroyOk = b.destroy && (effectiveDie.color === DieColor.RED && b.destroy.value === effectiveDie.value);
     if (target.mode === "avoid" && !avoidOk) {
       log(state, "Spend failed: avoid target no longer legal.");
       return state;
@@ -1339,9 +1614,16 @@ function spendDieOnTarget(state, die, target) {
     log(state, "Amy ability reminder: Piko Piko Hammer could raise a spent RED die by +1 (6->1) before spending.");
   }
 
+  if (useFlameShield) {
+    p.oncePerTurn.flameShieldUsed = true;
+    p.flameShieldArmed = false;
+    log(state, `${p.name} Flame Shield: spent die treated as RED.`);
+  }
+
   // Apply roll-action SPEND effect hooks
   if (typeof ra.onSpend === "function") {
-    ra.onSpend({ state, p, spentDie, spendTarget });
+    const spentDieForEffects = useFlameShield ? { ...spentDie, color: DieColor.RED } : spentDie;
+    ra.onSpend({ state, p, spentDie: spentDieForEffects, spendTarget });
   }
 
   // Knuckles Glide chaining rule: if the action specifies a chain rule, set it up for potential extra spend.
@@ -1403,7 +1685,7 @@ function rerollStep(state) {
     if (hits.length) {
       log(state, `🟥 Badnik attack hits: ${hits.map(h=>`${h.b.name}(${h.atk.color[0].toUpperCase()}${h.atk.value})`).join(", ")}`);
       takeDamage(state, "Badnik attack");
-      return state;
+      if (state.pendingDamage || state.phase !== "REROLL") return state;
     } else {
       log(state, `No Badnik attacks hit.`);
     }
@@ -1443,8 +1725,12 @@ function endTurn(state) {
   if (p.dicePool.length) {
     p.dicePool = [];
     p.selectedDieId = null;
-    state.timeTokens -= 1;
-    log(state, `${p.name} ends turn with dice remaining → discard dice and take 1 Time Token (Time left: ${state.timeTokens}).`);
+    if (p.blueShieldLostThisTurn) {
+      log(state, `${p.name} ends turn with dice remaining but avoids taking a Time Token (Blue Shield).`);
+    } else {
+      state.timeTokens -= 1;
+      log(state, `${p.name} ends turn with dice remaining -> discard dice and take 1 Time Token (Time left: ${state.timeTokens}).`);
+    }
   } else {
     log(state, `${p.name} ends turn.`);
   }
@@ -1452,6 +1738,11 @@ function endTurn(state) {
   makeVulnerable(p);
   p.spentSinceLastReroll = 0;
   p.lastChainSpendRule = null;
+  p.invincibleTokens = 0;
+  p.flameShieldArmed = false;
+  p.lightningShieldArmed = false;
+  p.blueShieldLostThisTurn = false;
+  state.pendingDamage = null;
 
   const over = isGameOver(state);
   if (over) {
@@ -1520,6 +1811,9 @@ function render() {
   if (s.ui?.starPost?.open) {
     if (p.heldRings <= 0) clearStarPostUi(s);
   }
+  if (s.pendingPowerUp || s.pendingDamage) {
+    clearSpendUi(s);
+  }
 
   document.getElementById("phase").textContent = s.phase;
   document.getElementById("activePlayer").textContent =
@@ -1534,19 +1828,159 @@ function render() {
     ${p.lastChainSpendRule ? `<div class="pill tiny warn"><b>Chain rule</b> ${p.lastChainSpendRule.color.toUpperCase()} must be lower than ${p.lastChainSpendRule.lastSpentValue}</div>` : ""}
   `;
 
+  const powerStatus = document.getElementById("powerUpStatus");
+  if (powerStatus) {
+    powerStatus.innerHTML = `
+      <div class="pill tiny"><b>Shield</b> ${p.shield ? getShieldLabel(p.shield.type) : "None"}</div>
+      <div class="pill tiny"><b>Hyper Ring</b> ${p.hyperRing ? "ON" : "OFF"}</div>
+      <div class="pill tiny"><b>Invincible</b> ${p.invincibleTokens}</div>
+      ${p.flameShieldArmed ? `<div class="pill tiny warn"><b>Flame Armed</b> yes</div>` : ""}
+      ${p.lightningShieldArmed ? `<div class="pill tiny warn"><b>Lightning Armed</b> yes</div>` : ""}
+    `;
+  }
+
+  const powerPanel = document.getElementById("powerUpPanel");
+  if (powerPanel) {
+    if (s.pendingDamage) {
+      powerPanel.innerHTML = `
+        <div class="pill tiny warn"><b>Invincible</b> Discard a die to ignore damage.</div>
+        <div id="invincibleDice"></div>
+        <div class="row">
+          <button id="invincibleConfirm">Discard Selected Die</button>
+          <button id="invincibleDecline">Take Damage</button>
+        </div>
+      `;
+      const diceWrap = powerPanel.querySelector("#invincibleDice");
+      for (const d of p.dicePool) {
+        const el = document.createElement("div");
+        el.className = `die ${d.color}` + (s.pendingDamage.selectedDieId === d.id ? " selected" : "");
+        el.textContent = d.value;
+        el.title = d.color;
+        el.addEventListener("click", () => {
+          s.pendingDamage.selectedDieId = d.id;
+          render();
+        });
+        diceWrap.appendChild(el);
+      }
+      const confirmBtn = powerPanel.querySelector("#invincibleConfirm");
+      confirmBtn.disabled = !s.pendingDamage.selectedDieId;
+      confirmBtn.addEventListener("click", () => {
+        confirmInvincibleDiscard(STATE);
+        render();
+      });
+      powerPanel.querySelector("#invincibleDecline").addEventListener("click", () => {
+        declineInvincible(STATE);
+        render();
+      });
+    } else if (s.pendingPowerUp) {
+      if (s.pendingPowerUp.kind === "eggman_mark") {
+        powerPanel.innerHTML = `
+          <div class="pill tiny warn"><b>Eggman Mark</b> Choose a player to receive a Badnik.</div>
+          <div id="eggmanTargets" class="row"></div>
+        `;
+        const targetWrap = powerPanel.querySelector("#eggmanTargets");
+        for (const pl of s.players) {
+          const btn = document.createElement("button");
+          btn.textContent = `${pl.name} (${pl.character})`;
+          btn.addEventListener("click", () => {
+            resolveEggmanMark(STATE, pl.id);
+            render();
+          });
+          targetWrap.appendChild(btn);
+        }
+      } else if (s.pendingPowerUp.kind === "shield_swap") {
+        const pendingShield = s.pendingPowerUp.newShield;
+        powerPanel.innerHTML = `
+          <div class="pill tiny warn"><b>Shield Choice</b> Keep current or swap.</div>
+          <div class="tiny">Current: ${p.shield ? getShieldLabel(p.shield.type) : "None"}</div>
+          <div class="tiny">New: ${getShieldLabel(pendingShield)}</div>
+          <div class="row">
+            <button id="shieldKeepBtn">Keep Current</button>
+            <button id="shieldSwapBtn">Take New</button>
+          </div>
+        `;
+        powerPanel.querySelector("#shieldKeepBtn").addEventListener("click", () => {
+          resolveShieldSwap(STATE, true);
+          render();
+        });
+        powerPanel.querySelector("#shieldSwapBtn").addEventListener("click", () => {
+          resolveShieldSwap(STATE, false);
+          render();
+        });
+      }
+    } else {
+      powerPanel.innerHTML = "";
+      const actions = [];
+      if (p.shield && p.shield.type === "flame") {
+        actions.push(`<button id="flameShieldBtn">${p.flameShieldArmed ? "Flame Shield Armed" : "Use Flame Shield"}</button>`);
+      }
+      if (p.shield && p.shield.type === "bubble") {
+        actions.push(`<button id="bubbleShieldBtn">Bubble Shield: Reroll Selected Die</button>`);
+      }
+      if (p.shield && p.shield.type === "lightning") {
+        actions.push(`<button id="lightningShieldBtn">${p.lightningShieldArmed ? "Lightning Armed" : "Arm Lightning Shield"}</button>`);
+      }
+      if (actions.length) {
+        powerPanel.innerHTML = `<div class="row">${actions.join("")}</div>`;
+      } else {
+        powerPanel.innerHTML = `<div class="muted">No pending Power Ups.</div>`;
+      }
+
+      const flameBtn = powerPanel.querySelector("#flameShieldBtn");
+      if (flameBtn) {
+        flameBtn.disabled = s.phase !== "SPENDING" || p.oncePerTurn.flameShieldUsed;
+        flameBtn.addEventListener("click", () => {
+          p.flameShieldArmed = !p.flameShieldArmed;
+          log(s, `${p.name} ${p.flameShieldArmed ? "arms" : "disarms"} Flame Shield for the next spend.`);
+          render();
+        });
+      }
+
+      const bubbleBtn = powerPanel.querySelector("#bubbleShieldBtn");
+      if (bubbleBtn) {
+        bubbleBtn.disabled = p.oncePerTurn.bubbleShieldUsed || p.dicePool.length === 0;
+        bubbleBtn.addEventListener("click", () => {
+          const target = p.dicePool.find(d => d.id === p.selectedDieId) || (p.dicePool.length === 1 ? p.dicePool[0] : null);
+          if (!target) {
+            log(s, `${p.name} Bubble Shield: select a die to reroll.`);
+            return;
+          }
+          const newValue = rollD6();
+          target.value = newValue;
+          p.oncePerTurn.bubbleShieldUsed = true;
+          log(s, `${p.name} Bubble Shield rerolls ${target.color.toUpperCase()}-${newValue}.`);
+          render();
+        });
+      }
+
+      const lightningBtn = powerPanel.querySelector("#lightningShieldBtn");
+      if (lightningBtn) {
+        lightningBtn.disabled = p.oncePerTurn.lightningShieldUsed || p.lightningShieldArmed;
+        lightningBtn.addEventListener("click", () => {
+          p.lightningShieldArmed = true;
+          log(s, `${p.name} arms Lightning Shield to change the next reward to rings x2.`);
+          render();
+        });
+      }
+    }
+  }
+
   // Buttons
   const dis = (id, v) => document.getElementById(id).disabled = !!v;
   const discardOpen = !!s.ui?.discard?.open;
   const starPostOpen = !!s.ui?.starPost?.open;
-  dis("btnBuildPool", s.phase !== "ROLL_ACTION");
-  dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || discardOpen || starPostOpen);
+  const powerOpen = !!s.pendingPowerUp;
+  const damageOpen = !!s.pendingDamage;
+  const actionBlocked = discardOpen || starPostOpen || powerOpen || damageOpen;
+  dis("btnBuildPool", s.phase !== "ROLL_ACTION" || actionBlocked);
+  dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || actionBlocked);
   const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
-  dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll) || discardOpen || starPostOpen);
+  dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll) || actionBlocked);
   const canUseBoost =
     (s.phase === "SPENDING" && p.boost > 0 && p.dicePool.length > 0) ||
     (s.phase === "REROLL" && p.boost > 0);
-  dis("btnUseBoostToken", !canUseBoost || discardOpen || starPostOpen);
-  dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN") || discardOpen || starPostOpen);
+  dis("btnUseBoostToken", !canUseBoost || actionBlocked);
+  dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN") || actionBlocked);
 
   // Roll action select
   const sel = document.getElementById("rollActionSelect");
@@ -1559,7 +1993,7 @@ function render() {
     sel.appendChild(opt);
   }
   sel.value = p.chosenRollAction;
-  sel.disabled = s.phase !== "ROLL_ACTION";
+  sel.disabled = s.phase !== "ROLL_ACTION" || actionBlocked;
   const hintEl = document.getElementById("rollActionDiceHint");
   if (hintEl) {
     hintEl.textContent = `Dice for ${ra.name}: ${buildRollActionDiceHint(ra.dice)}`;
@@ -1578,6 +2012,7 @@ function render() {
     el.style.opacity = (selectedDieId === d.id) ? "1" : "0.82";
     el.style.transform = (selectedDieId === d.id) ? "scale(1.05)" : "scale(1)";
     el.addEventListener("click", () => {
+      if (damageOpen || powerOpen) return;
       if (discardUi?.open) {
         discardUi.selectedDieId = d.id;
       } else {
