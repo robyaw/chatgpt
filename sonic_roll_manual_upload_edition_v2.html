@@ -68,7 +68,9 @@
     .portrait.tails { background:#b56a1f; }
     .portrait.knuckles { background:#a33131; }
     .portrait.amy { background:#8e2f60; }
-    .top-bar { display:flex; justify-content:flex-end; margin:6px 0 12px; }
+    .header-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:6px 0 12px; }
+    .header-bar h1 { margin:0; }
+    .top-bar { display:flex; justify-content:flex-end; }
     .menu-wrapper { position:relative; }
     .menu-button { width:36px; height:32px; display:flex; flex-direction:column; justify-content:center; gap:4px; padding:6px; }
     .menu-button span { display:block; width:18px; height:2px; background:#e8ecff; border-radius:2px; }
@@ -82,17 +84,19 @@
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <div id="menuWrapper" class="menu-wrapper">
-      <button id="menuBtn" class="menu-button" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
-      <div id="menuDropdown" class="menu-dropdown">
-        <button id="menuNewGame">New Game</button>
+  <div class="header-bar">
+    <h1>Sonic Roll – Rules Engine + Web App (Dashboards Implemented)</h1>
+    <div id="top-bar" class="top-bar">
+      <div id="menuWrapper" class="menu-wrapper">
+        <button id="menuBtn" class="menu-button" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div id="menuDropdown" class="menu-dropdown">
+          <button id="menuNewGame">New Game</button>
+        </div>
       </div>
     </div>
   </div>
-  <h1>Sonic Roll – Rules Engine + Web App (Dashboards Implemented)</h1>
   <p class="muted tiny">
     This prototype has the real character dashboard Roll Actions + effects. Zone/Badnik cards are simplified for now so you can test the engine immediately.
   </p>
