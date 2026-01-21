@@ -131,15 +131,17 @@
 
       <div class="hr"></div>
 
-      <h2>Discard a Die</h2>
-      <div id="discardPanel" class="tiny muted">No pending discard.</div>
+      <div id="discardSection">
+        <h2>Discard a Die</h2>
+        <div id="discardPanel" class="tiny muted"></div>
+        <div class="hr"></div>
+      </div>
 
-      <div class="hr"></div>
-
-      <h2>Star Post</h2>
-      <div id="starPostPanel" class="tiny muted">No pending Star Post.</div>
-
-      <div class="hr"></div>
+      <div id="starPostSection">
+        <h2>Star Post</h2>
+        <div id="starPostPanel" class="tiny muted"></div>
+        <div class="hr"></div>
+      </div>
 
       <h2>Spend Target</h2>
       <div id="spendTargetPanel" class="tiny muted">Select a die and click "Spend Selected Die" to choose a target. Tip: click a Zone/Badnik card to preselect.</div>
@@ -2070,11 +2072,14 @@ function render() {
   }
 
   // Discard panel
+  const discardSection = document.getElementById("discardSection");
   const discardPanel = document.getElementById("discardPanel");
   if (discardPanel) {
     if (!discardUi || !discardUi.open) {
-      discardPanel.textContent = "No pending discard.";
+      if (discardSection) discardSection.style.display = "none";
+      discardPanel.textContent = "";
     } else {
+      if (discardSection) discardSection.style.display = "";
       const selected = p.dicePool.find(d => d.id === discardUi.selectedDieId);
       const label = selected ? `${selected.color.toUpperCase()}-${selected.value}` : "Select a die to discard.";
       discardPanel.innerHTML = `
@@ -2092,12 +2097,15 @@ function render() {
   }
 
   // Star Post panel
+  const starPostSection = document.getElementById("starPostSection");
   const starPostPanel = document.getElementById("starPostPanel");
   const starUi = s.ui?.starPost;
   if (starPostPanel) {
     if (!starUi || !starUi.open) {
-      starPostPanel.textContent = "No pending Star Post.";
+      if (starPostSection) starPostSection.style.display = "none";
+      starPostPanel.textContent = "";
     } else {
+      if (starPostSection) starPostSection.style.display = "";
       starPostPanel.innerHTML = `
         <div class="pill tiny">Held Rings: ${p.heldRings}</div>
         <div class="row target-actions">
