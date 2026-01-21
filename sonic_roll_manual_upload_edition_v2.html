@@ -621,12 +621,13 @@ function generateZoneCard(genCfg) {
 
   function rollReward() {
     const rr = rng()();
-    return rr < 0.46 ? { type:"rings", amount: (rng()()<0.2?5:1) } :
-           rr < 0.6  ? { type:"boost", amount:1 } :
-           rr < 0.74 ? { type:"badnik", amount:1 } :
-           rr < 0.86 ? { type:"hazard", amount:1 } :
-           rr < 0.92 ? { type:"lose_die", amount:1 } :
-           rr < 0.97 ? { type:"star_post", amount:1 } :
+    const rrr = rng()();
+    return rr < 0.25 ? { type:"rings", amount: (rrr<0.1?4:(rrr<0.3?3:(rrr<0.6?2:1))) } :
+           rr < 0.50  ? { type:"boost", amount:1 } :
+           rr < 0.70 ? { type:"badnik", amount:1 } :
+           rr < 0.75 ? { type:"hazard", amount:1 } :
+           rr < 0.80 ? { type:"lose_die", amount:1 } :
+           rr < 0.90 ? { type:"star_post", amount:1 } :
                        { type:"power_up", powerUp: randomPowerUpId() };
   }
 
@@ -1391,7 +1392,7 @@ function buildDicePool(state) {
 
   if (ra.buildMode === "repeatUntilPair") {
     // Roll the action dice repeatedly, add all rolled dice, stop once any pair of values matches in pool.
-    let safety = 50;
+    let safety = 4;
     while (safety-- > 0) {
       const batch = rollBatch(ra.dice);
       p.dicePool.push(...batch);
