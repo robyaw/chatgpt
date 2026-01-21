@@ -68,9 +68,30 @@
     .portrait.tails { background:#b56a1f; }
     .portrait.knuckles { background:#a33131; }
     .portrait.amy { background:#8e2f60; }
+    .top-bar { display:flex; justify-content:flex-end; margin:6px 0 12px; }
+    .menu-wrapper { position:relative; }
+    .menu-button { width:36px; height:32px; display:flex; flex-direction:column; justify-content:center; gap:4px; padding:6px; }
+    .menu-button span { display:block; width:18px; height:2px; background:#e8ecff; border-radius:2px; }
+    .menu-dropdown { position:absolute; right:0; top:40px; background:#121a33; border:1px solid #23305a; border-radius:10px; padding:6px; min-width:140px; display:none; z-index:900; }
+    .menu-dropdown.open { display:block; }
+    .menu-dropdown button { width:100%; text-align:left; }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .modal-overlay.open { display:flex; }
+    .modal { max-width:540px; width:calc(100% - 32px); }
+    .modal-actions { justify-content:flex-end; }
   </style>
 </head>
 <body>
+  <div class="top-bar">
+    <div id="menuWrapper" class="menu-wrapper">
+      <button id="menuBtn" class="menu-button" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div id="menuDropdown" class="menu-dropdown">
+        <button id="menuNewGame">New Game</button>
+      </div>
+    </div>
+  </div>
   <h1>Sonic Roll – Rules Engine + Web App (Dashboards Implemented)</h1>
   <p class="muted tiny">
     This prototype has the real character dashboard Roll Actions + effects. Zone/Badnik cards are simplified for now so you can test the engine immediately.
@@ -79,25 +100,6 @@
   <div class="row">
     <div id="controlsCard" class="card controls-card" style="flex:1; min-width:340px;">
       <div id="characterHeading" class="character-heading"></div>
-      <h2>Game Controls</h2>
-      <div class="row">
-        <button id="newGameBtn">New Game</button>
-        <label class="pill tiny">Players
-          <select id="playerCount">
-            <option>1</option><option selected>2</option><option>3</option><option>4</option>
-          </select>
-        </label>
-        <label class="pill tiny">Seed
-          <input id="seed" value="12345" size="10" />
-        </label>
-      </div>
-
-      <div class="hr"></div>
-
-      <h2>Characters</h2>
-      <div id="playerSetup" class="player-setup tiny"></div>
-      <div class="tiny muted">Each character can only be used once per game.</div>
-
       <div class="hr"></div>
 
       <div class="row">
@@ -177,6 +179,36 @@
 
       <h2>Log</h2>
       <div id="log" class="log mono"></div>
+    </div>
+  </div>
+
+  <div id="newGameModal" class="modal-overlay">
+    <div class="card modal">
+      <h2>New Game</h2>
+      <h2>Game Controls</h2>
+      <div class="row">
+        <label class="pill tiny">Players
+          <select id="playerCount">
+            <option>1</option><option selected>2</option><option>3</option><option>4</option>
+          </select>
+        </label>
+        <label class="pill tiny">Seed
+          <input id="seed" value="12345" size="10" />
+        </label>
+      </div>
+
+      <div class="hr"></div>
+
+      <h2>Characters</h2>
+      <div id="playerSetup" class="player-setup tiny"></div>
+      <div class="tiny muted">Each character can only be used once per game.</div>
+
+      <div class="hr"></div>
+
+      <div class="row modal-actions">
+        <button id="cancelNewGameBtn">Cancel</button>
+        <button id="confirmNewGameBtn">Start New Game</button>
+      </div>
     </div>
   </div>
 
@@ -2249,13 +2281,62 @@ function render() {
 /* =======================
    UI events
    ======================= */
-document.getElementById("newGameBtn").addEventListener("click", () => {
+function openNewGameModal() {
+  const modal = document.getElementById("newGameModal");
+  if (modal) modal.classList.add("open");
+}
+
+function closeNewGameModal() {
+  const modal = document.getElementById("newGameModal");
+  if (modal) modal.classList.remove("open");
+}
+
+function startNewGame({ closeModal = false } = {}) {
   const playerCount = parseInt(document.getElementById("playerCount").value, 10);
   const seedStr = document.getElementById("seed").value || "12345";
   const characterSelections = readCharacterSelections(playerCount);
   STATE = newGame({ playerCount, seedStr, characterSelections });
+  if (closeModal) closeNewGameModal();
   render();
+}
+
+const menuWrapper = document.getElementById("menuWrapper");
+const menuBtn = document.getElementById("menuBtn");
+const menuDropdown = document.getElementById("menuDropdown");
+const menuNewGame = document.getElementById("menuNewGame");
+if (menuBtn && menuDropdown) {
+  menuBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    menuDropdown.classList.toggle("open");
+  });
+}
+if (menuNewGame) {
+  menuNewGame.addEventListener("click", () => {
+    menuDropdown?.classList.remove("open");
+    renderCharacterSelectors();
+    openNewGameModal();
+  });
+}
+document.addEventListener("click", (event) => {
+  if (!menuWrapper) return;
+  if (!menuWrapper.contains(event.target)) {
+    menuDropdown?.classList.remove("open");
+  }
 });
+
+const confirmNewGameBtn = document.getElementById("confirmNewGameBtn");
+if (confirmNewGameBtn) {
+  confirmNewGameBtn.addEventListener("click", () => {
+    startNewGame({ closeModal: true });
+  });
+}
+
+const cancelNewGameBtn = document.getElementById("cancelNewGameBtn");
+if (cancelNewGameBtn) {
+  cancelNewGameBtn.addEventListener("click", () => {
+    closeNewGameModal();
+  });
+}
 
 document.getElementById("playerCount").addEventListener("change", () => {
   renderCharacterSelectors();
@@ -2300,7 +2381,7 @@ document.getElementById("btnEndTurn").addEventListener("click", () => {
 
 // Auto-start
 renderCharacterSelectors();
-document.getElementById("newGameBtn").click();
+startNewGame();
 </script>
 </body>
 </html>
