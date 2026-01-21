@@ -53,6 +53,13 @@
     .track-item.cleared { opacity:.55; text-decoration: line-through; }
     .track-label { font-weight:600; font-size:14px; }
     .track-reward { color:#b0b8e8; font-size:12px; }
+    .req-chip { display:inline-flex; align-items:center; justify-content:center; min-width:36px; padding:4px 8px; border-radius:8px; border:1px solid #2d3b73; background:#d7dbe6; color:#111; font-weight:700; letter-spacing:.02em; }
+    .req-chip img { width:22px; height:22px; display:block; }
+    .req-chip.req-blue { background:#5aa3ff; color:#0b1020; }
+    .req-chip.req-yellow { background:#ffd756; color:#3a2a00; }
+    .req-chip.req-red { background:#ff6a6a; color:#2a0b0b; }
+    .req-chip.req-any { background:#d7dbe6; color:#111; }
+    .req-number { font-size:1.15em; }
     .player-setup { display:flex; flex-direction:column; gap:6px; }
     .player-setup-row { display:flex; align-items:center; gap:8px; }
     .player-setup-row select { min-width:150px; }
@@ -1129,6 +1136,24 @@ function formatChallengeRequirement(ch, card) {
   return `${colorPrefix || "ANY-"}${value}`;
 }
 
+function getChallengeColorClass(ch) {
+  if (ch?.color === DieColor.BLUE) return "req-blue";
+  if (ch?.color === DieColor.YELLOW) return "req-yellow";
+  if (ch?.color === DieColor.RED) return "req-red";
+  return "req-any";
+}
+
+function formatChallengeChip(ch, card) {
+  const cls = getChallengeColorClass(ch);
+  if (ch?.bumper) {
+    return `<span class="req-chip ${cls}"><img src="img/bumper.png" alt="Bumper"></span>`;
+  }
+  if (ch?.n != null) {
+    return `<span class="req-chip ${cls}"><img src="img/${ch.n}.png" alt="${ch.n}"></span>`;
+  }
+  return `<span class="req-chip ${cls}">ANY</span>`;
+}
+
 function isDieLegalForChallenge(ch, card, die) {
   if (!ch || !die) return false;
   if (ch.color && ch.color !== die.color) return false;
@@ -1149,12 +1174,31 @@ function applyBumperLock(ch, card, die) {
   }
 }
 
-function getEffectiveSpendDie(p, die, useFlameShieldOverride) {
+function getEffectiveSpendDie(p, die, options = {}) {
+  const amyEligible = p.character === "Amy" && die.color === DieColor.RED;
+  const useAmyRaise = amyEligible && !!options.useAmyRaise;
+  const raisedValue = useAmyRaise ? ((die.value % 6) + 1) : die.value;
+  const amyAdjustedDie = useAmyRaise ? { ...die, value: raisedValue } : die;
+
   const canUseFlame = p.shield?.type === "flame" && !p.oncePerTurn.flameShieldUsed;
-  const wantsFlame = useFlameShieldOverride ?? p.flameShieldArmed;
-  const useFlameShield = canUseFlame && wantsFlame && die.color !== DieColor.RED;
-  const effectiveDie = useFlameShield ? { ...die, color: DieColor.RED } : die;
-  return { effectiveDie, useFlameShield };
+  const wantsFlame = options.useFlameShieldOverride ?? p.flameShieldArmed;
+  const useFlameShield = canUseFlame && wantsFlame && amyAdjustedDie.color !== DieColor.RED;
+  const effectiveDie = useFlameShield ? { ...amyAdjustedDie, color: DieColor.RED } : amyAdjustedDie;
+  return { effectiveDie, useFlameShield, useAmyRaise };
+}
+
+function refreshSpendTargets(state, die) {
+  const spendUi = state.ui?.spend;
+  if (!spendUi || !die) return false;
+  const p = getActivePlayer(state);
+  const { effectiveDie } = getEffectiveSpendDie(p, die, {
+    useFlameShieldOverride: spendUi.useFlameShield,
+    useAmyRaise: spendUi.amyRaise
+  });
+  const targets = buildSpendTargets(state, effectiveDie);
+  spendUi.targets = targets;
+  spendUi.selectedTargetId = targets[0]?.id || null;
+  return targets.length > 0;
 }
 
 function buildSpendTargets(state, die) {
@@ -1209,7 +1253,7 @@ function buildSpendTargets(state, die) {
 function openSpendUiForDie(state, die) {
   if (!state.ui) state.ui = { spend: null, discard: null, starPost: null };
   const p = getActivePlayer(state);
-  const { effectiveDie, useFlameShield } = getEffectiveSpendDie(p, die);
+  const { effectiveDie, useFlameShield } = getEffectiveSpendDie(p, die, { useAmyRaise: false });
   const targets = buildSpendTargets(state, effectiveDie);
   if (!targets.length) return false;
   state.ui.spend = {
@@ -1217,7 +1261,8 @@ function openSpendUiForDie(state, die) {
     dieId: die.id,
     targets,
     selectedTargetId: targets[0].id,
-    useFlameShield
+    useFlameShield,
+    amyRaise: false
   };
   return true;
 }
@@ -1437,7 +1482,7 @@ function confirmSpendSelection(state) {
     return state;
   }
 
-  const spendMeta = { useFlameShield: spendUi.useFlameShield };
+  const spendMeta = { useFlameShield: spendUi.useFlameShield, amyRaise: spendUi.amyRaise };
   clearSpendUi(state);
   return spendDieOnTarget(state, die, target, spendMeta);
 }
@@ -1535,10 +1580,16 @@ function confirmStarPostKeep(state) {
 function spendDieOnTarget(state, die, target, spendMeta) {
   const p = getActivePlayer(state);
   const ra = getRollActionCfg(p);
-  const { effectiveDie, useFlameShield } = getEffectiveSpendDie(p, die, spendMeta?.useFlameShield);
+  const { effectiveDie, useFlameShield, useAmyRaise } = getEffectiveSpendDie(p, die, {
+    useFlameShieldOverride: spendMeta?.useFlameShield,
+    useAmyRaise: spendMeta?.amyRaise
+  });
   let spendTarget = null;
   let challengeReward = null;
   let completedRoute = null;
+  const spendLabel = useAmyRaise
+    ? `${die.color.toUpperCase()}-${die.value} (Piko Piko Hammer -> ${effectiveDie.value})`
+    : `${die.color.toUpperCase()}-${die.value}`;
 
   if (target.type === "zone") {
     const route = state.zone.routes.find(r => r.id === target.routeId);
@@ -1554,7 +1605,7 @@ function spendDieOnTarget(state, die, target, spendMeta) {
     applyBumperLock(ch, card, effectiveDie);
     spendTarget = { type:"zone", route: route.name, challengeId: ch.id };
     const reqLabel = formatChallengeRequirement(ch, card);
-    log(state, `${p.name} spends ${die.color.toUpperCase()}-${die.value} to clear ${route.name} challenge (${reqLabel}).`);
+    log(state, `${p.name} spends ${spendLabel} to clear ${route.name} challenge (${reqLabel}).`);
     challengeReward = ch.reward;
     completedRoute = route;
   } else if (target.type === "badnik") {
@@ -1575,9 +1626,9 @@ function spendDieOnTarget(state, die, target, spendMeta) {
     }
     spendTarget = { type:"badnik", name: b.name, mode: target.mode };
     if (target.mode === "destroy") {
-      log(state, `${p.name} DESTROYS Badnik "${b.name}" with RED-${die.value} (would gain Animal Token in full rules).`);
+      log(state, `${p.name} DESTROYS Badnik "${b.name}" with ${spendLabel} (would gain Animal Token in full rules).`);
     } else {
-      log(state, `${p.name} AVOIDS Badnik "${b.name}" with ${die.color.toUpperCase()}-${die.value}.`);
+      log(state, `${p.name} AVOIDS Badnik "${b.name}" with ${spendLabel}.`);
     }
     p.badniks.splice(target.badnikIndex, 1);
   } else {
@@ -1602,16 +1653,11 @@ function spendDieOnTarget(state, die, target, spendMeta) {
   }
 
   // Core dice properties (from rulebook)
-  const spentDie = die;
+  const spentDie = useAmyRaise ? { ...die, value: effectiveDie.value } : die;
 
   if (spentDie.color === DieColor.YELLOW) {
     p.heldRings += 1;
     log(state, `Jump die property: +1 Ring (Held=${p.heldRings}).`);
-  }
-
-  // Dashboard special ability: Amy Piko Piko Hammer (SPEND red): may raise result by 1 (6->1).
-  if (p.character === "Amy" && spentDie.color === DieColor.RED) {
-    log(state, "Amy ability reminder: Piko Piko Hammer could raise a spent RED die by +1 (6->1) before spending.");
   }
 
   if (useFlameShield) {
@@ -2074,14 +2120,29 @@ function render() {
   } else {
     const die = p.dicePool.find(d => d.id === spendUi.dieId);
     const dieLabel = die ? `${die.color.toUpperCase()}-${die.value}` : "Unknown";
+    const canAmyRaise = p.character === "Amy" && die && die.color === DieColor.RED;
     spendPanel.innerHTML = `
       <div class="pill tiny">Die: ${dieLabel}</div>
+      ${canAmyRaise ? `<div class="row target-actions">
+        <button id="btnAmyRaise">${spendUi.amyRaise ? "Piko Piko Hammer (+1) ON" : "Use Piko Piko Hammer (+1)"}</button>
+      </div>` : ""}
       <div class="target-list"></div>
       <div class="row target-actions">
         <button id="btnConfirmSpend">Confirm Spend</button>
         <button id="btnCancelSpend">Cancel</button>
       </div>
     `;
+    if (canAmyRaise) {
+      const btnAmy = spendPanel.querySelector("#btnAmyRaise");
+      btnAmy.addEventListener("click", () => {
+        spendUi.amyRaise = !spendUi.amyRaise;
+        const ok = refreshSpendTargets(STATE, die);
+        if (!ok) {
+          log(s, "No legal spend targets with Piko Piko Hammer.");
+        }
+        render();
+      });
+    }
     const list = spendPanel.querySelector(".target-list");
     for (const t of spendUi.targets) {
       const item = document.createElement("div");
@@ -2111,14 +2172,14 @@ function render() {
     card.className = `card ${next ? "clickable" : ""}`;
     const nextHtml = cardData
       ? (next
-          ? `<span class="pill">${formatChallengeRequirement(next, cardData)}</span>
+          ? `${formatChallengeChip(next, cardData)}
              <span class="muted">Reward:</span> <span class="pill">${formatRewardLabel(next.reward)}</span>`
           : `<span class="ok">Completed</span>`)
       : `<span class="muted">No Zone Card</span>`;
     const trackHtml = cardData
       ? `<div class="track-list">
           ${cardData.challenges.map(ch => {
-            const req = formatChallengeRequirement(ch, cardData);
+            const req = formatChallengeChip(ch, cardData);
             const reward = formatRewardLabel(ch.reward);
             return `<div class="track-item ${ch.cleared ? "cleared" : ""}">
               <div class="track-label">${req}</div>
