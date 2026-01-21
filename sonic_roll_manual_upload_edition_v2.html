@@ -724,6 +724,7 @@ function newGame({ playerCount, seedStr, characterSelections }) {
       heldRings: 0,
       savedRings: 0,
       zoneCardsCompleted: 0,
+      animalTokens: 0,
       hyperRing: false,
       invincibleTokens: 0,
       shield: null,
@@ -1664,7 +1665,8 @@ function spendDieOnTarget(state, die, target, spendMeta) {
     }
     spendTarget = { type:"badnik", name: b.name, mode: target.mode };
     if (target.mode === "destroy") {
-      log(state, `${p.name} DESTROYS Badnik "${b.name}" with ${spendLabel} (would gain Animal Token in full rules).`);
+      p.animalTokens += 1;
+      log(state, `${p.name} DESTROYS Badnik "${b.name}" with ${spendLabel} -> gained 1 Animal Token (total ${p.animalTokens}).`);
     } else {
       log(state, `${p.name} AVOIDS Badnik "${b.name}" with ${spendLabel}.`);
     }
@@ -1881,7 +1883,7 @@ function render() {
     const label = `${p.name} — ${p.character}`;
     characterHeading.innerHTML = `
       <span>${escapeHtml(label)}</span>
-      <span class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings}</span>
+      <span class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings} | Animals ${p.animalTokens}</span>
     `;
   }
 
@@ -1901,7 +1903,7 @@ function render() {
 
   document.getElementById("phase").textContent = s.phase;
   document.getElementById("activePlayer").textContent =
-    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | SavedRings=${p.savedRings} | ZoneCards=${p.zoneCardsCompleted} | Badniks=${p.badniks.length} | Time=${s.timeTokens}`;
+    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | SavedRings=${p.savedRings} | Animals=${p.animalTokens} | ZoneCards=${p.zoneCardsCompleted} | Badniks=${p.badniks.length} | Time=${s.timeTokens}`;
 
   document.getElementById("invuln").textContent = p.invulnerable ? "YES" : "NO";
 
