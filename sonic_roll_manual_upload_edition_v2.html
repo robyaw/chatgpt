@@ -557,26 +557,23 @@ const CONFIG = {
       maxGroups: 1,
       groupChance: 0.55,
       tripleChance: 0.35,
-      colorChance: 0.5
+      colorChance: 0.2
     }
   }
 };
 
 const POWER_UPS = [
-  { id: "super_ring", label: "Super Ring" },
-  { id: "hyper_ring", label: "Hyper Ring" },
-  { id: "eggman_mark", label: "Eggman Mark" },
-  { id: "power_sneakers", label: "Power Sneakers" },
-  { id: "invincible", label: "Invincible" },
-  { id: "shield_flame", label: "Flame Shield" },
-  { id: "shield_bubble", label: "Bubble Shield" },
-  { id: "shield_lightning", label: "Lightning Shield" },
-  { id: "shield_blue", label: "Blue Shield" }
+  { id: "super_ring", label: "Super Ring", count: 3 },
+  { id: "hyper_ring", label: "Hyper Ring", count: 2 },
+  { id: "eggman_mark", label: "Eggman Mark", count: 2 },
+  { id: "power_sneakers", label: "Power Sneakers", count: 3 },
+  { id: "invincible", label: "Invincible", count: 2 },
+  { id: "one_up", label: "1-Up", count: 3 },
+  { id: "shield_flame", label: "Flame Shield", count: 2 },
+  { id: "shield_bubble", label: "Bubble Shield", count: 2 },
+  { id: "shield_lightning", label: "Lightning Shield", count: 2 },
+  { id: "shield_blue", label: "Blue Shield", count: 2 }
 ];
-
-function randomPowerUpId() {
-  return POWER_UPS[Math.floor(rng()() * POWER_UPS.length)].id;
-}
 
 function getPowerUpLabel(id) {
   const entry = POWER_UPS.find(p => p.id === id);
@@ -600,7 +597,11 @@ function getShieldTypeFromPowerUp(id) {
 }
 
 function buildPowerUpDeck() {
-  const deck = POWER_UPS.map(p => p.id);
+  const deck = [];
+  for (const p of POWER_UPS) {
+    const count = Math.max(0, p.count ?? 1);
+    for (let i = 0; i < count; i++) deck.push(p.id);
+  }
   return shuffle(deck);
 }
 
@@ -975,6 +976,12 @@ function applyPowerUp(state, powerUpId) {
     log(state, `Power Up: Power Sneakers (+2 Boost). Boost=${p.boost}`);
     return;
   }
+  if (powerUpId === "one_up") {
+    if (state.pendingPowerUp) return queuePowerUp(state, powerUpId);
+    state.pendingPowerUp = { kind: "one_up" };
+    log(state, "Power Up: 1-Up. Choose a die color to add to your Dice Pool.");
+    return;
+  }
   if (powerUpId === "invincible") {
     p.invincibleTokens += 1;
     log(state, "Power Up: Invincible (discard a die to ignore damage this turn).");
@@ -1005,6 +1012,17 @@ function resolveEggmanMark(state, targetPlayerId) {
   const target = state.players.find(pl => pl.id === targetPlayerId);
   if (!target) return;
   drawBadnik(state, target);
+  state.pendingPowerUp = null;
+  processQueuedPowerUps(state);
+}
+
+function resolveOneUp(state, color) {
+  const p = state.players[state.activePlayer];
+  const pending = state.pendingPowerUp;
+  if (!pending || pending.kind !== "one_up") return;
+  const d = makeDie(color, rollD6());
+  p.dicePool.push(d);
+  log(state, `${p.name} gains a ${color.toUpperCase()} die from 1-Up (${d.value}).`);
   state.pendingPowerUp = null;
   processQueuedPowerUps(state);
 }
@@ -2008,6 +2026,27 @@ function render() {
           });
           targetWrap.appendChild(btn);
         }
+      } else if (s.pendingPowerUp.kind === "one_up") {
+        powerPanel.innerHTML = `
+          <div class="pill tiny warn"><b>1-Up</b> Choose a die color to add.</div>
+          <div class="row">
+            <button id="oneUpBlue">Blue Die</button>
+            <button id="oneUpYellow">Yellow Die</button>
+            <button id="oneUpRed">Red Die</button>
+          </div>
+        `;
+        powerPanel.querySelector("#oneUpBlue").addEventListener("click", () => {
+          resolveOneUp(STATE, DieColor.BLUE);
+          render();
+        });
+        powerPanel.querySelector("#oneUpYellow").addEventListener("click", () => {
+          resolveOneUp(STATE, DieColor.YELLOW);
+          render();
+        });
+        powerPanel.querySelector("#oneUpRed").addEventListener("click", () => {
+          resolveOneUp(STATE, DieColor.RED);
+          render();
+        });
       } else if (s.pendingPowerUp.kind === "shield_swap") {
         const pendingShield = s.pendingPowerUp.newShield;
         powerPanel.innerHTML = `
