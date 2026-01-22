@@ -183,6 +183,16 @@
 
       <h2>Log</h2>
       <div id="log" class="log mono"></div>
+
+      <div class="hr"></div>
+
+      <h2>Discarded Power Ups</h2>
+      <div id="powerUpDiscardView" class="tiny muted"></div>
+
+      <div class="hr"></div>
+
+      <h2>Discarded Badniks</h2>
+      <div id="badnikDiscardView" class="tiny muted"></div>
     </div>
   </div>
 
@@ -2357,6 +2367,22 @@ function render() {
   const logEl = document.getElementById("log");
   logEl.innerHTML = s.log.slice(-400).map(line => `<div>${escapeHtml(line)}</div>`).join("");
   logEl.scrollTop = logEl.scrollHeight;
+
+  // Discards
+  const powerDiscardEl = document.getElementById("powerUpDiscardView");
+  if (powerDiscardEl) {
+    const discards = s.powerUpDiscard || [];
+    powerDiscardEl.textContent = discards.length
+      ? discards.map(id => getPowerUpLabel(id)).join(", ")
+      : "No discarded Power Ups.";
+  }
+  const badnikDiscardEl = document.getElementById("badnikDiscardView");
+  if (badnikDiscardEl) {
+    const discards = s.badnikDiscard || [];
+    badnikDiscardEl.textContent = discards.length
+      ? discards.map(b => b.name).join(", ")
+      : "No discarded Badniks.";
+  }
 }
 
 /* =======================
