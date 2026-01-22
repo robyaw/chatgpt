@@ -867,6 +867,9 @@ function applyDamage(state, reason) {
   }
 
   // Clear badniks and dice pool, end turn without time token
+  if (p.badniks.length) {
+    state.badnikDiscard.push(...p.badniks);
+  }
   p.badniks = [];
   p.dicePool = [];
   p.selectedDieId = null;
@@ -913,6 +916,9 @@ function takeDamageLegacy(state, reason) {
   }
 
   // Clear badniks and dice pool, end turn without time token
+  if (p.badniks.length) {
+    state.badnikDiscard.push(...p.badniks);
+  }
   p.badniks = [];
   p.dicePool = [];
   p.selectedDieId = null;
@@ -1734,6 +1740,7 @@ function spendDieOnTarget(state, die, target, spendMeta) {
       log(state, `${p.name} AVOIDS Badnik "${b.name}" with ${spendLabel}.`);
     }
     p.badniks.splice(target.badnikIndex, 1);
+    state.badnikDiscard.push(b);
   } else {
     return state;
   }
@@ -1933,6 +1940,18 @@ function buildRollActionDiceHint(diceSpec) {
     if (count > 0) out += item.emoji.repeat(count);
   }
   return out || "none";
+}
+
+function getBadnikDisplayLabels(b) {
+  const attacksLabel = (b.attacks || [])
+    .map(a => `${a.color ? a.color[0].toUpperCase() : "ANY"}${a.value ?? ""}`)
+    .join(", ") || "none";
+  const avoidLabel = b.avoid
+    ? `${b.avoid.color ? b.avoid.color[0].toUpperCase() : "ANY"}${b.avoid.value ?? ""}`
+    : "none";
+  const destroyColor = b.destroy?.color ? b.destroy.color[0].toUpperCase() : "R";
+  const destroyLabel = b.destroy ? `${destroyColor}${b.destroy.value ?? ""}` : "none";
+  return { attacksLabel, avoidLabel, destroyLabel };
 }
 
 function render() {
@@ -2348,12 +2367,13 @@ function render() {
   } else {
     for (let i = 0; i < p.badniks.length; i++) {
       const b = p.badniks[i];
+      const labels = getBadnikDisplayLabels(b);
       const el = document.createElement("div");
       el.className = "pill tiny clickable";
       el.innerHTML = `<b>${escapeHtml(b.name)}</b>
-        <span class="muted">attacks:</span> ${b.attacks.map(a=>`${a.color ? a.color[0].toUpperCase() : "ANY"}${a.value}`).join(", ")}
-        <span class="muted">avoid:</span> ${b.avoid.color[0].toUpperCase()}${b.avoid.value}
-        <span class="muted">destroy:</span> R${b.destroy.value}`;
+        <span class="muted">attacks:</span> ${labels.attacksLabel}
+        <span class="muted">avoid:</span> ${labels.avoidLabel}
+        <span class="muted">destroy:</span> ${labels.destroyLabel}`;
       el.title = "Click to preselect spend target";
       el.addEventListener("click", () => {
         preselectSpendTarget(STATE, { type:"badnik", badnikIndex: i });
@@ -2379,9 +2399,15 @@ function render() {
   const badnikDiscardEl = document.getElementById("badnikDiscardView");
   if (badnikDiscardEl) {
     const discards = s.badnikDiscard || [];
-    badnikDiscardEl.textContent = discards.length
-      ? discards.map(b => b.name).join(", ")
-      : "No discarded Badniks.";
+    badnikDiscardEl.innerHTML = discards.length
+      ? discards.map(b => {
+          const labels = getBadnikDisplayLabels(b);
+          return `<div class="pill tiny"><b>${escapeHtml(b.name)}</b>
+            <span class="muted">attacks:</span> ${labels.attacksLabel}
+            <span class="muted">avoid:</span> ${labels.avoidLabel}
+            <span class="muted">defeat:</span> ${labels.destroyLabel}</div>`;
+        }).join("")
+      : `<div class="tiny muted">No discarded Badniks.</div>`;
   }
 }
 
