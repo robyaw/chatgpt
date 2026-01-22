@@ -538,9 +538,10 @@ const CONFIG = {
 
   // Simplified Badnik deck used just to test attack timing and spend rules
   badnikDeck: [
-    { name:"Moto Bug", attacks:[{color:"blue", value:6},{color:"blue", value:3}], avoid:{color:"blue", value:1}, destroy:{color:"red", value:1} },
-    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3} },
-    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2} }
+    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
   ],
 
   // Simplified Zone generator (placeholder until we encode real Zone Cards)
@@ -1817,11 +1818,14 @@ function rerollStep(state) {
     const hits = [];
     for (const b of p.badniks) {
       for (const atk of (b.attacks||[])) {
-        if (p.dicePool.some(d => d.color === atk.color && d.value === atk.value)) hits.push({ b, atk });
+        const hit = atk.color
+          ? p.dicePool.some(d => d.color === atk.color && d.value === atk.value)
+          : p.dicePool.some(d => d.value === atk.value);
+        if (hit) hits.push({ b, atk });
       }
     }
     if (hits.length) {
-      log(state, `🟥 Badnik attack hits: ${hits.map(h=>`${h.b.name}(${h.atk.color[0].toUpperCase()}${h.atk.value})`).join(", ")}`);
+      log(state, `🟥 Badnik attack hits: ${hits.map(h=>`${h.b.name}(${h.atk.color ? h.atk.color[0].toUpperCase() : "ANY"}${h.atk.value})`).join(", ")}`);
       takeDamage(state, "Badnik attack");
       if (state.pendingDamage || state.phase !== "REROLL") return state;
     } else {
@@ -2337,7 +2341,7 @@ function render() {
       const el = document.createElement("div");
       el.className = "pill tiny clickable";
       el.innerHTML = `<b>${escapeHtml(b.name)}</b>
-        <span class="muted">attacks:</span> ${b.attacks.map(a=>`${a.color[0].toUpperCase()}${a.value}`).join(", ")}
+        <span class="muted">attacks:</span> ${b.attacks.map(a=>`${a.color ? a.color[0].toUpperCase() : "ANY"}${a.value}`).join(", ")}
         <span class="muted">avoid:</span> ${b.avoid.color[0].toUpperCase()}${b.avoid.value}
         <span class="muted">destroy:</span> R${b.destroy.value}`;
       el.title = "Click to preselect spend target";
