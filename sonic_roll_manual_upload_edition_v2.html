@@ -550,8 +550,8 @@ const CONFIG = {
     actBoardName: "Green Hill Zone (Act 1)",
     actBoardRewards: {
       Top: { type:"rings", amount:2 },
-      Mid: { type:"boost", amount:1 },
-      Bot: { type:"badnik", amount:1 }
+      Middle: { type:"boost", amount:1 },
+      Bottom: { type:"badnik", amount:1 }
     },
     bumper: {
       maxGroups: 1,
@@ -673,7 +673,7 @@ function generateZone(genCfg, playerCount) {
   for (let i=0;i<deckCount;i++) deck.push(generateZoneCard(genCfg));
   shuffle(deck);
 
-  const routes = ["Top","Mid","Bot"].map(name => ({
+  const routes = ["Top","Middle","Bottom"].map(name => ({
     id: uuid(),
     name,
     activeCard: deck.shift() || null
@@ -683,7 +683,7 @@ function generateZone(genCfg, playerCount) {
 }
 
 function generateActBoard(genCfg) {
-  const routes = ["Top","Mid","Bot"].map(name => ({
+  const routes = ["Top","Middle","Bottom"].map(name => ({
     id: uuid(),
     name,
     reward: genCfg.actBoardRewards?.[name] || { type:"rings", amount:1 }
@@ -2243,7 +2243,6 @@ function render() {
       <div class="tiny" style="margin-top:6px;">
         Next: ${nextHtml}
       </div>
-      <div class="tiny muted" style="margin-top:8px;">Track + rewards:</div>
       ${trackHtml}
     `;
     if (next) {
