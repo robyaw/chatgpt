@@ -197,7 +197,7 @@
           </select>
         </label>
         <label class="pill tiny">Seed
-          <input id="seed" value="12345" size="10" />
+          <input id="seed" value="" size="10" />
         </label>
       </div>
 
@@ -2136,8 +2136,7 @@ function render() {
   const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
   dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll) || actionBlocked);
   const canUseBoost =
-    (s.phase === "SPENDING" && p.boost > 0 && p.dicePool.length > 0) ||
-    (s.phase === "REROLL" && p.boost > 0);
+    (s.phase === "SPENDING" && p.boost > 0 && p.dicePool.length > 0);
   dis("btnUseBoostToken", !canUseBoost || actionBlocked);
   dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN") || actionBlocked);
 
@@ -2369,9 +2368,20 @@ function closeNewGameModal() {
   if (modal) modal.classList.remove("open");
 }
 
+function generateSeed() {
+  return Math.floor(Math.random() * 1000000000).toString();
+}
+
+function ensureSeedValue() {
+  const seedInput = document.getElementById("seed");
+  if (!seedInput) return generateSeed();
+  if (!seedInput.value.trim()) seedInput.value = generateSeed();
+  return seedInput.value;
+}
+
 function startNewGame({ closeModal = false } = {}) {
   const playerCount = parseInt(document.getElementById("playerCount").value, 10);
-  const seedStr = document.getElementById("seed").value || "12345";
+  const seedStr = ensureSeedValue();
   const characterSelections = readCharacterSelections(playerCount);
   STATE = newGame({ playerCount, seedStr, characterSelections });
   if (closeModal) closeNewGameModal();
@@ -2459,6 +2469,7 @@ document.getElementById("btnEndTurn").addEventListener("click", () => {
 
 // Auto-start
 renderCharacterSelectors();
+ensureSeedValue();
 startNewGame();
 </script>
 </body>
