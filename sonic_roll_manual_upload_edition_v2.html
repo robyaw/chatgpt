@@ -599,6 +599,30 @@ function getShieldTypeFromPowerUp(id) {
   return id.replace("shield_", "");
 }
 
+function buildPowerUpDeck() {
+  const deck = POWER_UPS.map(p => p.id);
+  return shuffle(deck);
+}
+
+function drawPowerUp(state) {
+  if (!state.powerUpDeck) state.powerUpDeck = [];
+  if (!state.powerUpDiscard) state.powerUpDiscard = [];
+  if (!state.powerUpDeck.length) {
+    if (state.powerUpDiscard.length) {
+      state.powerUpDeck = shuffle(state.powerUpDiscard);
+      state.powerUpDiscard = [];
+      log(state, "Power Up deck reshuffled from discard.");
+    } else {
+      log(state, "Power Up deck empty: no Power Ups available.");
+      return null;
+    }
+  }
+  const next = state.powerUpDeck.shift();
+  state.powerUpDiscard.push(next);
+  log(state, `Power Up drawn: ${getPowerUpLabel(next)}.`);
+  return next;
+}
+
 /* =======================
    Zone (simplified)
    ======================= */
@@ -628,7 +652,7 @@ function generateZoneCard(genCfg) {
            rr < 0.75 ? { type:"hazard", amount:1 } :
            rr < 0.80 ? { type:"lose_die", amount:1 } :
            rr < 0.90 ? { type:"star_post", amount:1 } :
-                       { type:"power_up", powerUp: randomPowerUpId() };
+                       { type:"power_up" };
   }
 
   const challenges = [];
@@ -749,6 +773,7 @@ function newGame({ playerCount, seedStr, characterSelections }) {
   const badnikDeck = shuffle(clone(CONFIG.badnikDeck));
   const zone = generateZone(CONFIG.zoneGenerator, playerCount);
   const actBoard = generateActBoard(CONFIG.zoneGenerator);
+  const powerUpDeck = buildPowerUpDeck();
 
   return {
     phase: "ROLL_ACTION", // ROLL_ACTION | SPENDING | REROLL | END_TURN | GAME_OVER
@@ -757,6 +782,8 @@ function newGame({ playerCount, seedStr, characterSelections }) {
     players,
     badnikDeck,
     badnikDiscard: [],
+    powerUpDeck,
+    powerUpDiscard: [],
     zone,
     actBoard,
     ui: { spend: null, discard: null, starPost: null },
@@ -1054,10 +1081,16 @@ function applyReward(state, reward) {
   } else if (effectiveReward.type === "star_post") {
     queueStarPostReward(state, "reward");
   } else if (effectiveReward.type === "power_up") {
+    const powerUpId = effectiveReward.powerUp || drawPowerUp(state);
+    if (!powerUpId) return;
+    if (effectiveReward.powerUp) {
+      if (!state.powerUpDiscard) state.powerUpDiscard = [];
+      state.powerUpDiscard.push(powerUpId);
+    }
     if (state.pendingPowerUp) {
-      queuePowerUp(state, effectiveReward.powerUp);
+      queuePowerUp(state, powerUpId);
     } else {
-      applyPowerUp(state, effectiveReward.powerUp);
+      applyPowerUp(state, powerUpId);
     }
   }
 }
@@ -1103,7 +1136,7 @@ function formatRewardLabel(reward) {
   if (!reward) return "none";
   if (reward.type === "lose_die") return "lose die";
   if (reward.type === "star_post") return "star post";
-  if (reward.type === "power_up") return `power up: ${getPowerUpLabel(reward.powerUp)}`;
+  if (reward.type === "power_up") return "power up";
   if (reward.amount != null) return `${reward.type} x${reward.amount}`;
   return `${reward.type}`;
 }
