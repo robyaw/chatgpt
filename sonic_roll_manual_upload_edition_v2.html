@@ -429,12 +429,13 @@ const CONFIG = {
         {
           name:"Drop Dash",
           dice:{ yellow:3 },
-          // SPEND: Gain big ring if spent on a Zone Card.
+          // SPEND: If a yellow die is spent on a Zone Card, gain a blue die.
           onSpend: (ctx) => {
-            const { state, p, spendTarget } = ctx;
-            if (spendTarget?.type === "zone") {
-              p.heldRings += BIG_RING_AMOUNT;
-              log(state, `Sonic Drop Dash (SPEND): +${BIG_RING_AMOUNT} Rings (big ring) for spending on a Zone. Held=${p.heldRings}`);
+            const { state, p, spendTarget, spentDie } = ctx;
+            if (spendTarget?.type === "zone" && spentDie?.color === DieColor.YELLOW) {
+              const d = makeDie(DieColor.BLUE, rollD6());
+              p.dicePool.push(d);
+              log(state, `Sonic Drop Dash (SPEND): gained a BLUE die (${d.value}) for spending on a Zone.`);
             }
           }
         }
