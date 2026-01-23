@@ -909,52 +909,6 @@ function applyDamage(state, reason) {
   return state;
 }
 
-function takeDamageLegacy(state, reason) {
-  const p = state.players[state.activePlayer];
-
-  if (p.invulnerable) {
-    log(state, `No damage (invulnerable): ${reason}`);
-    return state;
-  }
-
-  clearSpendUi(state);
-
-  const lostHeld = p.heldRings;
-  p.heldRings = 0;
-
-  if (lostHeld === 0) {
-    p.lives -= 1;
-    log(state, `💥 DAMAGE (${reason}): No held rings → ${p.name} loses 1 Life (now ${p.lives}).`);
-  } else {
-    log(state, `💥 DAMAGE (${reason}): ${p.name} loses all Held Rings (${lostHeld}).`);
-  }
-
-  // Clear badniks and dice pool, end turn without time token
-  if (p.badniks.length) {
-    state.badnikDiscard.push(...p.badniks);
-  }
-  p.badniks = [];
-  p.dicePool = [];
-  p.selectedDieId = null;
-  p.spentSinceLastReroll = 0;
-  p.hasRerolledThisTurn = false;
-  p.propellerTailBonusGivenSinceReroll = false;
-  p.lastChainSpendRule = null;
-  clearStarPostUi(state);
-
-  makeInvulnerable(p);
-  state.phase = "END_TURN";
-
-  const over = isGameOver(state);
-  if (over) {
-    state.phase = "GAME_OVER";
-    log(state, `🛑 GAME OVER: ${over}`);
-  } else {
-    log(state, `Turn ends immediately (no Time Token taken).`);
-  }
-  return state;
-}
-
 function hazardRoll(state) {
   const p = state.players[state.activePlayer];
   const v = rollD6();
