@@ -6,7 +6,15 @@
   <title>Sonic Roll – Rules Engine (Dashboards Implemented)</title>
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    body { margin: 16px; background:#0b1020; color:#e8ecff; }
+    body {
+      margin: 16px;
+      color:#e8ecff;
+      background: linear-gradient(45deg, #b7dbff 25%, transparent 25%, transparent 75%, #b7dbff 75%, #b7dbff),
+                  linear-gradient(45deg, #b7dbff 25%, transparent 25%, transparent 75%, #b7dbff 75%, #b7dbff);
+      background-size: 120px 120px;
+      background-position: 0 0, 60px 60px;
+      background-color: #cfe7ff;
+    }
     h1,h2 { margin: 8px 0; }
     .row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
     .card { background:#121a33; border:1px solid #23305a; border-radius:14px; padding:12px; box-shadow: 0 8px 25px rgba(0,0,0,.25); }
