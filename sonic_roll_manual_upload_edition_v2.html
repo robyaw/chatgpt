@@ -808,6 +808,7 @@ function newGame({ playerCount, seedStr, characterSelections }) {
     players,
     badnikDeck,
     badnikDiscard: [],
+    pendingBadnikReward: null,
     powerUpDeck,
     powerUpDiscard: [],
     zone,
@@ -931,6 +932,46 @@ function drawBadnik(state, targetPlayer) {
   const b = state.badnikDeck.shift();
   p.badniks.push(b);
   log(state, `${p.name} draws Badnik: ${b.name}`);
+}
+
+function getEligibleBadnikTargets(state) {
+  return state.players.filter(pl => pl.badniks.length < 3);
+}
+
+function queueBadnikRewardChoice(state, count = 1) {
+  for (let i = 0; i < count; i++) {
+    const eligible = getEligibleBadnikTargets(state);
+    if (!eligible.length) {
+      log(state, "Badnik reward: no eligible players can draw (all at 3).");
+      continue;
+    }
+    if (!state.pendingBadnikReward) {
+      state.pendingBadnikReward = { remaining: 0 };
+    }
+    state.pendingBadnikReward.remaining += 1;
+    log(state, "Badnik reward: choose a player with fewer than 3 Badniks to draw.");
+  }
+}
+
+function resolveBadnikRewardChoice(state, targetPlayerId) {
+  const pending = state.pendingBadnikReward;
+  if (!pending) return;
+  const target = state.players.find(pl => pl.id === targetPlayerId);
+  if (!target) return;
+  if (target.badniks.length >= 3) {
+    log(state, `${target.name} cannot draw more Badniks (already 3).`);
+    return;
+  }
+  drawBadnik(state, target);
+  pending.remaining -= 1;
+  if (pending.remaining <= 0) {
+    state.pendingBadnikReward = null;
+    return;
+  }
+  if (!getEligibleBadnikTargets(state).length) {
+    log(state, "Badnik reward: no eligible players can draw (all at 3).");
+    state.pendingBadnikReward = null;
+  }
 }
 
 function queuePowerUp(state, powerUpId) {
@@ -1076,7 +1117,10 @@ function applyReward(state, reward) {
     p.boost += effectiveReward.amount;
     log(state, `Reward: +${effectiveReward.amount} Boost (Boost=${p.boost})`);
   } else if (effectiveReward.type === "badnik") {
-    for (let i=0;i<effectiveReward.amount;i++) drawBadnik(state, p);
+    for (let i=0;i<effectiveReward.amount;i++) {
+      drawBadnik(state, p);
+      queueBadnikRewardChoice(state, 1);
+    }
   } else if (effectiveReward.type === "hazard") {
     for (let i=0;i<effectiveReward.amount;i++) hazardRoll(state);
   } else if (effectiveReward.type === "lose_die") {
@@ -1348,7 +1392,9 @@ function preselectSpendTarget(state, targetInfo) {
   if (state.phase !== "SPENDING") return log(state, "Cannot select spend target outside SPENDING.");
   if (state.ui?.discard?.open) return log(state, "Resolve the discard before selecting a spend target.");
   if (state.ui?.starPost?.open) return log(state, "Resolve the Star Post before selecting a spend target.");
-  if (state.pendingPowerUp || state.pendingDamage) return log(state, "Resolve the pending Power Up before selecting a target.");
+  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward) {
+    return log(state, "Resolve the pending reward before selecting a target.");
+  }
   const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
   if (!die) return log(state, "Select a die before targeting.");
 
@@ -1525,7 +1571,9 @@ function boostAfterRollAction(state) {
 function spendSelectedDie(state) {
   const p = getActivePlayer(state);
   if (state.phase !== "SPENDING") return log(state, `Cannot spend: phase=${state.phase}`);
-  if (state.pendingPowerUp || state.pendingDamage) return log(state, "Resolve the pending Power Up before spending.");
+  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward) {
+    return log(state, "Resolve the pending reward before spending.");
+  }
 
   if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice left → End Turn`); }
 
@@ -2047,7 +2095,7 @@ function render() {
   if (s.ui?.starPost?.open) {
     if (p.heldRings <= 0) clearStarPostUi(s);
   }
-  if (s.pendingPowerUp || s.pendingDamage) {
+  if (s.pendingPowerUp || s.pendingDamage || s.pendingBadnikReward) {
     clearSpendUi(s);
   }
 
@@ -2165,6 +2213,23 @@ function render() {
           render();
         });
       }
+    } else if (s.pendingBadnikReward) {
+      const eligible = getEligibleBadnikTargets(s);
+      powerPanel.innerHTML = `
+        <div class="pill tiny warn"><b>Badnik Reward</b> Choose a player to draw a Badnik.</div>
+        <div class="tiny">Remaining selections: ${s.pendingBadnikReward.remaining}</div>
+        <div id="badnikRewardTargets" class="row"></div>
+      `;
+      const targetWrap = powerPanel.querySelector("#badnikRewardTargets");
+      for (const pl of eligible) {
+        const btn = document.createElement("button");
+        btn.textContent = `${pl.name} (${pl.character})`;
+        btn.addEventListener("click", () => {
+          resolveBadnikRewardChoice(STATE, pl.id);
+          render();
+        });
+        targetWrap.appendChild(btn);
+      }
     } else {
       powerPanel.innerHTML = "";
       const actions = [];
@@ -2228,7 +2293,8 @@ function render() {
   const starPostOpen = !!s.ui?.starPost?.open;
   const powerOpen = !!s.pendingPowerUp;
   const damageOpen = !!s.pendingDamage;
-  const actionBlocked = discardOpen || starPostOpen || powerOpen || damageOpen;
+  const badnikRewardOpen = !!s.pendingBadnikReward;
+  const actionBlocked = discardOpen || starPostOpen || powerOpen || damageOpen || badnikRewardOpen;
   dis("btnBuildPool", s.phase !== "ROLL_ACTION" || actionBlocked);
   dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || actionBlocked);
   const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
@@ -2268,7 +2334,7 @@ function render() {
     el.style.opacity = (selectedDieId === d.id) ? "1" : "0.82";
     el.style.transform = (selectedDieId === d.id) ? "scale(1.05)" : "scale(1)";
     el.addEventListener("click", () => {
-      if (damageOpen || powerOpen) return;
+      if (damageOpen || powerOpen || badnikRewardOpen) return;
       if (discardUi?.open) {
         discardUi.selectedDieId = d.id;
       } else {
