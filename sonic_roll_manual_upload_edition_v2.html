@@ -9,11 +9,11 @@
     body {
       margin: 16px;
       color:#e8ecff;
-      background: linear-gradient(45deg, #b7dbff 25%, transparent 25%, transparent 75%, #b7dbff 75%, #b7dbff),
-                  linear-gradient(45deg, #b7dbff 25%, transparent 25%, transparent 75%, #b7dbff 75%, #b7dbff);
+      background: linear-gradient(45deg, #8fbfe8 25%, transparent 25%, transparent 75%, #8fbfe8 75%, #8fbfe8),
+                  linear-gradient(45deg, #8fbfe8 25%, transparent 25%, transparent 75%, #8fbfe8 75%, #8fbfe8);
       background-size: 120px 120px;
       background-position: 0 0, 60px 60px;
-      background-color: #cfe7ff;
+      background-color: #9fc7ea;
     }
     h1,h2 { margin: 8px 0; }
     .row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
@@ -57,12 +57,21 @@
     .target-item.selected { outline:2px solid rgba(120,200,255,.6); background:#15234a; }
     .target-actions { margin-top:8px; }
     .track-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-    .track-item { border:1px solid #2d3b73; border-radius:10px; background:#0f1733; padding:6px 8px; font-size:13px; }
+    .track-item {
+      border:1px solid #2d3b73;
+      border-radius:10px;
+      background:#0f1733;
+      padding:6px 8px;
+      font-size:13px;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-start;
+    }
     .track-item.cleared { opacity:.55; text-decoration: line-through; }
     .track-label { font-weight:600; font-size:14px; }
     .track-reward { color:#b0b8e8; font-size:12px; }
-    .req-chip { display:inline-flex; align-items:center; justify-content:center; min-width:36px; padding:4px 8px; border-radius:8px; border:1px solid #2d3b73; background:#d7dbe6; color:#111; font-weight:700; letter-spacing:.02em; }
-    .req-chip img { width:22px; height:22px; display:block; }
+    .req-chip { display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; padding:0; border-radius:8px; border:1px solid #2d3b73; background:#d7dbe6; color:#111; font-weight:700; letter-spacing:.02em; }
+    .req-chip img { width:28px; height:28px; display:block; }
     .req-chip.req-blue { background:#5aa3ff; color:#0b1020; }
     .req-chip.req-yellow { background:#ffd756; color:#3a2a00; }
     .req-chip.req-red { background:#ff6a6a; color:#2a0b0b; }
@@ -105,9 +114,6 @@
       </div>
     </div>
   </div>
-  <p class="muted tiny">
-    This prototype has the real character dashboard Roll Actions + effects. Zone/Badnik cards are simplified for now so you can test the engine immediately.
-  </p>
 
   <div class="row">
     <div id="controlsCard" class="card controls-card" style="flex:1; min-width:340px;">
