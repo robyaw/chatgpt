@@ -562,7 +562,8 @@ const CONFIG = {
 
   // Simplified Zone generator (placeholder until we encode real Zone Cards)
   zoneGenerator: {
-    challengesPerCard: 7,
+    challengesMin: 5,
+    challengesMax: 7,
     deckCounts: { 1: 8, 2: 8, 3: 9, 4: 10 },
     actBoardName: "Green Hill Zone (Act 1)",
     actBoardRewards: {
@@ -673,8 +674,12 @@ function generateZoneCard(genCfg) {
                        { type:"power_up" };
   }
 
+  const minChallenges = genCfg.challengesMin ?? genCfg.challengesPerCard ?? 7;
+  const maxChallenges = genCfg.challengesMax ?? genCfg.challengesPerCard ?? minChallenges;
+  const totalChallenges = minChallenges + Math.floor(rng()() * (maxChallenges - minChallenges + 1));
+
   const challenges = [];
-  for (let i=0;i<genCfg.challengesPerCard;i++) {
+  for (let i=0;i<totalChallenges;i++) {
     const n = rollD6();
     const color = rollBaseColor();
     const reward = rollReward();
