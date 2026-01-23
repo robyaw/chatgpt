@@ -763,6 +763,9 @@ function newGame({ playerCount, seedStr, characterSelections }) {
       savedRings: 0,
       zoneCardsCompleted: 0,
       animalTokens: 0,
+      timeTokensTaken: 0,
+      chaosEmeraldsReady: 0,
+      chaosEmeraldsSpent: 0,
       hyperRing: false,
       invincibleTokens: 0,
       shield: null,
@@ -1889,6 +1892,7 @@ function endTurn(state) {
       log(state, `${p.name} ends turn with dice remaining but avoids taking a Time Token (Blue Shield).`);
     } else {
       state.timeTokens -= 1;
+      p.timeTokensTaken += 1;
       log(state, `${p.name} ends turn with dice remaining -> discard dice and take 1 Time Token (Time left: ${state.timeTokens}).`);
     }
   } else {
@@ -1969,7 +1973,7 @@ function render() {
     const label = `${p.name} — ${p.character}`;
     characterHeading.innerHTML = `
       <span>${escapeHtml(label)}</span>
-      <span class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings} | Animals ${p.animalTokens}</span>
+      <span class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken} | Chaos Ready ${p.chaosEmeraldsReady} | Chaos Spent ${p.chaosEmeraldsSpent}</span>
     `;
   }
 
@@ -1989,7 +1993,7 @@ function render() {
 
   document.getElementById("phase").textContent = s.phase;
   document.getElementById("activePlayer").textContent =
-    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | SavedRings=${p.savedRings} | Animals=${p.animalTokens} | ZoneCards=${p.zoneCardsCompleted} | Badniks=${p.badniks.length} | Time=${s.timeTokens}`;
+    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | SavedRings=${p.savedRings} | Animals=${p.animalTokens} | ChaosReady=${p.chaosEmeraldsReady} | ChaosSpent=${p.chaosEmeraldsSpent} | ZoneCards=${p.zoneCardsCompleted} | Badniks=${p.badniks.length} | TimeTaken=${p.timeTokensTaken}`;
 
   document.getElementById("invuln").textContent = p.invulnerable ? "YES" : "NO";
 
