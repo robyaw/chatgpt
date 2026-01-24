@@ -36,6 +36,9 @@
     .tiny { font-size: 12px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     .badge { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid #2d3b73; background:#0f1733; }
+    .roll-action-btn { padding:8px 10px; border-radius:10px; border:1px solid #2d3b73; background:#0f1733; color:#e8ecff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:90px; }
+    .roll-action-icon { font-size:16px; line-height:1; }
+    .roll-action-btn.active { border-color:#7cb6ff; box-shadow: 0 0 0 2px rgba(124,182,255,.35); background:#15234a; }
     .die {
       width: 44px; height: 44px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;
       margin:4px; font-weight:700; border:1px solid #2d3b73; background:#0f1733;
@@ -121,12 +124,9 @@
       <div class="hr"></div>
 
       <div class="row">
-        <label class="pill tiny">Roll Action
-          <select id="rollActionSelect"></select>
-        </label>
+        <div id="rollActionButtons" class="row"></div>
         <button id="btnBuildPool">Roll / Build Dice Pool</button>
       </div>
-      <div id="rollActionDiceHint" class="tiny muted" style="margin-top:6px;"></div>
 
       <div class="row" style="margin-top:8px;">
         <button id="btnUseBoostToken">Use Boost Token</button>
@@ -780,6 +780,7 @@ function newGame({ playerCount, seedStr, characterSelections }) {
       name: `P${i+1}`,
       character,
       chosenRollAction: rollActions[0].name,
+      rollActionSelectedThisTurn: false,
 
       lives: 3,
       boost: 1,
@@ -1467,6 +1468,9 @@ function buildDicePool(state) {
   clearStarPostUi(state);
 
   const p = getActivePlayer(state);
+  if (!p.rollActionSelectedThisTurn) {
+    return log(state, `${p.name} must select a Roll Action before building the Dice Pool.`);
+  }
   p.oncePerTurn = {};                 // refresh "once per turn" flags
   p.spentSinceLastReroll = 0;
   p.hasRerolledThisTurn = false;
@@ -1944,6 +1948,7 @@ function endTurn(state) {
   state.activePlayer = (state.activePlayer + 1) % state.players.length;
   const np = getActivePlayer(state);
   np.oncePerTurn = {};
+  np.rollActionSelectedThisTurn = false;
   state.phase = "ROLL_ACTION";
   log(state, `➡️ Turn passes to ${np.name} (${np.character}).`);
   return state;
@@ -2309,7 +2314,7 @@ function render() {
   const damageOpen = !!s.pendingDamage;
   const badnikRewardOpen = !!s.pendingBadnikReward;
   const actionBlocked = discardOpen || starPostOpen || powerOpen || damageOpen || badnikRewardOpen;
-  dis("btnBuildPool", s.phase !== "ROLL_ACTION" || actionBlocked);
+  dis("btnBuildPool", s.phase !== "ROLL_ACTION" || actionBlocked || !p.rollActionSelectedThisTurn);
   dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || actionBlocked);
   const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
   dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll) || actionBlocked);
@@ -2318,23 +2323,26 @@ function render() {
   dis("btnUseBoostToken", !canUseBoost || actionBlocked);
   dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN") || actionBlocked);
 
-  // Roll action select
-  const sel = document.getElementById("rollActionSelect");
-  sel.innerHTML = "";
+  // Roll action buttons
+  const raWrap = document.getElementById("rollActionButtons");
+  raWrap.innerHTML = "";
   for (const a of getCharCfg(p).rollActions) {
-    const opt = document.createElement("option");
-    opt.value = a.name;
+    const btn = document.createElement("button");
     const hint = buildRollActionDiceHint(a.dice);
-    opt.textContent = hint === "none" ? a.name : `${a.name} ${hint}`;
-    sel.appendChild(opt);
+    btn.className = `roll-action-btn ${p.rollActionSelectedThisTurn && p.chosenRollAction === a.name ? "active" : ""}`;
+    btn.innerHTML = `
+      <div class="roll-action-icon">${hint === "none" ? "" : hint}</div>
+      <div>${escapeHtml(a.name)}</div>
+    `;
+    btn.disabled = s.phase !== "ROLL_ACTION" || actionBlocked;
+    btn.addEventListener("click", () => {
+      p.chosenRollAction = a.name;
+      p.rollActionSelectedThisTurn = true;
+      log(s, `${p.name} set Roll Action to: ${p.chosenRollAction}`);
+      render();
+    });
+    raWrap.appendChild(btn);
   }
-  sel.value = p.chosenRollAction;
-  sel.disabled = s.phase !== "ROLL_ACTION" || actionBlocked;
-  const hintEl = document.getElementById("rollActionDiceHint");
-  if (hintEl) {
-    hintEl.textContent = `Dice for ${ra.name}: ${buildRollActionDiceHint(ra.dice)}`;
-  }
-
   // Dice pool
   const dp = document.getElementById("dicePool");
   dp.innerHTML = "";
@@ -2661,14 +2669,6 @@ if (cancelNewGameBtn) {
 
 document.getElementById("playerCount").addEventListener("change", () => {
   renderCharacterSelectors();
-});
-
-document.getElementById("rollActionSelect").addEventListener("change", (event) => {
-  if (!STATE) return;
-  const p = getActivePlayer(STATE);
-  p.chosenRollAction = event.target.value;
-  log(STATE, `${p.name} set Roll Action to: ${p.chosenRollAction}`);
-  render();
 });
 
 document.getElementById("btnBuildPool").addEventListener("click", () => {
