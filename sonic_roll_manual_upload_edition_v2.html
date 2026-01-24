@@ -49,6 +49,7 @@
     .die.red { outline:2px solid rgba(255,97,97,.65); }
     .die.black { outline:2px solid rgba(170,170,170,.35); }
     .die.selected { box-shadow: 0 0 0 2px #b8c6ff; }
+    .die.disabled { opacity:.35; cursor:not-allowed; }
     textarea { width:100%; min-height:120px; border-radius:10px; background:#0f1733; border:1px solid #2d3b73; color:#e8ecff; padding:10px; }
     .hr { height:1px; background:#23305a; margin:10px 0; }
     .ok { color:#b8ffcf; }
@@ -150,6 +151,12 @@
       <div class="tiny muted">Click a die to select it for spending.</div>
 
       <div class="hr"></div>
+
+      <div id="wallClimbSection">
+        <h2>Wall Climb</h2>
+        <div id="wallClimbPanel" class="tiny muted"></div>
+        <div class="hr"></div>
+      </div>
 
       <div id="discardSection">
         <h2>Discard a Die</h2>
@@ -832,6 +839,7 @@ function newGame({ playerCount, seedStr, characterSelections }) {
     pendingPowerUp: null,
     pendingPowerUpQueue: [],
     pendingDamage: null,
+    pendingWallClimb: null,
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
 }
@@ -1407,7 +1415,7 @@ function preselectSpendTarget(state, targetInfo) {
   if (state.phase !== "SPENDING") return log(state, "Cannot select spend target outside SPENDING.");
   if (state.ui?.discard?.open) return log(state, "Resolve the discard before selecting a spend target.");
   if (state.ui?.starPost?.open) return log(state, "Resolve the Star Post before selecting a spend target.");
-  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward) {
+  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb) {
     return log(state, "Resolve the pending reward before selecting a target.");
   }
   const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
@@ -1455,6 +1463,64 @@ function getCharCfg(p){ return CONFIG.characters[p.character]; }
 function getRollActionCfg(p){
   const c = getCharCfg(p);
   return c.rollActions.find(r=>r.name===p.chosenRollAction) || c.rollActions[0];
+}
+
+function rollWallClimbBatch() {
+  return [
+    makeDie(DieColor.RED, rollD6()),
+    makeDie(DieColor.RED, rollD6()),
+    makeDie(DieColor.RED, rollD6())
+  ];
+}
+
+function startWallClimb(state, p) {
+  p.dicePool = [];
+  p.selectedDieId = null;
+  state.pendingWallClimb = {
+    rollIndex: 1,
+    remaining: 3,
+    lastSaved: 0,
+    batch: rollWallClimbBatch(),
+    selectedIds: []
+  };
+  state.phase = "WALL_CLIMB";
+  log(state, `${p.name} Wall Climb roll 1: ${state.pendingWallClimb.batch.map(d=>`R${d.value}`).join(" ")}. Choose dice to save (> ${state.pendingWallClimb.lastSaved}).`);
+}
+
+function confirmWallClimbSelection(state, saveNone = false) {
+  const p = getActivePlayer(state);
+  const pending = state.pendingWallClimb;
+  if (!pending) return;
+  if (saveNone) pending.selectedIds = [];
+  const selected = pending.batch.filter(d => pending.selectedIds.includes(d.id));
+  const values = selected.map(d => d.value).sort((a, b) => a - b);
+  let valid = values.every(v => v > pending.lastSaved);
+  for (let i = 1; i < values.length; i++) {
+    if (values[i] <= values[i - 1]) valid = false;
+  }
+  if (!valid) {
+    log(state, "Wall Climb: selection must be strictly increasing and above the last saved die.");
+    return;
+  }
+  if (selected.length) {
+    p.dicePool.push(...selected);
+    pending.lastSaved = values[values.length - 1];
+    log(state, `${p.name} Wall Climb: saved ${selected.map(d=>`R${d.value}`).join(" ")}.`);
+  } else {
+    log(state, `${p.name} Wall Climb: saved no dice.`);
+  }
+  pending.remaining -= 1;
+  if (pending.remaining > 0) {
+    pending.rollIndex += 1;
+    pending.batch = rollWallClimbBatch();
+    pending.selectedIds = [];
+    log(state, `${p.name} Wall Climb roll ${pending.rollIndex}: ${pending.batch.map(d=>`R${d.value}`).join(" ")}. Choose dice to save (> ${pending.lastSaved}).`);
+    return;
+  }
+  state.pendingWallClimb = null;
+  state.phase = "SPENDING";
+  makeVulnerable(p);
+  log(state, `${p.name} Dice Pool built: ${p.dicePool.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")}`);
 }
 
 /* =======================
@@ -1527,28 +1593,12 @@ function buildDicePool(state) {
       }
     }
   }
-  else if (ra.buildMode === "knucklesWallClimbX3") {
-    // x3: each repeat roll 3 reds; greedily save ascending sequence (smallest possible > lastSaved), discard rest.
-    let last = 0;
-    for (let rep=1; rep<=3; rep++) {
-      const batch = rollBatch(ra.dice); // 3 reds
-      batch.sort((a,b)=>a.value-b.value);
-
-      const savedThisRep = [];
-      for (const d of batch) {
-        if (d.value > last) { savedThisRep.push(d); last = d.value; }
-      }
-      if (savedThisRep.length === 0) {
-        // if none higher, save the highest anyway (keeps game moving; adjust if you prefer strict failure)
-        const fallback = batch[batch.length-1];
-        savedThisRep.push(fallback);
-        last = fallback.value;
-      }
-      p.dicePool.push(...savedThisRep);
-      log(state, `${p.name} Wall Climb (x${rep}): rolled ${batch.map(d=>`R${d.value}`).join(" ")} → saved ${savedThisRep.map(d=>`R${d.value}`).join(" ")}.`);
-    }
+    else if (ra.buildMode === "knucklesWallClimbX3") {
+    // x3: each repeat roll 3 reds; player chooses which dice to save (strictly increasing).
+    startWallClimb(state, p);
+    return state;
   }
-  else {
+else {
     // Standard: roll once, add all dice
     const batch = rollBatch(ra.dice);
     p.dicePool.push(...batch);
@@ -1589,7 +1639,7 @@ function boostAfterRollAction(state) {
 function spendSelectedDie(state) {
   const p = getActivePlayer(state);
   if (state.phase !== "SPENDING") return log(state, `Cannot spend: phase=${state.phase}`);
-  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward) {
+  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb) {
     return log(state, "Resolve the pending reward before spending.");
   }
 
@@ -2114,7 +2164,7 @@ function render() {
   if (s.ui?.starPost?.open) {
     if (p.heldRings <= 0) clearStarPostUi(s);
   }
-  if (s.pendingPowerUp || s.pendingDamage || s.pendingBadnikReward) {
+  if (s.pendingPowerUp || s.pendingDamage || s.pendingBadnikReward || s.pendingWallClimb) {
     clearSpendUi(s);
   }
 
@@ -2313,7 +2363,8 @@ function render() {
   const powerOpen = !!s.pendingPowerUp;
   const damageOpen = !!s.pendingDamage;
   const badnikRewardOpen = !!s.pendingBadnikReward;
-  const actionBlocked = discardOpen || starPostOpen || powerOpen || damageOpen || badnikRewardOpen;
+  const wallClimbOpen = !!s.pendingWallClimb;
+  const actionBlocked = discardOpen || starPostOpen || powerOpen || damageOpen || badnikRewardOpen || wallClimbOpen;
   dis("btnBuildPool", s.phase !== "ROLL_ACTION" || actionBlocked || !p.rollActionSelectedThisTurn);
   dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || actionBlocked);
   const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
@@ -2356,7 +2407,7 @@ function render() {
     el.style.opacity = (selectedDieId === d.id) ? "1" : "0.82";
     el.style.transform = (selectedDieId === d.id) ? "scale(1.05)" : "scale(1)";
     el.addEventListener("click", () => {
-      if (damageOpen || powerOpen || badnikRewardOpen) return;
+      if (damageOpen || powerOpen || badnikRewardOpen || wallClimbOpen) return;
       if (discardUi?.open) {
         discardUi.selectedDieId = d.id;
       } else {
@@ -2365,6 +2416,64 @@ function render() {
       render();
     });
     dp.appendChild(el);
+  }
+
+  // Wall Climb panel
+  const wallSection = document.getElementById("wallClimbSection");
+  const wallPanel = document.getElementById("wallClimbPanel");
+  const pendingWall = s.pendingWallClimb;
+  if (wallPanel) {
+    if (!pendingWall) {
+      if (wallSection) wallSection.style.display = "none";
+      wallPanel.textContent = "";
+    } else {
+      if (wallSection) wallSection.style.display = "";
+      const lastLabel = pendingWall.lastSaved > 0 ? pendingWall.lastSaved : "-";
+      wallPanel.innerHTML = `
+        <div class="pill tiny">Roll ${pendingWall.rollIndex}/3 | Last Saved ${lastLabel}</div>
+        <div id="wallClimbDice" class="row"></div>
+        <div class="row target-actions">
+          <button id="wallClimbConfirm">Save Selected Dice</button>
+          <button id="wallClimbSaveNone">Save None</button>
+        </div>
+      `;
+      const diceWrap = wallPanel.querySelector("#wallClimbDice");
+      for (const d of pendingWall.batch) {
+        const disabled = d.value <= pendingWall.lastSaved;
+        const selected = pendingWall.selectedIds.includes(d.id);
+        const el = document.createElement("div");
+        el.className = `die ${d.color}` + (selected ? " selected" : "") + (disabled ? " disabled" : "");
+        el.textContent = d.value;
+        el.title = d.color;
+        el.addEventListener("click", () => {
+          if (disabled) return;
+          if (pendingWall.selectedIds.includes(d.id)) {
+            pendingWall.selectedIds = pendingWall.selectedIds.filter(id => id !== d.id);
+          } else {
+            pendingWall.selectedIds.push(d.id);
+          }
+          render();
+        });
+        diceWrap.appendChild(el);
+      }
+      const selectedDice = pendingWall.batch.filter(d => pendingWall.selectedIds.includes(d.id));
+      const values = selectedDice.map(d => d.value).sort((a, b) => a - b);
+      let valid = values.every(v => v > pendingWall.lastSaved);
+      for (let i = 1; i < values.length; i++) {
+        if (values[i] <= values[i - 1]) valid = false;
+      }
+      const confirmBtn = wallPanel.querySelector("#wallClimbConfirm");
+      const saveNoneBtn = wallPanel.querySelector("#wallClimbSaveNone");
+      confirmBtn.disabled = !valid;
+      confirmBtn.addEventListener("click", () => {
+        confirmWallClimbSelection(STATE);
+        render();
+      });
+      saveNoneBtn.addEventListener("click", () => {
+        confirmWallClimbSelection(STATE, true);
+        render();
+      });
+    }
   }
 
   // Discard panel
