@@ -102,6 +102,103 @@
     .modal-overlay.open { display:flex; }
     .modal { max-width:540px; width:calc(100% - 32px); }
     .modal-actions { justify-content:flex-end; }
+    .bonus-stage-modal .modal {
+      background:
+        linear-gradient(45deg, #fb7 25%, transparent 25%, transparent 75%, #fb7 75%, #fb7),
+        linear-gradient(45deg, #fb7 25%, transparent 25%, transparent 75%, #fb7 75%, #fb7);
+      background-size: 120px 120px;
+      background-position: 0 0, 60px 60px;
+      background-color: #da9;
+      color:#1a1a1a;
+    }
+    .bonus-stage-modal .modal h2 {
+      color:#1a1a1a;
+    }
+    .bonus-stage-modal .modal .tiny,
+    .bonus-stage-modal .modal .muted {
+      color:#2a1a0a;
+    }
+    .bonus-stage-modal .modal .pill {
+      background:#fff1c9;
+      border-color:#b8894a;
+      color:#1a1a1a;
+    }
+    .bonus-stage-modal .modal button {
+      background:#33d;
+      color:#fff;
+      border-color:#2240a0;
+    }
+    .bonus-stage-modal .modal button:hover {
+      filter:brightness(1.08);
+    }
+    .bonus-stage-grid {
+      display:grid;
+      grid-template-columns: repeat(4, 120px);
+      gap:16px;
+      justify-content:center;
+      margin-top:20px;
+    }
+    .bonus-tile {
+      width:120px;
+      height:120px;
+      border-radius:12px;
+      border:1px solid #2d3b73;
+      background:linear-gradient(to bottom, #fdb418, #fee306);
+      color:#1a1a1a;
+      font-size:11px;
+      font-weight:600;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      position:relative;
+      cursor:pointer;
+      user-select:none;
+      padding:6px;
+      box-sizing:border-box;
+      box-shadow: 0 2px 4px rgba(0,0,0,.8);
+    }
+    .bonus-tile.revealed { cursor:default; }
+    .bonus-tile.revealed { background:linear-gradient(to bottom, #fff3b0, #ffd6a5); }
+    .bonus-tile.red { border-color:#8a2a2a; }
+    .bonus-tile.bumper { border-color:#8b5b2a; }
+    .bonus-tile.chaos {
+      background:linear-gradient(to bottom, #fff, #ddd);
+      border-color:#b8c6ff;
+    }
+    .bonus-tile.disabled { opacity:.6; cursor:not-allowed; }
+    .bonus-reward {
+      position:absolute;
+      top:4px;
+      right:4px;
+      font-size:10px;
+      background:#0f1733;
+      border:1px solid #2d3b73;
+      border-radius:6px;
+      padding:1px 4px;
+    }
+    .bonus-reward img {
+      width:18px;
+      height:18px;
+      display:block;
+    }
+    .reward-icon {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:18px;
+      height:18px;
+      vertical-align:middle;
+    }
+    .reward-icon img {
+      width:18px;
+      height:18px;
+      display:block;
+    }
+    .bonus-icon {
+      font-size:70px;
+      line-height:1;
+    }
   </style>
 </head>
 <body>
@@ -183,6 +280,11 @@
       <h2>Power Ups</h2>
       <div id="powerUpStatus" class="tiny"></div>
       <div id="powerUpPanel" class="tiny muted">No pending Power Ups.</div>
+
+      <div class="hr"></div>
+
+      <h2>Debug</h2>
+      <button id="btnForceBonusStage">Force Bonus Stage</button>
     </div>
 
     <div class="card" style="flex:1; min-width:340px;">
@@ -219,6 +321,7 @@
 
       <h2>Time Scoring</h2>
       <div id="timeScoringView" class="tiny muted"></div>
+
     </div>
   </div>
 
@@ -248,6 +351,17 @@
       <div class="row modal-actions">
         <button id="cancelNewGameBtn">Cancel</button>
         <button id="confirmNewGameBtn">Start New Game</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bonusStageModal" class="modal-overlay bonus-stage-modal">
+    <div class="card modal">
+      <h2>Bonus Stage</h2>
+      <div id="bonusStageStatus" class="tiny muted"></div>
+      <div id="bonusStageGrid" class="bonus-stage-grid"></div>
+      <div class="row modal-actions">
+        <button id="bonusStageExit">Return to Zone</button>
       </div>
     </div>
   </div>
@@ -424,7 +538,7 @@ function readCharacterSelections(playerCount) {
    Dashboard-accurate config
    (from the four images you provided)
    ======================= */
-const BIG_RING_AMOUNT = 5; // "big ring" icon: treat as +5 Rings for now (easy to change globally)
+const BIG_RING_AMOUNT = 5; // Reference value for Big Ring rewards (Bonus Stage trigger).
 
 const CONFIG = {
   characters: {
@@ -663,6 +777,127 @@ function drawPowerUp(state) {
   return next;
 }
 
+function buildChaosEmeraldDeck() {
+  const deck = [];
+  for (let i = 1; i <= 7; i++) deck.push(`Chaos Emerald ${i}`);
+  return shuffle(deck);
+}
+
+function drawChaosEmerald(state) {
+  if (!state.chaosEmeraldDeck || !state.chaosEmeraldDeck.length) {
+    log(state, "Chaos Emerald deck empty: no Emeralds available.");
+    return null;
+  }
+  const p = state.players[state.activePlayer];
+  state.chaosEmeraldDeck.shift();
+  p.chaosEmeraldsReady += 1;
+  log(state, `${p.name} gains a Chaos Emerald.`);
+  return true;
+}
+
+function buildBonusStageTiles() {
+  const tiles = [];
+  const bumperRewards = shuffle([
+    ...Array(4).fill(0).map(() => ({ type: "rings", amount: 1 })),
+    ...Array(3).fill(0).map(() => ({ type: "boost", amount: 1 }))
+  ]);
+  const redRewards = shuffle([
+    ...Array(2).fill(0).map(() => ({ type: "boost", amount: 1 })),
+    ...Array(6).fill(0).map(() => ({ type: "power_up" }))
+  ]);
+
+  tiles.push({ id: uuid(), type: "chaos", reward: null, revealed: false });
+  bumperRewards.forEach(reward => tiles.push({ id: uuid(), type: "bumper", reward, revealed: false }));
+  redRewards.forEach(reward => tiles.push({ id: uuid(), type: "red", reward, revealed: false }));
+
+  return shuffle(tiles);
+}
+
+function initBonusStageState() {
+  return {
+    open: false,
+    tiles: buildBonusStageTiles(),
+    message: "",
+    awaitingExit: false,
+    resetOnClose: false,
+    activePlayerId: null
+  };
+}
+
+function ensureBonusStageState(state) {
+  if (!state.bonusStage) state.bonusStage = initBonusStageState();
+  if (!state.bonusStage.tiles || !state.bonusStage.tiles.length) {
+    state.bonusStage.tiles = buildBonusStageTiles();
+  }
+}
+
+function enterBonusStage(state, reason) {
+  ensureBonusStageState(state);
+  const stage = state.bonusStage;
+  stage.open = true;
+  stage.awaitingExit = false;
+  stage.resetOnClose = false;
+  stage.activePlayerId = state.activePlayer;
+  stage.message = reason ? `Bonus Stage: ${reason}` : "Bonus Stage: flip a tile.";
+  const p = state.players[state.activePlayer];
+  log(state, `${p.name} enters the Bonus Stage.`);
+}
+
+function closeBonusStage(state) {
+  const stage = state.bonusStage;
+  if (!stage) return;
+  stage.open = false;
+  stage.awaitingExit = false;
+  stage.message = "";
+  if (stage.resetOnClose) {
+    stage.tiles = buildBonusStageTiles();
+    stage.resetOnClose = false;
+    log(state, "Bonus Stage reset with a new tile grid.");
+  }
+}
+
+function formatBonusStageRewardLabel(reward) {
+  if (!reward) return "";
+  if (reward.type === "rings") return "Ring";
+  if (reward.type === "boost") return "Boost";
+  if (reward.type === "power_up") return "Power Up";
+  return formatRewardLabel(reward);
+}
+
+function flipBonusStageTile(state, tileId) {
+  const stage = state.bonusStage;
+  if (!stage || !stage.open || stage.awaitingExit) return;
+  if (state.pendingPowerUp || state.pendingBadnikReward || state.pendingDamage || state.pendingWallClimb) {
+    log(state, "Resolve the pending reward before flipping another Bonus Stage tile.");
+    return;
+  }
+  const tile = stage.tiles.find(t => t.id === tileId);
+  if (!tile || tile.revealed) return;
+  tile.revealed = true;
+
+  if (tile.type === "chaos") {
+    drawChaosEmerald(state);
+    stage.message = "Chaos Emerald found! Bonus Stage cleared.";
+    stage.awaitingExit = true;
+    stage.resetOnClose = true;
+    log(state, "Bonus Stage cleared (Chaos Emerald found).");
+    return;
+  }
+
+  const reward = tile.reward || null;
+  if (reward) applyReward(state, reward);
+  const rewardLabel = reward ? formatBonusStageRewardLabel(reward) : "Reward";
+
+  if (tile.type === "red") {
+    stage.message = `Red Sphere: ${rewardLabel}. Bonus Stage ends.`;
+    stage.awaitingExit = true;
+    log(state, "Bonus Stage ends on a Red Sphere.");
+  } else {
+    stage.message = `Bumper Sphere: ${rewardLabel}. Flip another tile.`;
+    log(state, "Bonus Stage continues after Bumper Sphere.");
+  }
+}
+
 /* =======================
    Zone (simplified)
    ======================= */
@@ -691,7 +926,8 @@ function generateZoneCard(genCfg) {
            rr < 0.70 ? { type:"badnik", amount:1 } :
            rr < 0.75 ? { type:"hazard", amount:1 } :
            rr < 0.80 ? { type:"lose_die", amount:1 } :
-           rr < 0.90 ? { type:"star_post", amount:1 } :
+           rr < 0.88 ? { type:"star_post", amount:1 } :
+           rr < 0.93 ? { type:"big_ring" } :
                        { type:"power_up" };
   }
 
@@ -822,6 +1058,8 @@ function newGame({ playerCount, seedStr, characterSelections }) {
   const zone = generateZone(CONFIG.zoneGenerator, playerCount);
   const actBoard = generateActBoard(CONFIG.zoneGenerator);
   const powerUpDeck = buildPowerUpDeck();
+  const chaosEmeraldDeck = buildChaosEmeraldDeck();
+  const bonusStage = initBonusStageState();
 
   return {
     phase: "ROLL_ACTION", // ROLL_ACTION | SPENDING | REROLL | END_TURN | GAME_OVER
@@ -833,6 +1071,7 @@ function newGame({ playerCount, seedStr, characterSelections }) {
     pendingBadnikReward: null,
     powerUpDeck,
     powerUpDiscard: [],
+    chaosEmeraldDeck,
     zone,
     actBoard,
     ui: { spend: null, discard: null, starPost: null },
@@ -840,6 +1079,7 @@ function newGame({ playerCount, seedStr, characterSelections }) {
     pendingPowerUpQueue: [],
     pendingDamage: null,
     pendingWallClimb: null,
+    bonusStage,
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
 }
@@ -1150,6 +1390,8 @@ function applyReward(state, reward) {
     queueLoseDieReward(state, "reward");
   } else if (effectiveReward.type === "star_post") {
     queueStarPostReward(state, "reward");
+  } else if (effectiveReward.type === "big_ring") {
+    enterBonusStage(state, "Big Ring reward");
   } else if (effectiveReward.type === "power_up") {
     const powerUpId = effectiveReward.powerUp || drawPowerUp(state);
     if (!powerUpId) return;
@@ -1206,9 +1448,21 @@ function formatRewardLabel(reward) {
   if (!reward) return "none";
   if (reward.type === "lose_die") return "lose die";
   if (reward.type === "star_post") return "star post";
+  if (reward.type === "big_ring") return "big ring";
   if (reward.type === "power_up") return "power up";
   if (reward.amount != null) return `${reward.type} x${reward.amount}`;
   return `${reward.type}`;
+}
+
+function formatRewardDisplayHtml(reward) {
+  if (!reward) return "none";
+  if (reward.type === "power_up") {
+    return `<span class="reward-icon" title="power up"><img src="img/power_up.png" alt="Power Up"></span>`;
+  }
+  if (reward.type === "boost") {
+    return `<span class="reward-icon" title="boost"><img src="img/boost.png" alt="Boost"></span>`;
+  }
+  return formatRewardLabel(reward);
 }
 
 function getActBoardReward(state, routeName) {
@@ -1413,6 +1667,7 @@ function openSpendUiForDie(state, die) {
 function preselectSpendTarget(state, targetInfo) {
   const p = getActivePlayer(state);
   if (state.phase !== "SPENDING") return log(state, "Cannot select spend target outside SPENDING.");
+  if (state.bonusStage?.open) return log(state, "Finish the Bonus Stage before selecting a spend target.");
   if (state.ui?.discard?.open) return log(state, "Resolve the discard before selecting a spend target.");
   if (state.ui?.starPost?.open) return log(state, "Resolve the Star Post before selecting a spend target.");
   if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb) {
@@ -1639,6 +1894,7 @@ function boostAfterRollAction(state) {
 function spendSelectedDie(state) {
   const p = getActivePlayer(state);
   if (state.phase !== "SPENDING") return log(state, `Cannot spend: phase=${state.phase}`);
+  if (state.bonusStage?.open) return log(state, "Finish the Bonus Stage before spending.");
   if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb) {
     return log(state, "Resolve the pending reward before spending.");
   }
@@ -1742,17 +1998,19 @@ function confirmStarPostSave(state) {
   p.heldRings = 0;
   p.savedRings += savedNow;
   log(state, `Star Post (${starUi.reason}): saved ${savedNow} Rings (Saved=${p.savedRings}).`);
-  if (savedNow >= 5) {
-    log(state, "Bonus Stage triggered (not implemented).");
-  }
+  const triggerBonusStage = savedNow >= 5;
 
   const post = starUi.postSpend;
   clearStarPostUi(state);
+  let outState = state;
   if (post?.spentDieColor) {
     const ra = getRollActionCfg(p);
-    return finalizePostSpend(state, { color: post.spentDieColor }, ra);
+    outState = finalizePostSpend(state, { color: post.spentDieColor }, ra);
   }
-  return state;
+  if (triggerBonusStage) {
+    enterBonusStage(outState, "Star Post saved 5+ Rings");
+  }
+  return outState;
 }
 
 function confirmStarPostKeep(state) {
@@ -2164,7 +2422,7 @@ function render() {
   if (s.ui?.starPost?.open) {
     if (p.heldRings <= 0) clearStarPostUi(s);
   }
-  if (s.pendingPowerUp || s.pendingDamage || s.pendingBadnikReward || s.pendingWallClimb) {
+  if (s.pendingPowerUp || s.pendingDamage || s.pendingBadnikReward || s.pendingWallClimb || s.bonusStage?.open) {
     clearSpendUi(s);
   }
 
@@ -2364,7 +2622,8 @@ function render() {
   const damageOpen = !!s.pendingDamage;
   const badnikRewardOpen = !!s.pendingBadnikReward;
   const wallClimbOpen = !!s.pendingWallClimb;
-  const actionBlocked = discardOpen || starPostOpen || powerOpen || damageOpen || badnikRewardOpen || wallClimbOpen;
+  const bonusStageOpen = !!s.bonusStage?.open;
+  const actionBlocked = discardOpen || starPostOpen || powerOpen || damageOpen || badnikRewardOpen || wallClimbOpen || bonusStageOpen;
   dis("btnBuildPool", s.phase !== "ROLL_ACTION" || actionBlocked || !p.rollActionSelectedThisTurn);
   dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || actionBlocked);
   const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
@@ -2373,6 +2632,7 @@ function render() {
     (s.phase === "SPENDING" && p.boost > 0 && p.dicePool.length > 0);
   dis("btnUseBoostToken", !canUseBoost || actionBlocked);
   dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN") || actionBlocked);
+  dis("btnForceBonusStage", bonusStageOpen);
 
   // Roll action buttons
   const raWrap = document.getElementById("rollActionButtons");
@@ -2407,7 +2667,7 @@ function render() {
     el.style.opacity = (selectedDieId === d.id) ? "1" : "0.82";
     el.style.transform = (selectedDieId === d.id) ? "scale(1.05)" : "scale(1)";
     el.addEventListener("click", () => {
-      if (damageOpen || powerOpen || badnikRewardOpen || wallClimbOpen) return;
+      if (damageOpen || powerOpen || badnikRewardOpen || wallClimbOpen || bonusStageOpen) return;
       if (discardUi?.open) {
         discardUi.selectedDieId = d.id;
       } else {
@@ -2586,14 +2846,14 @@ function render() {
     const nextHtml = cardData
       ? (next
           ? `${formatChallengeChip(next, cardData)}
-             <span class="muted">Reward:</span> <span class="pill">${formatRewardLabel(next.reward)}</span>`
+             <span class="muted">Reward:</span> <span class="pill">${formatRewardDisplayHtml(next.reward)}</span>`
           : `<span class="ok">Completed</span>`)
       : `<span class="muted">No Zone Card</span>`;
     const trackHtml = cardData
       ? `<div class="track-list">
           ${cardData.challenges.map(ch => {
             const req = formatChallengeChip(ch, cardData);
-            const reward = formatRewardLabel(ch.reward);
+            const reward = formatRewardDisplayHtml(ch.reward);
             return `<div class="track-item ${ch.cleared ? "cleared" : ""}">
               <div class="track-label">${req}</div>
               <div class="track-reward">${reward}</div>
@@ -2703,6 +2963,94 @@ function render() {
       `;
     }
   }
+
+  const bonusModal = document.getElementById("bonusStageModal");
+  if (bonusModal) {
+    const stage = s.bonusStage;
+    if (!stage || !stage.open) {
+      bonusModal.classList.remove("open");
+    } else {
+      bonusModal.classList.add("open");
+      const statusEl = document.getElementById("bonusStageStatus");
+      const gridEl = document.getElementById("bonusStageGrid");
+      const exitBtn = document.getElementById("bonusStageExit");
+      const activeName = s.players[stage.activePlayerId ?? s.activePlayer]?.name || p.name;
+      const remaining = stage.tiles.filter(t => !t.revealed).length;
+      if (statusEl) {
+        const baseMsg = stage.message || `Bonus Stage: ${activeName} is flipping tiles.`;
+        statusEl.textContent = `${baseMsg} (Unflipped: ${remaining})`;
+      }
+      if (gridEl) {
+        gridEl.innerHTML = "";
+        for (const tile of stage.tiles) {
+          const tileEl = document.createElement("div");
+          const classes = ["bonus-tile"];
+          let label = "Blue Sphere";
+          let icon = "🔵";
+          if (tile.revealed) {
+            classes.push("revealed");
+            if (tile.type === "red") {
+              classes.push("red");
+              label = "Red Sphere";
+              icon = "🔴";
+            } else if (tile.type === "bumper") {
+              classes.push("bumper");
+              label = "Bumper Sphere";
+              icon = "⚪";
+            } else if (tile.type === "chaos") {
+              classes.push("chaos");
+              label = "Chaos Emerald";
+              icon = "💎";
+            }
+          }
+          if (stage.awaitingExit) classes.push("disabled");
+          tileEl.className = classes.join(" ");
+          tileEl.title = label;
+          const iconEl = document.createElement("div");
+          iconEl.className = "bonus-icon";
+          iconEl.textContent = icon;
+          tileEl.appendChild(iconEl);
+          if (tile.revealed && tile.reward) {
+            const badge = document.createElement("div");
+            badge.className = "bonus-reward";
+            if (tile.reward.type === "rings") {
+              const img = document.createElement("img");
+              img.src = "img/ring.png";
+              img.alt = "Ring";
+              badge.appendChild(img);
+            } else if (tile.reward.type === "power_up") {
+              const img = document.createElement("img");
+              img.src = "img/power_up.png";
+              img.alt = "Power Up";
+              badge.appendChild(img);
+            } else if (tile.reward.type === "boost") {
+              const img = document.createElement("img");
+              img.src = "img/boost.png";
+              img.alt = "Boost";
+              badge.appendChild(img);
+            } else {
+              badge.textContent = formatBonusStageRewardLabel(tile.reward);
+            }
+            tileEl.appendChild(badge);
+          }
+          tileEl.addEventListener("click", () => {
+            flipBonusStageTile(STATE, tile.id);
+            render();
+          });
+          gridEl.appendChild(tileEl);
+        }
+      }
+      if (exitBtn) {
+        exitBtn.disabled = !stage.awaitingExit;
+        exitBtn.textContent = stage.awaitingExit ? "Return to Zone" : "Finish Bonus Stage";
+        exitBtn.onclick = () => {
+          if (!stage.awaitingExit) return;
+          closeBonusStage(STATE);
+          render();
+        };
+      }
+    }
+  }
 }
 
 /* =======================
@@ -2808,6 +3156,20 @@ document.getElementById("btnEndTurn").addEventListener("click", () => {
   endTurn(STATE);
   render();
 });
+
+const forceBonusBtn = document.getElementById("btnForceBonusStage");
+if (forceBonusBtn) {
+  forceBonusBtn.addEventListener("click", () => {
+    if (!STATE) return;
+    if (STATE.pendingPowerUp || STATE.pendingDamage || STATE.pendingBadnikReward || STATE.pendingWallClimb) {
+      log(STATE, "Resolve the pending reward before forcing the Bonus Stage.");
+      render();
+      return;
+    }
+    enterBonusStage(STATE, "Debug trigger");
+    render();
+  });
+}
 
 // Auto-start
 renderCharacterSelectors();
