@@ -828,6 +828,10 @@ function getShieldTypeFromPowerUp(id) {
   return id.replace("shield_", "");
 }
 
+function getShieldPowerUpId(type) {
+  return `shield_${type}`;
+}
+
 function buildPowerUpDeck() {
   const deck = [];
   for (const p of POWER_UPS) {
@@ -854,6 +858,26 @@ function drawPowerUp(state) {
   state.powerUpDiscard.push(next);
   log(state, `Power Up drawn: ${getPowerUpLabel(next)}.`);
   return next;
+}
+
+function removePowerUpFromDiscard(state, powerUpId) {
+  if (!state.powerUpDiscard) state.powerUpDiscard = [];
+  const idx = state.powerUpDiscard.indexOf(powerUpId);
+  if (idx >= 0) state.powerUpDiscard.splice(idx, 1);
+}
+
+function addPowerUpToDiscard(state, powerUpId) {
+  if (!state.powerUpDiscard) state.powerUpDiscard = [];
+  state.powerUpDiscard.push(powerUpId);
+}
+
+function clearInvinciblePowerUps(state, p, reason) {
+  if (!p.invincibleTokens) return;
+  for (let i = 0; i < p.invincibleTokens; i++) {
+    addPowerUpToDiscard(state, "invincible");
+  }
+  log(state, `${p.name} discards Invincible (${reason}).`);
+  clearInvinciblePowerUps(state, p, "turn end (damage)");
 }
 
 function buildChaosEmeraldDeck() {
@@ -1226,6 +1250,7 @@ function takeDamage(state, reason) {
     const shieldType = p.shield.type;
     p.shield = null;
     if (shieldType === "blue") p.blueShieldLostThisTurn = true;
+    addPowerUpToDiscard(state, getShieldPowerUpId(shieldType));
     log(state, `${p.name} ignores damage with ${getShieldLabel(shieldType)} (shield discarded).`);
     return state;
   }
@@ -1269,6 +1294,11 @@ function applyDamage(state, reason) {
   if (heldBefore === 0) {
     p.lives -= 1;
     log(state, `DAMAGE (${reason}): No held rings -> ${p.name} loses 1 Life (now ${p.lives}).`);
+    if (p.hyperRing) {
+      p.hyperRing = false;
+      addPowerUpToDiscard(state, "hyper_ring");
+      log(state, `${p.name} loses Hyper Ring after losing a Life.`);
+    }
   }
 
   // Clear badniks and dice pool, end turn without time token
@@ -1282,7 +1312,7 @@ function applyDamage(state, reason) {
   p.hasRerolledThisTurn = false;
   p.propellerTailBonusGivenSinceReroll = false;
   p.lastChainSpendRule = null;
-  p.invincibleTokens = 0;
+  clearInvinciblePowerUps(state, p, "turn end");
   p.flameShieldArmed = false;
   p.lightningShieldArmed = false;
   state.pendingDamage = null;
@@ -1384,6 +1414,7 @@ function applyPowerUp(state, powerUpId) {
   }
   if (powerUpId === "hyper_ring") {
     p.hyperRing = true;
+    removePowerUpFromDiscard(state, powerUpId);
     log(state, "Power Up: Hyper Ring (keep half held Rings when damaged).");
     return;
   }
@@ -1400,6 +1431,7 @@ function applyPowerUp(state, powerUpId) {
   }
   if (powerUpId === "invincible") {
     p.invincibleTokens += 1;
+    removePowerUpFromDiscard(state, powerUpId);
     log(state, "Power Up: Invincible (discard a die to ignore damage this turn).");
     return;
   }
@@ -1413,6 +1445,7 @@ function applyPowerUp(state, powerUpId) {
     const newShield = getShieldTypeFromPowerUp(powerUpId);
     if (!p.shield) {
       p.shield = { type: newShield };
+      removePowerUpFromDiscard(state, powerUpId);
       log(state, `Power Up: ${getShieldLabel(newShield)} equipped.`);
       return;
     }
@@ -1451,7 +1484,9 @@ function resolveShieldSwap(state, keepCurrent) {
     log(state, `${p.name} keeps ${getShieldLabel(p.shield.type)} and discards ${getShieldLabel(pending.newShield)}.`);
   } else {
     log(state, `${p.name} swaps to ${getShieldLabel(pending.newShield)} (discarded ${getShieldLabel(p.shield.type)}).`);
+    addPowerUpToDiscard(state, getShieldPowerUpId(p.shield.type));
     p.shield = { type: pending.newShield };
+    removePowerUpFromDiscard(state, getShieldPowerUpId(pending.newShield));
   }
   state.pendingPowerUp = null;
   processQueuedPowerUps(state);
@@ -2369,7 +2404,7 @@ function endTurn(state) {
   makeVulnerable(p);
   p.spentSinceLastReroll = 0;
   p.lastChainSpendRule = null;
-  p.invincibleTokens = 0;
+  clearInvinciblePowerUps(state, p, "turn end");
   p.flameShieldArmed = false;
   p.lightningShieldArmed = false;
   p.blueShieldLostThisTurn = false;
