@@ -2965,12 +2965,6 @@ function render() {
     const next = cardData?.challenges.find(x=>!x.cleared);
     const card = document.createElement("div");
     card.className = `card ${next ? "clickable" : ""}`;
-    const nextHtml = cardData
-      ? (next
-          ? `${formatChallengeChip(next, cardData)}
-             <span class="muted">Reward:</span> <span class="pill">${formatRewardDisplayHtml(next.reward)}</span>`
-          : `<span class="ok">Completed</span>`)
-      : `<span class="muted">No Zone Card</span>`;
     const trackHtml = cardData
       ? `<div class="track-list">
           ${cardData.challenges.map(ch => {
@@ -2987,9 +2981,6 @@ function render() {
       <h2>${route.name} Route</h2>
       <div class="tiny">
         Act Board reward: <span class="pill">${formatRewardLabel(getActBoardReward(s, route.name))}</span>
-      </div>
-      <div class="tiny" style="margin-top:6px;">
-        Next: ${nextHtml}
       </div>
       ${trackHtml}
     `;
