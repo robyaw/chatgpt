@@ -41,14 +41,31 @@
     .roll-action-btn.active { border-color:#7cb6ff; box-shadow: 0 0 0 2px rgba(124,182,255,.35); background:#15234a; }
     .die {
       width: 44px; height: 44px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;
-      margin:4px; font-weight:700; border:1px solid #2d3b73; background:#0f1733;
-      user-select:none;
+      margin:4px; font-weight:700; border:1px solid transparent; background:#0f1733; color:#f7f9ff;
+      user-select:none; opacity:.82; transform:scale(1);
     }
-    .die.blue { outline:2px solid rgba(86,161,255,.65); }
-    .die.yellow { outline:2px solid rgba(255,219,86,.65); }
-    .die.red { outline:2px solid rgba(255,97,97,.65); }
-    .die.black { outline:2px solid rgba(170,170,170,.35); }
-    .die.selected { box-shadow: 0 0 0 2px #b8c6ff; }
+    .die.blue { background:#2f7cff; border-color:#2f7cff; outline:2px solid #2f7cff; }
+    .die.yellow { background:#e7c240; border-color:#e7c240; color:#f7f9ff; outline:2px solid #e7c240; }
+    .die.red { background:#ff3b30; border-color:#ff3b30; outline:2px solid #ff3b30; }
+    .die.black { background:#2d2d2d; border-color:#2d2d2d; outline:2px solid #2d2d2d; }
+    .pip-grid {
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      width:100%;
+      height:100%;
+    }
+    .pip {
+      width:11px;
+      height:11px;
+      border-radius:50%;
+      background:currentColor;
+      opacity:0;
+      justify-self:center;
+      align-self:center;
+    }
+    .pip.on { opacity:1; }
+    .die.selected { box-shadow: 0 0 0 2px #b8c6ff; opacity:1; transform:scale(1.05); }
     .die.disabled { opacity:.35; cursor:not-allowed; }
     textarea { width:100%; min-height:120px; border-radius:10px; background:#0f1733; border:1px solid #2d3b73; color:#e8ecff; padding:10px; }
     .hr { height:1px; background:#23305a; margin:10px 0; }
@@ -439,6 +456,27 @@ function shuffle(arr) {
 function log(state, msg) { state.log.push(msg); return state; }
 function makeVulnerable(p){ p.invulnerable = false; }
 function makeInvulnerable(p){ p.invulnerable = true; }
+
+function getPipPositions(value) {
+  switch (value) {
+    case 1: return [4];
+    case 2: return [0, 8];
+    case 3: return [0, 4, 8];
+    case 4: return [0, 2, 6, 8];
+    case 5: return [0, 2, 4, 6, 8];
+    case 6: return [0, 2, 3, 5, 6, 8];
+    default: return [4];
+  }
+}
+
+function buildDieFaceHtml(value) {
+  const v = Math.max(1, Math.min(6, Number(value) || 1));
+  const on = new Set(getPipPositions(v));
+  const pips = Array.from({ length: 9 }, (_, i) => {
+    return `<span class="pip${on.has(i) ? " on" : ""}"></span>`;
+  }).join("");
+  return `<div class="pip-grid">${pips}</div>`;
+}
 
 function isGameOver(state) {
   if (state.timeTokens <= 0) return "Time ran out (0 Time Tokens)";
@@ -2558,7 +2596,7 @@ function render() {
       for (const d of p.dicePool) {
         const el = document.createElement("div");
         el.className = `die ${d.color}` + (s.pendingDamage.selectedDieId === d.id ? " selected" : "");
-        el.textContent = d.value;
+        el.innerHTML = buildDieFaceHtml(d.value);
         el.title = d.color;
         el.addEventListener("click", () => {
           s.pendingDamage.selectedDieId = d.id;
@@ -2792,11 +2830,9 @@ function render() {
   const selectedDieId = discardUi?.open ? discardUi.selectedDieId : p.selectedDieId;
   for (const d of p.dicePool) {
     const el = document.createElement("div");
-    el.className = `die ${d.color}`;
-    el.textContent = d.value;
+    el.className = `die ${d.color}` + (selectedDieId === d.id ? " selected" : "");
+    el.innerHTML = buildDieFaceHtml(d.value);
     el.title = d.color;
-    el.style.opacity = (selectedDieId === d.id) ? "1" : "0.82";
-    el.style.transform = (selectedDieId === d.id) ? "scale(1.05)" : "scale(1)";
     el.addEventListener("click", () => {
       if (damageOpen || powerOpen || badnikRewardOpen || wallClimbOpen || bonusStageOpen) return;
       if (discardUi?.open) {
@@ -2834,7 +2870,7 @@ function render() {
         const selected = pendingWall.selectedIds.includes(d.id);
         const el = document.createElement("div");
         el.className = `die ${d.color}` + (selected ? " selected" : "") + (disabled ? " disabled" : "");
-        el.textContent = d.value;
+        el.innerHTML = buildDieFaceHtml(d.value);
         el.title = d.color;
         el.addEventListener("click", () => {
           if (disabled) return;
