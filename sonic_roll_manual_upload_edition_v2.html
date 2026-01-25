@@ -34,7 +34,7 @@
     .log { max-height: 300px; overflow:auto; font-size: 13px; line-height:1.35; }
     .grid { display:grid; grid-template-columns: minmax(240px, 1fr); gap:10px; }
     .tiny { font-size: 12px; }
-    .mono { font-family: Jost, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     .badge { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid #2d3b73; background:#0f1733; }
     .roll-action-btn { padding:8px 10px; border-radius:10px; border:1px solid #2d3b73; background:#0f1733; color:#e8ecff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:90px; }
     .roll-action-icon { font-size:16px; line-height:1; }
@@ -268,9 +268,8 @@
 
       <div class="hr"></div>
 
-      <div class="tiny">
+      <div class="tiny row">
         <div><span class="badge">Phase</span> <span id="phase"></span></div>
-        <div><span class="badge">Active</span> <span id="activePlayer"></span></div>
         <div><span class="badge">Invulnerable</span> <span id="invuln"></span></div>
       </div>
 
@@ -2593,9 +2592,6 @@ function render() {
   }
 
   document.getElementById("phase").textContent = s.phase;
-  document.getElementById("activePlayer").textContent =
-    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | SavedRings=${p.savedRings} | Animals=${p.animalTokens} | ChaosReady=${chaosCounts.ready} | ChaosSpent=${chaosCounts.spent} | ZoneCards=${p.zoneCardsCompleted} | Badniks=${p.badniks.length} | TimeTaken=${p.timeTokensTaken}`;
-
   document.getElementById("invuln").textContent = p.invulnerable ? "YES" : "NO";
 
   const counters = document.getElementById("counters");
