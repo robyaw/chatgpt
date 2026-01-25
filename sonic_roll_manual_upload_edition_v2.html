@@ -195,6 +195,22 @@
       height:18px;
       display:block;
     }
+    .chaos-emerald-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+    .chaos-emerald-card {
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:4px;
+      padding:6px 8px;
+      border:1px solid #2d3b73;
+      border-radius:10px;
+      background:#0f1733;
+      color:#e8ecff;
+      font-size:11px;
+      min-width:90px;
+    }
+    .chaos-emerald-card img { width:36px; height:auto; display:block; }
+    .chaos-emerald-card.spent { opacity:.6; text-decoration: line-through; }
     .bonus-icon {
       font-size:70px;
       line-height:1;
@@ -280,6 +296,11 @@
       <h2>Power Ups</h2>
       <div id="powerUpStatus" class="tiny"></div>
       <div id="powerUpPanel" class="tiny muted">No pending Power Ups.</div>
+
+      <div class="hr"></div>
+
+      <h2>Chaos Emeralds</h2>
+      <div id="chaosEmeraldPanel" class="tiny muted"></div>
 
       <div class="hr"></div>
 
@@ -728,9 +749,29 @@ const POWER_UPS = [
   { id: "shield_blue", label: "Blue Shield", count: 2 }
 ];
 
+const CHAOS_EMERALDS = [
+  { id: "chaos_emerald_green", color: "green", img: "img/chaos_emerald_01_green.png" },
+  { id: "chaos_emerald_yellow", color: "yellow", img: "img/chaos_emerald_02_yellow.png" },
+  { id: "chaos_emerald_blue", color: "blue", img: "img/chaos_emerald_03_blue.png" },
+  { id: "chaos_emerald_purple", color: "purple", img: "img/chaos_emerald_04_purple.png" },
+  { id: "chaos_emerald_white", color: "white", img: "img/chaos_emerald_05_white.png" },
+  { id: "chaos_emerald_cyan", color: "cyan", img: "img/chaos_emerald_06_cyan.png" },
+  { id: "chaos_emerald_red", color: "red", img: "img/chaos_emerald_07_red.png" }
+].map(card => ({
+  ...card,
+  diceBonusColors: [],
+  extraReward: null
+}));
+
 function getPowerUpLabel(id) {
   const entry = POWER_UPS.find(p => p.id === id);
   return entry ? entry.label : id;
+}
+
+function getChaosEmeraldLabel(card) {
+  if (!card) return "Chaos Emerald";
+  const color = card.color ? `${card.color[0].toUpperCase()}${card.color.slice(1)}` : "Unknown";
+  return `${color} Chaos Emerald`;
 }
 
 function getShieldLabel(type) {
@@ -778,9 +819,17 @@ function drawPowerUp(state) {
 }
 
 function buildChaosEmeraldDeck() {
-  const deck = [];
-  for (let i = 1; i <= 7; i++) deck.push(`Chaos Emerald ${i}`);
-  return shuffle(deck);
+  return shuffle(CHAOS_EMERALDS.map(card => ({
+    ...card,
+    spent: false,
+    instanceId: uuid()
+  })));
+}
+
+function getChaosCounts(p) {
+  const list = p.chaosEmeralds || [];
+  const spent = list.filter(c => c.spent).length;
+  return { ready: list.length - spent, spent };
 }
 
 function drawChaosEmerald(state) {
@@ -789,10 +838,44 @@ function drawChaosEmerald(state) {
     return null;
   }
   const p = state.players[state.activePlayer];
-  state.chaosEmeraldDeck.shift();
-  p.chaosEmeraldsReady += 1;
-  log(state, `${p.name} gains a Chaos Emerald.`);
+  const card = state.chaosEmeraldDeck.shift();
+  p.chaosEmeralds.push(card);
+  log(state, `${p.name} gains the ${getChaosEmeraldLabel(card)}.`);
   return true;
+}
+
+function spendChaosEmerald(state, emeraldId) {
+  if (state.ui?.discard?.open || state.ui?.starPost?.open) {
+    log(state, "Resolve the current prompt before spending a Chaos Emerald.");
+    return;
+  }
+  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb || state.bonusStage?.open) {
+    log(state, "Resolve the pending reward before spending a Chaos Emerald.");
+    return;
+  }
+  const p = state.players[state.activePlayer];
+  const card = p.chaosEmeralds.find(c => c.id === emeraldId && !c.spent);
+  if (!card) {
+    log(state, "Chaos Emerald spend failed: no unspent Emerald found.");
+    return;
+  }
+  const colors = Array.isArray(card.diceBonusColors) ? card.diceBonusColors : [];
+  if (colors.length !== 2) {
+    log(state, "Chaos Emerald dice bonus colors not configured yet.");
+    return;
+  }
+  card.spent = true;
+  log(state, `${p.name} spends the ${getChaosEmeraldLabel(card)}.`);
+  colors.forEach(color => {
+    if (!color) return;
+    const d = makeDie(color, rollD6());
+    p.dicePool.push(d);
+  });
+  log(state, "Chaos Emerald bonus: added two dice to the Dice Pool.");
+  if (card.extraReward) {
+    applyReward(state, card.extraReward);
+    log(state, "Chaos Emerald extra reward applied.");
+  }
 }
 
 function buildBonusStageTiles() {
@@ -1032,8 +1115,7 @@ function newGame({ playerCount, seedStr, characterSelections }) {
       zoneCardsCompleted: 0,
       animalTokens: 0,
       timeTokensTaken: 0,
-      chaosEmeraldsReady: 0,
-      chaosEmeraldsSpent: 0,
+      chaosEmeralds: [],
       hyperRing: false,
       invincibleTokens: 0,
       shield: null,
@@ -2330,7 +2412,8 @@ function getLifeLossPoints(p) {
 }
 
 function getChaosEmeraldPoints(p) {
-  return (p.chaosEmeraldsReady * 50) + (p.chaosEmeraldsSpent * 20);
+  const counts = getChaosCounts(p);
+  return (counts.ready * 50) + (counts.spent * 20);
 }
 
 function computeTimeScores(state) {
@@ -2400,6 +2483,7 @@ function render() {
 
   const p = getActivePlayer(s);
   const ra = getRollActionCfg(p);
+  const chaosCounts = getChaosCounts(p);
 
   const controlsCard = document.getElementById("controlsCard");
   if (controlsCard) controlsCard.dataset.character = p.character;
@@ -2408,7 +2492,7 @@ function render() {
     const label = `${p.name} — ${p.character}`;
     characterHeading.innerHTML = `
       <span>${escapeHtml(label)}</span>
-      <span class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken} | Chaos Ready ${p.chaosEmeraldsReady} | Chaos Spent ${p.chaosEmeraldsSpent}</span>
+      <span class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken} | Chaos Ready ${chaosCounts.ready} | Chaos Spent ${chaosCounts.spent}</span>
     `;
   }
 
@@ -2428,7 +2512,7 @@ function render() {
 
   document.getElementById("phase").textContent = s.phase;
   document.getElementById("activePlayer").textContent =
-    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | SavedRings=${p.savedRings} | Animals=${p.animalTokens} | ChaosReady=${p.chaosEmeraldsReady} | ChaosSpent=${p.chaosEmeraldsSpent} | ZoneCards=${p.zoneCardsCompleted} | Badniks=${p.badniks.length} | TimeTaken=${p.timeTokensTaken}`;
+    `${p.name} (${p.character}) | Lives=${p.lives} | Boost=${p.boost} | HeldRings=${p.heldRings} | SavedRings=${p.savedRings} | Animals=${p.animalTokens} | ChaosReady=${chaosCounts.ready} | ChaosSpent=${chaosCounts.spent} | ZoneCards=${p.zoneCardsCompleted} | Badniks=${p.badniks.length} | TimeTaken=${p.timeTokensTaken}`;
 
   document.getElementById("invuln").textContent = p.invulnerable ? "YES" : "NO";
 
@@ -2611,6 +2695,44 @@ function render() {
           render();
         });
       }
+    }
+  }
+
+  const chaosPanel = document.getElementById("chaosEmeraldPanel");
+  if (chaosPanel) {
+    const emeralds = p.chaosEmeralds || [];
+    if (!emeralds.length) {
+      chaosPanel.textContent = "No Chaos Emeralds.";
+    } else {
+      const chaosBlocked = !!s.ui?.discard?.open || !!s.ui?.starPost?.open ||
+        s.pendingPowerUp || s.pendingDamage || s.pendingBadnikReward || s.pendingWallClimb || s.bonusStage?.open;
+      chaosPanel.innerHTML = `<div class="chaos-emerald-list"></div>`;
+      const list = chaosPanel.querySelector(".chaos-emerald-list");
+      emeralds.forEach(card => {
+        const cardEl = document.createElement("div");
+        cardEl.className = `chaos-emerald-card ${card.spent ? "spent" : ""}`;
+        cardEl.innerHTML = `
+          <img src="${card.img}" alt="${escapeHtml(getChaosEmeraldLabel(card))}">
+          <div>${escapeHtml(getChaosEmeraldLabel(card))}</div>
+        `;
+        if (!card.spent) {
+          const canSpend = Array.isArray(card.diceBonusColors) && card.diceBonusColors.length === 2;
+          const btn = document.createElement("button");
+          btn.textContent = canSpend ? "Spend" : "Spend (TBD)";
+          btn.disabled = chaosBlocked || !canSpend;
+          btn.addEventListener("click", () => {
+            spendChaosEmerald(STATE, card.id);
+            render();
+          });
+          cardEl.appendChild(btn);
+        } else {
+          const tag = document.createElement("div");
+          tag.className = "muted";
+          tag.textContent = "Spent";
+          cardEl.appendChild(tag);
+        }
+        list.appendChild(cardEl);
+      });
     }
   }
 
