@@ -1971,9 +1971,11 @@ function formatActRewardHtml(reward) {
     `;
   }
   if (reward.type === "rings") {
+    const amount = reward.amount ?? 1;
+    const ringSrc = amount === 2 ? "img/ring_2.png" : amount === 3 ? "img/ring_3.png" : amount === 4 ? "img/ring_4.png" : "img/ring.png";
     return `
       <div class="act-reward-circle">
-        <img src="img/ring.png" alt="Rings">
+        <img src="${ringSrc}" alt="Rings">
       </div>
     `;
   }
