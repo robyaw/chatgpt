@@ -199,6 +199,48 @@
       height:18px;
       display:block;
     }
+    .zone-header {
+      display:block;
+      margin-top:6px;
+    }
+    .zone-level-name {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      width:100%;
+      box-sizing:border-box;
+      padding:8px 14px;
+      border-radius:14px;
+      background:linear-gradient(135deg, #0a47c8, #3ddcff, #ffd756);
+      color:#ffffff;
+      font-weight:900;
+      font-size:13px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      border:1px solid #e8f3ff;
+      box-shadow: 0 4px 12px rgba(0,0,0,.35);
+      position:relative;
+    }
+    .zone-level-name::after {
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:16px;
+      background:linear-gradient(120deg, rgba(255,255,255,.6), rgba(255,255,255,0));
+      z-index:-1;
+      filter:blur(6px);
+    }
+    .zone-level-name .zone-title {
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .zone-level-name .zone-deck {
+      font-size:11px;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      opacity:.95;
+    }
     .reward-icon {
       display:inline-flex;
       align-items:center;
@@ -325,7 +367,8 @@
     </div>
 
     <div class="card" style="flex:1; min-width:340px;">
-      <h2>Zone (Simplified Track)</h2>
+      <h2 style="display:none;">Zone (Simplified Track)</h2>
+      <div id="zoneHeaderInfo" class="zone-header"></div>
       <p class="tiny muted">
         For now: each route has a “next challenge” requiring an exact number, sometimes also an exact colour. This is a stand-in until we encode real Zone Cards.
       </p>
@@ -760,9 +803,9 @@ const CONFIG = {
     deckCounts: { 1: 8, 2: 8, 3: 9, 4: 10 },
     actBoardName: "Green Hill Zone (Act 1)",
     actBoardRewards: {
-      Top: { type:"rings", amount:2 },
-      Middle: { type:"boost", amount:1 },
-      Bottom: { type:"badnik", amount:1 }
+      Top: { type:"big_ring" },
+      Middle: { type:"star_post", amount:1 },
+      Bottom: { type:"power_up" }
     },
     bumper: {
       maxGroups: 1,
@@ -876,7 +919,7 @@ function clearInvinciblePowerUps(state, p, reason) {
     addPowerUpToDiscard(state, "invincible");
   }
   log(state, `${p.name} discards Invincible (${reason}).`);
-  clearInvinciblePowerUps(state, p, "turn end (damage)");
+  p.invincibleTokens = 0;
 }
 
 function buildChaosEmeraldDeck() {
@@ -910,7 +953,7 @@ function spendChaosEmerald(state, emeraldId) {
     log(state, "Resolve the current prompt before spending a Chaos Emerald.");
     return;
   }
-  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb || state.bonusStage?.open) {
+  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb || state.pendingAvoid || state.bonusStage?.open) {
     log(state, "Resolve the pending reward before spending a Chaos Emerald.");
     return;
   }
@@ -973,6 +1016,28 @@ function ensureBonusStageState(state) {
   if (!state.bonusStage.tiles || !state.bonusStage.tiles.length) {
     state.bonusStage.tiles = buildBonusStageTiles();
   }
+}
+
+function canStartBonusStage(state) {
+  if (!state) return false;
+  return !state.pendingPowerUp &&
+    !state.pendingDamage &&
+    !state.pendingBadnikReward &&
+    !state.pendingWallClimb &&
+    !state.pendingAvoid &&
+    !state.ui?.discard?.open &&
+    !state.ui?.starPost?.open;
+}
+
+function queueBonusStage(state, reason) {
+  if (!state) return;
+  if (state.bonusStage?.open) return;
+  if (!canStartBonusStage(state)) {
+    state.pendingBonusStage = { reason };
+    log(state, `Bonus Stage queued: ${reason}`);
+    return;
+  }
+  enterBonusStage(state, reason);
 }
 
 function enterBonusStage(state, reason) {
@@ -1212,7 +1277,7 @@ function newGame({ playerCount, seedStr, characterSelections }) {
   const bonusStage = initBonusStageState();
 
   return {
-    phase: "ROLL_ACTION", // ROLL_ACTION | SPENDING | REROLL | END_TURN | GAME_OVER
+    phase: "ROLL_ACTION", // ROLL_ACTION | SPENDING | AVOID | REROLL | END_TURN | GAME_OVER
     activePlayer: 0,
     timeTokens: 7,
     players,
@@ -1229,6 +1294,8 @@ function newGame({ playerCount, seedStr, characterSelections }) {
     pendingPowerUpQueue: [],
     pendingDamage: null,
     pendingWallClimb: null,
+    pendingAvoid: null,
+    pendingBonusStage: null,
     bonusStage,
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
@@ -1552,7 +1619,7 @@ function applyReward(state, reward) {
   } else if (effectiveReward.type === "star_post") {
     queueStarPostReward(state, "reward");
   } else if (effectiveReward.type === "big_ring") {
-    enterBonusStage(state, "Big Ring reward");
+    queueBonusStage(state, "Big Ring reward");
   } else if (effectiveReward.type === "power_up") {
     const powerUpId = effectiveReward.powerUp || drawPowerUp(state);
     if (!powerUpId) return;
@@ -1603,6 +1670,60 @@ function clearDiscardUi(state) {
 
 function clearStarPostUi(state) {
   if (state?.ui) state.ui.starPost = null;
+}
+
+function startAvoidPhase(state, reason) {
+  state.pendingAvoid = { reason };
+  state.phase = "AVOID";
+  log(state, `AVOID: ${reason}`);
+}
+
+function resolveAvoidTakeDamage(state) {
+  const pending = state.pendingAvoid;
+  if (!pending) return state;
+  state.pendingAvoid = null;
+  return takeDamage(state, pending.reason);
+}
+
+function resolveAvoidBoost(state) {
+  const p = getActivePlayer(state);
+  if (!state.pendingAvoid) return state;
+  if (p.boost <= 0) {
+    log(state, `${p.name} has no Boost tokens to avoid damage.`);
+    return state;
+  }
+  p.boost -= 1;
+  log(state, `${p.name} spends 1 Boost to avoid damage and reroll the Dice Pool.`);
+  clearSpendUi(state);
+  clearDiscardUi(state);
+  clearStarPostUi(state);
+  state.pendingAvoid = null;
+  state.phase = "REROLL";
+  return rerollStep(state);
+}
+
+function resolveAvoidBubble(state) {
+  const p = getActivePlayer(state);
+  if (!state.pendingAvoid) return state;
+  if (!p.shield || p.shield.type !== "bubble") {
+    log(state, "Bubble Shield not available.");
+    return state;
+  }
+  if (p.oncePerTurn.bubbleShieldUsed) {
+    log(state, "Bubble Shield already used this turn.");
+    return state;
+  }
+  const target = p.dicePool.find(d => d.id === p.selectedDieId) || (p.dicePool.length === 1 ? p.dicePool[0] : null);
+  if (!target) {
+    log(state, `${p.name} Bubble Shield: select a die to reroll.`);
+    return state;
+  }
+  target.value = rollD6();
+  p.oncePerTurn.bubbleShieldUsed = true;
+  log(state, `${p.name} Bubble Shield rerolls ${target.color.toUpperCase()}-${target.value}.`);
+  state.pendingAvoid = null;
+  state.phase = "SPENDING";
+  return state;
 }
 
 function formatRewardLabel(reward) {
@@ -1833,7 +1954,7 @@ function preselectSpendTarget(state, targetInfo) {
   if (state.bonusStage?.open) return log(state, "Finish the Bonus Stage before selecting a spend target.");
   if (state.ui?.discard?.open) return log(state, "Resolve the discard before selecting a spend target.");
   if (state.ui?.starPost?.open) return log(state, "Resolve the Star Post before selecting a spend target.");
-  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb) {
+  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb || state.pendingAvoid) {
     return log(state, "Resolve the pending reward before selecting a target.");
   }
   const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
@@ -2058,7 +2179,7 @@ function spendSelectedDie(state) {
   const p = getActivePlayer(state);
   if (state.phase !== "SPENDING") return log(state, `Cannot spend: phase=${state.phase}`);
   if (state.bonusStage?.open) return log(state, "Finish the Bonus Stage before spending.");
-  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb) {
+  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb || state.pendingAvoid) {
     return log(state, "Resolve the pending reward before spending.");
   }
 
@@ -2067,8 +2188,17 @@ function spendSelectedDie(state) {
   const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
 
   if (!openSpendUiForDie(state, die)) {
+    const canSpendAny = p.dicePool.some(candidate => {
+      const { effectiveDie } = getEffectiveSpendDie(p, candidate, { useAmyRaise: false });
+      return buildSpendTargets(state, effectiveDie).length > 0;
+    });
+    if (canSpendAny) {
+      clearSpendUi(state);
+      return log(state, "Selected die has no legal targets. Choose another die to spend.");
+    }
     clearSpendUi(state);
-    return takeDamage(state, "Could not spend a die during Spending Step");
+    startAvoidPhase(state, "No legal spend available");
+    return state;
   }
   return state;
 }
@@ -2171,7 +2301,7 @@ function confirmStarPostSave(state) {
     outState = finalizePostSpend(state, { color: post.spentDieColor }, ra);
   }
   if (triggerBonusStage) {
-    enterBonusStage(outState, "Star Post saved 5+ Rings");
+    queueBonusStage(outState, "Star Post saved 5+ Rings");
   }
   return outState;
 }
@@ -2562,6 +2692,12 @@ function render() {
   const s = STATE;
   if (!s) return;
 
+  if (s.pendingBonusStage && !s.bonusStage?.open && canStartBonusStage(s)) {
+    const reason = s.pendingBonusStage.reason;
+    s.pendingBonusStage = null;
+    enterBonusStage(s, reason);
+  }
+
   const p = getActivePlayer(s);
   const ra = getRollActionCfg(p);
   const chaosCounts = getChaosCounts(p);
@@ -2587,7 +2723,7 @@ function render() {
   if (s.ui?.starPost?.open) {
     if (p.heldRings <= 0) clearStarPostUi(s);
   }
-  if (s.pendingPowerUp || s.pendingDamage || s.pendingBadnikReward || s.pendingWallClimb || s.bonusStage?.open) {
+  if (s.pendingPowerUp || s.pendingDamage || s.pendingBadnikReward || s.pendingWallClimb || s.pendingAvoid || s.bonusStage?.open) {
     clearSpendUi(s);
   }
 
@@ -2614,7 +2750,41 @@ function render() {
 
   const powerPanel = document.getElementById("powerUpPanel");
   if (powerPanel) {
-    if (s.pendingDamage) {
+    if (s.pendingAvoid) {
+      const canBoost = p.boost > 0;
+      const canBubble = p.shield?.type === "bubble" && !p.oncePerTurn.bubbleShieldUsed && p.dicePool.length > 0;
+      powerPanel.innerHTML = `
+        <div class="pill tiny warn"><b>Avoid Damage</b> ${escapeHtml(s.pendingAvoid.reason || "No legal spend available")}</div>
+        <div class="row">
+          <button id="avoidBoostBtn">Use Boost Token</button>
+          ${canBubble ? `<button id="avoidBubbleBtn">Bubble Shield: Reroll Selected Die</button>` : ""}
+          <button id="avoidDamageBtn">Take Damage</button>
+        </div>
+      `;
+      const boostBtn = powerPanel.querySelector("#avoidBoostBtn");
+      if (boostBtn) {
+        boostBtn.disabled = !canBoost;
+        boostBtn.addEventListener("click", () => {
+          resolveAvoidBoost(STATE);
+          render();
+        });
+      }
+      const bubbleBtn = powerPanel.querySelector("#avoidBubbleBtn");
+      if (bubbleBtn) {
+        bubbleBtn.disabled = !canBubble;
+        bubbleBtn.addEventListener("click", () => {
+          resolveAvoidBubble(STATE);
+          render();
+        });
+      }
+      const dmgBtn = powerPanel.querySelector("#avoidDamageBtn");
+      if (dmgBtn) {
+        dmgBtn.addEventListener("click", () => {
+          resolveAvoidTakeDamage(STATE);
+          render();
+        });
+      }
+    } else if (s.pendingDamage) {
       powerPanel.innerHTML = `
         <div class="pill tiny warn"><b>Invincible</b> Discard a die to ignore damage.</div>
         <div id="invincibleDice"></div>
@@ -2823,7 +2993,8 @@ function render() {
   const badnikRewardOpen = !!s.pendingBadnikReward;
   const wallClimbOpen = !!s.pendingWallClimb;
   const bonusStageOpen = !!s.bonusStage?.open;
-  const actionBlocked = discardOpen || starPostOpen || powerOpen || damageOpen || badnikRewardOpen || wallClimbOpen || bonusStageOpen;
+  const avoidOpen = !!s.pendingAvoid;
+  const actionBlocked = discardOpen || starPostOpen || powerOpen || damageOpen || badnikRewardOpen || wallClimbOpen || avoidOpen || bonusStageOpen;
   dis("btnBuildPool", s.phase !== "ROLL_ACTION" || actionBlocked || !p.rollActionSelectedThisTurn);
   dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || actionBlocked);
   const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
@@ -2865,7 +3036,7 @@ function render() {
     el.innerHTML = buildDieFaceHtml(d.value);
     el.title = d.color;
     el.addEventListener("click", () => {
-      if (damageOpen || powerOpen || badnikRewardOpen || wallClimbOpen || bonusStageOpen) return;
+      if (damageOpen || powerOpen || badnikRewardOpen || wallClimbOpen || avoidOpen || bonusStageOpen) return;
       if (discardUi?.open) {
         discardUi.selectedDieId = d.id;
       } else {
@@ -3036,6 +3207,17 @@ function render() {
   // Zone view
   const zv = document.getElementById("zoneView");
   zv.innerHTML = "";
+  const zoneHeader = document.getElementById("zoneHeaderInfo");
+  if (zoneHeader) {
+    const deckRemaining = s.zone?.deck?.length ?? 0;
+    const actName = s.actBoard?.name || "Act 1";
+    zoneHeader.innerHTML = `
+      <div class="zone-level-name">
+        <span class="zone-title">${escapeHtml(actName)}</span>
+        <span class="zone-deck">Deck ${deckRemaining}</span>
+      </div>
+    `;
+  }
   for (const route of s.zone.routes) {
     const cardData = route.activeCard;
     const next = cardData?.challenges.find(x=>!x.cleared);
