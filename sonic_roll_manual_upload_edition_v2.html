@@ -77,12 +77,18 @@
     .target-item { padding:6px 8px; border:1px solid #2d3b73; border-radius:10px; background:#0f1733; cursor:pointer; }
     .target-item.selected { outline:2px solid rgba(120,200,255,.6); background:#15234a; }
     .target-actions { margin-top:8px; }
-    .track-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .track-list { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+    .track-list-even {
+      justify-content:space-between;
+      gap:0;
+      width:100%;
+      flex-wrap:nowrap;
+    }
     .track-item {
       border:1px solid #2d3b73;
       border-radius:10px;
       background:#0f1733;
-      padding:6px 8px;
+      padding:4px 6px;
       font-size:13px;
       display:flex;
       flex-direction:column;
@@ -230,6 +236,7 @@
       z-index:-1;
       filter:blur(6px);
     }
+    .zone-card { background:#121a33; }
     .zone-level-name .zone-title {
       white-space:nowrap;
       overflow:hidden;
@@ -240,6 +247,102 @@
       letter-spacing:.18em;
       text-transform:uppercase;
       opacity:.95;
+    }
+    #zoneView { justify-items:start; }
+    .zone-card {
+      max-width:460px;
+      width:100%;
+      min-height:260px;
+    }
+    .zone-layout {
+      display:flex;
+      gap:6px;
+      align-items:stretch;
+    }
+    .zone-cards {
+      flex:1;
+      min-width:240px;
+    }
+    .act-board {
+      flex:0 0 200px;
+      background:linear-gradient(180deg, #0f2347, #0a142b);
+      border:1px solid #23305a;
+      border-radius:14px;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      box-shadow: 0 8px 25px rgba(0,0,0,.25);
+    }
+    .act-board-lanes {
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      flex:1;
+    }
+    .act-lane {
+      flex:1;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      background:rgba(0,0,0,.2);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      padding:8px;
+    }
+    .act-lane-arrow {
+      width:44px;
+      height:24px;
+      background:linear-gradient(135deg, #58b6ff, #2f7cff);
+      border-radius:8px;
+      position:relative;
+      flex:0 0 56px;
+    }
+    .act-lane-arrow::after {
+      content:"";
+      position:absolute;
+      right:-8px;
+      top:0;
+      border-left:8px solid #2f7cff;
+      border-top:12px solid transparent;
+      border-bottom:12px solid transparent;
+    }
+    .act-reward-circle {
+      width:110px;
+      height:110px;
+      border-radius:50%;
+      background:radial-gradient(circle at 30% 30%, #ffffff, #b6c8ff);
+      border:3px solid #7aa8ff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      color:#0a142b;
+      font-weight:800;
+      text-align:center;
+      padding:8px;
+      box-sizing:border-box;
+    }
+    .act-reward-circle img {
+      width:52px;
+      height:52px;
+      display:block;
+    }
+    .act-reward-tag {
+      position:absolute;
+      bottom:6px;
+      font-size:9px;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      background:#0a47c8;
+      color:#fff;
+      padding:2px 6px;
+      border-radius:999px;
+    }
+    .act-reward-text {
+      font-size:10px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
     }
     .reward-icon {
       display:inline-flex;
@@ -366,16 +469,21 @@
       <button id="btnForceBonusStage">Force Bonus Stage</button>
     </div>
 
-    <div class="card" style="flex:1; min-width:340px;">
+    <div class="card" style="flex:1.2; min-width:360px;">
       <h2 style="display:none;">Zone (Simplified Track)</h2>
       <div id="zoneHeaderInfo" class="zone-header"></div>
       <p class="tiny muted">
         For now: each route has a “next challenge” requiring an exact number, sometimes also an exact colour. This is a stand-in until we encode real Zone Cards.
       </p>
-      <div id="zoneView" class="grid"></div>
+      <div class="zone-layout">
+        <div class="zone-cards">
+          <div id="zoneView" class="grid"></div>
+        </div>
+        <div id="actBoardView" class="act-board"></div>
+      </div>
     </div>
 
-    <div class="card" style="flex:1; min-width:340px;">
+    <div class="card" style="flex:0 0 320px; min-width:320px;">
       <h2>Badniks (Simplified)</h2>
       <p class="tiny muted">
         Badniks attack only dice being rerolled. Destroy/Avoid are simplified (exact match).
@@ -417,6 +525,9 @@
         </label>
         <label class="pill tiny">Seed
           <input id="seed" value="" size="10" />
+        </label>
+        <label class="pill tiny">Zone
+          <select id="zoneSelect"></select>
         </label>
       </div>
 
@@ -479,6 +590,7 @@ function rollD6(){ return 1 + Math.floor(rng()()*6); }
 const DieColor = Object.freeze({ BLUE:"blue", YELLOW:"yellow", RED:"red", BLACK:"black" });
 
 let PRE_GAME_CHARACTERS = [];
+let PRE_GAME_ZONE = "green_hill";
 
 function uuid() {
   // browser-safe UUID fallback
@@ -518,6 +630,23 @@ function buildDieFaceHtml(value) {
     return `<span class="pip${on.has(i) ? " on" : ""}"></span>`;
   }).join("");
   return `<div class="pip-grid">${pips}</div>`;
+}
+
+function buildGradientCss(colors) {
+  if (!Array.isArray(colors) || !colors.length) return "";
+  if (colors.length === 1 && typeof colors[0] === "string") return colors[0];
+  const stops = colors.map((entry, index) => {
+    if (typeof entry === "string") {
+      const pct = Math.round((index / (colors.length - 1)) * 100);
+      return `${entry} ${pct}%`;
+    }
+    if (entry && typeof entry === "object") {
+      const pct = Number.isFinite(entry.stop) ? entry.stop : Math.round((index / (colors.length - 1)) * 100);
+      return `${entry.color} ${pct}%`;
+    }
+    return "";
+  }).filter(Boolean);
+  return `linear-gradient(180deg, ${stops.join(", ")})`;
 }
 
 function isGameOver(state) {
@@ -624,6 +753,30 @@ function renderCharacterSelectors() {
     container.appendChild(row);
   }
   enforceUniqueCharacterSelections();
+}
+
+function renderZoneSelector() {
+  const select = document.getElementById("zoneSelect");
+  if (!select) return;
+  select.innerHTML = "";
+  for (const zone of Object.values(CONFIG.zones)) {
+    const opt = document.createElement("option");
+    opt.value = zone.id;
+    opt.textContent = zone.name;
+    select.appendChild(opt);
+  }
+  if (!CONFIG.zones[PRE_GAME_ZONE]) {
+    PRE_GAME_ZONE = Object.keys(CONFIG.zones)[0];
+  }
+  select.value = PRE_GAME_ZONE;
+  select.addEventListener("change", () => {
+    PRE_GAME_ZONE = select.value;
+  });
+}
+
+function readZoneSelection() {
+  const select = document.getElementById("zoneSelect");
+  return select?.value || PRE_GAME_ZONE || Object.keys(CONFIG.zones)[0];
 }
 
 function readCharacterSelections(playerCount) {
@@ -801,17 +954,44 @@ const CONFIG = {
     challengesMin: 5,
     challengesMax: 7,
     deckCounts: { 1: 8, 2: 8, 3: 9, 4: 10 },
-    actBoardName: "Green Hill Zone (Act 1)",
-    actBoardRewards: {
-      Top: { type:"big_ring" },
-      Middle: { type:"star_post", amount:1 },
-      Bottom: { type:"power_up" }
-    },
     bumper: {
       maxGroups: 1,
       groupChance: 0.55,
       tripleChance: 0.35,
       colorChance: 0.2
+    }
+  },
+  zones: {
+    green_hill: {
+      id: "green_hill",
+      name: "Green Hill Zone Act 1",
+      zoneGenerator: {
+        actBoardName: "Green Hill Zone Act 1",
+        actBoardRewards: {
+          Top: { type:"big_ring" },
+          Middle: { type:"star_post", amount:1 },
+          Bottom: { type:"power_up" }
+        },
+        cardGradient: ["#1c2d66", "#2f7cff", "#8bd3ff"]
+      }
+    },
+    stardust_speedway: {
+      id: "stardust_speedway",
+      name: "Stardust Speedway Zone Act 1",
+      zoneGenerator: {
+        actBoardName: "Stardust Speedway Zone Act 1",
+        actBoardRewards: {
+          Top: { type:"big_ring" },
+          Middle: { type:"star_post", amount:1 },
+          Bottom: { type:"power_up" }
+        },
+        cardGradient: [
+          { color: "#1f2a7a", stop: 0 },
+          { color: "#4a1c7a", stop: 50 },
+          { color: "#ffd400", stop: 50 },
+          { color: "#b48fe6", stop: 100 }
+        ]
+      }
     }
   }
 };
@@ -1208,13 +1388,24 @@ function generateActBoard(genCfg) {
     name,
     reward: genCfg.actBoardRewards?.[name] || { type:"rings", amount:1 }
   }));
-  return { name: genCfg.actBoardName || "Act 1", routes };
+  return {
+    name: genCfg.actBoardName || "Act 1",
+    routes,
+    cardGradient: genCfg.cardGradient || null
+  };
+}
+
+function getZoneConfig(zoneId) {
+  const zones = CONFIG.zones || {};
+  if (zoneId && zones[zoneId]) return zones[zoneId];
+  const first = Object.values(zones)[0];
+  return first || { id: "default", name: "Act 1", zoneGenerator: {} };
 }
 
 /* =======================
    Game creation
    ======================= */
-function newGame({ playerCount, seedStr, characterSelections }) {
+function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
   const seed = hashSeed(seedStr);
   initGameRng(seed);
 
@@ -1269,9 +1460,11 @@ function newGame({ playerCount, seedStr, characterSelections }) {
     };
   });
 
+  const zoneConfig = getZoneConfig(zoneId);
+  const zoneGen = { ...CONFIG.zoneGenerator, ...zoneConfig.zoneGenerator };
   const badnikDeck = shuffle(clone(CONFIG.badnikDeck));
-  const zone = generateZone(CONFIG.zoneGenerator, playerCount);
-  const actBoard = generateActBoard(CONFIG.zoneGenerator);
+  const zone = generateZone(zoneGen, playerCount);
+  const actBoard = generateActBoard(zoneGen);
   const powerUpDeck = buildPowerUpDeck();
   const chaosEmeraldDeck = buildChaosEmeraldDeck();
   const bonusStage = initBonusStageState();
@@ -1297,6 +1490,7 @@ function newGame({ playerCount, seedStr, characterSelections }) {
     pendingAvoid: null,
     pendingBonusStage: null,
     bonusStage,
+    zoneId: zoneConfig.id,
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
 }
@@ -1744,7 +1938,60 @@ function formatRewardDisplayHtml(reward) {
   if (reward.type === "boost") {
     return `<span class="reward-icon" title="boost"><img src="img/boost.png" alt="Boost"></span>`;
   }
+  if (reward.type === "star_post") {
+    return `<span class="reward-icon" title="star post"><img src="img/star_post.png" alt="Star Post"></span>`;
+  }
   return formatRewardLabel(reward);
+}
+
+function formatActRewardHtml(reward) {
+  if (!reward) return `<div class="act-reward-circle"><span class="act-reward-text">NONE</span></div>`;
+  if (reward.type === "big_ring") {
+    return `
+      <div class="act-reward-circle">
+        <img src="img/ring.png" alt="Big Ring">
+        <span class="act-reward-tag">BIG</span>
+      </div>
+    `;
+  }
+  if (reward.type === "rings") {
+    return `
+      <div class="act-reward-circle">
+        <img src="img/ring.png" alt="Rings">
+      </div>
+    `;
+  }
+  if (reward.type === "power_up") {
+    return `
+      <div class="act-reward-circle">
+        <img src="img/power_up.png" alt="Power Up">
+      </div>
+    `;
+  }
+  if (reward.type === "boost") {
+    return `
+      <div class="act-reward-circle">
+        <img src="img/boost.png" alt="Boost">
+      </div>
+    `;
+  }
+  if (reward.type === "star_post") {
+    return `
+      <div class="act-reward-circle">
+        <img src="img/star_post.png" alt="Star Post">
+      </div>
+    `;
+  }
+  if (reward.type === "badnik") {
+    return `<div class="act-reward-circle"><span class="act-reward-text">BADNIK</span></div>`;
+  }
+  if (reward.type === "hazard") {
+    return `<div class="act-reward-circle"><span class="act-reward-text">HAZARD</span></div>`;
+  }
+  if (reward.type === "lose_die") {
+    return `<div class="act-reward-circle"><span class="act-reward-text">LOSE DIE</span></div>`;
+  }
+  return `<div class="act-reward-circle"><span class="act-reward-text">${escapeHtml(formatRewardLabel(reward))}</span></div>`;
 }
 
 function getActBoardReward(state, routeName) {
@@ -3218,13 +3465,36 @@ function render() {
       </div>
     `;
   }
+  const actBoardView = document.getElementById("actBoardView");
+  if (actBoardView) {
+    const routes = ["Top","Middle","Bottom"].map(name => ({
+      name,
+      reward: getActBoardReward(s, name)
+    }));
+    actBoardView.innerHTML = `
+      <div class="act-board-lanes">
+        ${routes.map(route => `
+          <div class="act-lane">
+            <div class="act-lane-arrow"></div>
+            ${formatActRewardHtml(route.reward)}
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
   for (const route of s.zone.routes) {
     const cardData = route.activeCard;
     const next = cardData?.challenges.find(x=>!x.cleared);
     const card = document.createElement("div");
-    card.className = `card ${next ? "clickable" : ""}`;
+    card.className = `card zone-card ${next ? "clickable" : ""}`;
+    const gradient = buildGradientCss(s.actBoard?.cardGradient);
+    if (gradient) card.style.background = gradient;
+    const challengeCount = cardData?.challenges?.length ?? 0;
+    const evenLayout = challengeCount === 5 || challengeCount === 6;
+    const trackClass = evenLayout ? "track-list track-list-even" : "track-list";
+    const trackStyle = "";
     const trackHtml = cardData
-      ? `<div class="track-list">
+      ? `<div class="${trackClass}"${trackStyle}>
           ${cardData.challenges.map(ch => {
             const req = formatChallengeChip(ch, cardData);
             const reward = formatRewardDisplayHtml(ch.reward);
@@ -3237,9 +3507,6 @@ function render() {
       : `<div class="tiny muted">No active card.</div>`;
     card.innerHTML = `
       <h2>${route.name} Route</h2>
-      <div class="tiny">
-        Act Board reward: <span class="pill">${formatRewardLabel(getActBoardReward(s, route.name))}</span>
-      </div>
       ${trackHtml}
     `;
     if (next) {
@@ -3452,7 +3719,8 @@ function startNewGame({ closeModal = false } = {}) {
   const playerCount = parseInt(document.getElementById("playerCount").value, 10);
   const seedStr = ensureSeedValue();
   const characterSelections = readCharacterSelections(playerCount);
-  STATE = newGame({ playerCount, seedStr, characterSelections });
+  const zoneId = readZoneSelection();
+  STATE = newGame({ playerCount, seedStr, characterSelections, zoneId });
   if (closeModal) closeNewGameModal();
   render();
 }
@@ -3471,6 +3739,7 @@ if (menuNewGame) {
   menuNewGame.addEventListener("click", () => {
     menuDropdown?.classList.remove("open");
     renderCharacterSelectors();
+    renderZoneSelector();
     openNewGameModal();
   });
 }
@@ -3544,6 +3813,7 @@ if (forceBonusBtn) {
 
 // Auto-start
 renderCharacterSelectors();
+renderZoneSelector();
 ensureSeedValue();
 startNewGame();
 </script>
