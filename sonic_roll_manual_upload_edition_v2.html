@@ -97,6 +97,22 @@
     .track-item.cleared { opacity:.55; text-decoration: line-through; }
     .track-label { font-weight:600; font-size:14px; }
     .track-reward { color:#b0b8e8; font-size:12px; }
+    .track-reward .act-reward-circle {
+      width:46px;
+      height:46px;
+      border-width:2px;
+    }
+    .track-reward .act-reward-circle img {
+      width:24px;
+      height:24px;
+    }
+    .track-reward .act-reward-tag {
+      font-size:7px;
+      padding:1px 4px;
+    }
+    .track-reward .act-reward-text {
+      font-size:8px;
+    }
     .req-chip { display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; padding:0; border-radius:8px; border:1px solid #2d3b73; background:#d7dbe6; color:#111; font-weight:700; letter-spacing:.02em; }
     .req-chip img { width:28px; height:28px; display:block; }
     .req-chip.req-blue { background:#5aa3ff; color:#0b1020; }
@@ -252,7 +268,7 @@
     .zone-card {
       max-width:460px;
       width:100%;
-      min-height:260px;
+      min-height:230px;
     }
     .zone-layout {
       display:flex;
@@ -1968,6 +1984,13 @@ function formatActRewardHtml(reward) {
       </div>
     `;
   }
+  if (reward.type === "badnik") {
+    return `
+      <div class="act-reward-circle">
+        <img src="img/badnik.png" alt="Badnik">
+      </div>
+    `;
+  }
   if (reward.type === "boost") {
     return `
       <div class="act-reward-circle">
@@ -3497,7 +3520,7 @@ function render() {
       ? `<div class="${trackClass}"${trackStyle}>
           ${cardData.challenges.map(ch => {
             const req = formatChallengeChip(ch, cardData);
-            const reward = formatRewardDisplayHtml(ch.reward);
+            const reward = formatActRewardHtml(ch.reward);
             return `<div class="track-item ${ch.cleared ? "cleared" : ""}">
               <div class="track-label">${req}</div>
               <div class="track-reward">${reward}</div>
@@ -3506,7 +3529,6 @@ function render() {
         </div>`
       : `<div class="tiny muted">No active card.</div>`;
     card.innerHTML = `
-      <h2>${route.name} Route</h2>
       ${trackHtml}
     `;
     if (next) {
