@@ -47,6 +47,7 @@
     .die.blue { background:#2f7cff; border-color:#2f7cff; outline:2px solid #2f7cff; }
     .die.yellow { background:#e7c240; border-color:#e7c240; color:#f7f9ff; outline:2px solid #e7c240; }
     .die.red { background:#ff3b30; border-color:#ff3b30; outline:2px solid #ff3b30; }
+    .die.buddy-flight { background:#f0b44b; border-color:#f0b44b; color:#2a1a00; outline:2px solid #f0b44b; }
     .die.black { background:#2d2d2d; border-color:#2d2d2d; outline:2px solid #2d2d2d; }
     .pip-grid {
       display:grid;
@@ -1424,6 +1425,14 @@ function getZoneConfig(zoneId) {
   return first || { id: "default", name: "Act 1", zoneGenerator: {} };
 }
 
+function resetBuddyFlightForTurn(state) {
+  if (!state?.buddyFlight) return;
+  const p = state.players[state.activePlayer];
+  if (!p || p.character !== "Tails") return;
+  state.buddyFlight.value = 2;
+  log(state, "Buddy Flight die set to 2 (Tails' turn).");
+}
+
 /* =======================
    Game creation
    ======================= */
@@ -1490,12 +1499,14 @@ function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
   const powerUpDeck = buildPowerUpDeck();
   const chaosEmeraldDeck = buildChaosEmeraldDeck();
   const bonusStage = initBonusStageState();
+  const buddyFlight = finalChars.includes("Tails") ? { value: 0 } : null;
 
-  return {
+  const state = {
     phase: "ROLL_ACTION", // ROLL_ACTION | SPENDING | AVOID | REROLL | END_TURN | GAME_OVER
     activePlayer: 0,
     timeTokens: 7,
     players,
+    buddyFlight,
     badnikDeck,
     badnikDiscard: [],
     pendingBadnikReward: null,
@@ -1515,6 +1526,8 @@ function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
     zoneId: zoneConfig.id,
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
+  resetBuddyFlightForTurn(state);
+  return state;
 }
 
 /* =======================
@@ -2132,30 +2145,74 @@ function applyBumperLock(ch, card, die) {
   }
 }
 
-function getEffectiveSpendDie(p, die, options = {}) {
+function getBuddyFlightValue(state) {
+  return Math.max(0, Number(state?.buddyFlight?.value) || 0);
+}
+
+function getBuddyFlightDeltaRange(buddyValue, baseValue) {
+  const safeBase = Math.max(1, Math.min(6, Number(baseValue) || 1));
+  const available = Math.max(0, Number(buddyValue) || 0);
+  if (!available) return { min: 0, max: 0 };
+  const min = -Math.min(available, safeBase - 1);
+  const max = Math.min(available, 6 - safeBase);
+  return { min, max };
+}
+
+function clampBuddyFlightDelta(buddyValue, baseValue, delta) {
+  const range = getBuddyFlightDeltaRange(buddyValue, baseValue);
+  const desired = Math.trunc(delta) || 0;
+  return Math.max(range.min, Math.min(range.max, desired));
+}
+
+function getBuddyFlightCandidateDeltas(buddyValue, baseValue) {
+  const range = getBuddyFlightDeltaRange(buddyValue, baseValue);
+  const maxAbs = Math.max(Math.abs(range.min), Math.abs(range.max));
+  const deltas = [];
+  for (let step = 1; step <= maxAbs; step++) {
+    if (-step >= range.min) deltas.push(-step);
+    if (step <= range.max) deltas.push(step);
+  }
+  return deltas;
+}
+
+function getEffectiveSpendDie(state, p, die, options = {}) {
   const amyEligible = p.character === "Amy" && die.color === DieColor.RED;
   const useAmyRaise = amyEligible && !!options.useAmyRaise;
   const raisedValue = useAmyRaise ? ((die.value % 6) + 1) : die.value;
-  const amyAdjustedDie = useAmyRaise ? { ...die, value: raisedValue } : die;
+
+  const buddyValue = getBuddyFlightValue(state);
+  const buddyFlightDelta = clampBuddyFlightDelta(buddyValue, raisedValue, options.buddyFlightDelta);
+  const buddyAdjustedValue = Math.max(1, Math.min(6, raisedValue + buddyFlightDelta));
+  const buddyAdjustedDie = { ...die, value: buddyAdjustedValue };
 
   const canUseFlame = p.shield?.type === "flame" && !p.oncePerTurn.flameShieldUsed;
   const wantsFlame = options.useFlameShieldOverride ?? p.flameShieldArmed;
-  const useFlameShield = canUseFlame && wantsFlame && amyAdjustedDie.color !== DieColor.RED;
-  const effectiveDie = useFlameShield ? { ...amyAdjustedDie, color: DieColor.RED } : amyAdjustedDie;
-  return { effectiveDie, useFlameShield, useAmyRaise };
+  const useFlameShield = canUseFlame && wantsFlame && buddyAdjustedDie.color !== DieColor.RED;
+  const effectiveDie = useFlameShield ? { ...buddyAdjustedDie, color: DieColor.RED } : buddyAdjustedDie;
+  return {
+    effectiveDie,
+    useFlameShield,
+    useAmyRaise,
+    buddyFlightDelta,
+    buddyFlightBaseValue: raisedValue,
+    buddyFlightAdjustedValue: buddyAdjustedValue,
+    buddyFlightAvailable: buddyValue > 0
+  };
 }
 
 function refreshSpendTargets(state, die) {
   const spendUi = state.ui?.spend;
   if (!spendUi || !die) return false;
   const p = getActivePlayer(state);
-  const { effectiveDie } = getEffectiveSpendDie(p, die, {
+  const { effectiveDie, buddyFlightDelta } = getEffectiveSpendDie(state, p, die, {
     useFlameShieldOverride: spendUi.useFlameShield,
-    useAmyRaise: spendUi.amyRaise
+    useAmyRaise: spendUi.amyRaise,
+    buddyFlightDelta: spendUi.buddyFlightDelta
   });
   const targets = buildSpendTargets(state, effectiveDie);
   spendUi.targets = targets;
   spendUi.selectedTargetId = targets[0]?.id || null;
+  spendUi.buddyFlightDelta = buddyFlightDelta;
   return targets.length > 0;
 }
 
@@ -2211,16 +2268,30 @@ function buildSpendTargets(state, die) {
 function openSpendUiForDie(state, die) {
   if (!state.ui) state.ui = { spend: null, discard: null, starPost: null };
   const p = getActivePlayer(state);
-  const { effectiveDie, useFlameShield } = getEffectiveSpendDie(p, die, { useAmyRaise: false });
-  const targets = buildSpendTargets(state, effectiveDie);
+  const base = getEffectiveSpendDie(state, p, die, { useAmyRaise: false, buddyFlightDelta: 0 });
+  let targets = buildSpendTargets(state, base.effectiveDie);
+  let buddyFlightDelta = base.buddyFlightDelta;
+  if (!targets.length && base.buddyFlightAvailable) {
+    const deltas = getBuddyFlightCandidateDeltas(getBuddyFlightValue(state), base.buddyFlightBaseValue);
+    for (const delta of deltas) {
+      const adjusted = getEffectiveSpendDie(state, p, die, { useAmyRaise: false, buddyFlightDelta: delta });
+      const adjustedTargets = buildSpendTargets(state, adjusted.effectiveDie);
+      if (adjustedTargets.length) {
+        targets = adjustedTargets;
+        buddyFlightDelta = adjusted.buddyFlightDelta;
+        break;
+      }
+    }
+  }
   if (!targets.length) return false;
   state.ui.spend = {
     open: true,
     dieId: die.id,
     targets,
     selectedTargetId: targets[0].id,
-    useFlameShield,
-    amyRaise: false
+    useFlameShield: base.useFlameShield,
+    amyRaise: false,
+    buddyFlightDelta
   };
   return true;
 }
@@ -2466,8 +2537,14 @@ function spendSelectedDie(state) {
 
   if (!openSpendUiForDie(state, die)) {
     const canSpendAny = p.dicePool.some(candidate => {
-      const { effectiveDie } = getEffectiveSpendDie(p, candidate, { useAmyRaise: false });
-      return buildSpendTargets(state, effectiveDie).length > 0;
+      const base = getEffectiveSpendDie(state, p, candidate, { useAmyRaise: false, buddyFlightDelta: 0 });
+      if (buildSpendTargets(state, base.effectiveDie).length > 0) return true;
+      if (!base.buddyFlightAvailable) return false;
+      const deltas = getBuddyFlightCandidateDeltas(getBuddyFlightValue(state), base.buddyFlightBaseValue);
+      return deltas.some(delta => {
+        const adjusted = getEffectiveSpendDie(state, p, candidate, { useAmyRaise: false, buddyFlightDelta: delta });
+        return buildSpendTargets(state, adjusted.effectiveDie).length > 0;
+      });
     });
     if (canSpendAny) {
       clearSpendUi(state);
@@ -2500,7 +2577,11 @@ function confirmSpendSelection(state) {
     return state;
   }
 
-  const spendMeta = { useFlameShield: spendUi.useFlameShield, amyRaise: spendUi.amyRaise };
+  const spendMeta = {
+    useFlameShield: spendUi.useFlameShield,
+    amyRaise: spendUi.amyRaise,
+    buddyFlightDelta: spendUi.buddyFlightDelta
+  };
   clearSpendUi(state);
   return spendDieOnTarget(state, die, target, spendMeta);
 }
@@ -2600,16 +2681,29 @@ function confirmStarPostKeep(state) {
 function spendDieOnTarget(state, die, target, spendMeta) {
   const p = getActivePlayer(state);
   const ra = getRollActionCfg(p);
-  const { effectiveDie, useFlameShield, useAmyRaise } = getEffectiveSpendDie(p, die, {
+  const {
+    effectiveDie,
+    useFlameShield,
+    useAmyRaise,
+    buddyFlightDelta,
+    buddyFlightBaseValue,
+    buddyFlightAdjustedValue
+  } = getEffectiveSpendDie(state, p, die, {
     useFlameShieldOverride: spendMeta?.useFlameShield,
-    useAmyRaise: spendMeta?.amyRaise
+    useAmyRaise: spendMeta?.amyRaise,
+    buddyFlightDelta: spendMeta?.buddyFlightDelta
   });
   let spendTarget = null;
   let challengeReward = null;
   let completedRoute = null;
-  const spendLabel = useAmyRaise
-    ? `${die.color.toUpperCase()}-${die.value} (Piko Piko Hammer -> ${effectiveDie.value})`
-    : `${die.color.toUpperCase()}-${die.value}`;
+  let spendLabel = `${die.color.toUpperCase()}-${die.value}`;
+  if (useAmyRaise) {
+    spendLabel += ` (Piko Piko Hammer -> ${buddyFlightBaseValue})`;
+  }
+  if (buddyFlightDelta) {
+    const deltaLabel = buddyFlightDelta > 0 ? `+${buddyFlightDelta}` : `${buddyFlightDelta}`;
+    spendLabel += ` (Buddy Flight ${deltaLabel} -> ${buddyFlightAdjustedValue})`;
+  }
 
   if (target.type === "zone") {
     const route = state.zone.routes.find(r => r.id === target.routeId);
@@ -2667,6 +2761,18 @@ function spendDieOnTarget(state, die, target, spendMeta) {
   // Update counters for "since last reroll"
   p.spentSinceLastReroll += 1;
 
+  if (buddyFlightDelta) {
+    const spendAmount = Math.abs(buddyFlightDelta);
+    if (state.buddyFlight) {
+      const before = state.buddyFlight.value;
+      state.buddyFlight.value = Math.max(0, before - spendAmount);
+      log(state, `Buddy Flight: spent ${spendAmount} (die ${before} -> ${state.buddyFlight.value}).`);
+      if (state.buddyFlight.value === 0) {
+        log(state, "Buddy Flight die removed (0).");
+      }
+    }
+  }
+
   if (ra.name === "Propeller Tail" && !p.hasRerolledThisTurn && p.spentSinceLastReroll >= 2 && !p.propellerTailBonusGivenSinceReroll) {
     const bonusDie = makeDie(DieColor.YELLOW, rollD6());
     p.dicePool.push(bonusDie);
@@ -2675,7 +2781,7 @@ function spendDieOnTarget(state, die, target, spendMeta) {
   }
 
   // Core dice properties (from rulebook)
-  const spentDie = useAmyRaise ? { ...die, value: effectiveDie.value } : die;
+  const spentDie = { ...die, value: effectiveDie.value };
 
   if (spentDie.color === DieColor.YELLOW) {
     p.heldRings += 1;
@@ -2829,6 +2935,7 @@ function endTurn(state) {
   np.rollActionSelectedThisTurn = false;
   state.phase = "ROLL_ACTION";
   log(state, `➡️ Turn passes to ${np.name} (${np.character}).`);
+  resetBuddyFlightForTurn(state);
   return state;
 }
 
@@ -3008,9 +3115,14 @@ function render() {
   document.getElementById("invuln").textContent = p.invulnerable ? "YES" : "NO";
 
   const counters = document.getElementById("counters");
+  const buddyFlightValue = s.buddyFlight?.value ?? 0;
+  const buddyFlightMarkup = buddyFlightValue > 0
+    ? `<div class="pill tiny"><b>Buddy Flight</b><div class="die buddy-flight">${buildDieFaceHtml(buddyFlightValue)}</div></div>`
+    : "";
   counters.innerHTML = `
     <div class="pill tiny"><b>spentSinceLastReroll</b> ${p.spentSinceLastReroll}</div>
     <div class="pill tiny"><b>Roll Action</b> ${escapeHtml(ra.name)}</div>
+    ${buddyFlightMarkup}
     ${p.lastChainSpendRule ? `<div class="pill tiny warn"><b>Chain rule</b> ${p.lastChainSpendRule.color.toUpperCase()} must be lower than ${p.lastChainSpendRule.lastSpentValue}</div>` : ""}
   `;
 
@@ -3440,11 +3552,34 @@ function render() {
     const die = p.dicePool.find(d => d.id === spendUi.dieId);
     const dieLabel = die ? `${die.color.toUpperCase()}-${die.value}` : "Unknown";
     const canAmyRaise = p.character === "Amy" && die && die.color === DieColor.RED;
+    const buddyFlightValue = s.buddyFlight?.value ?? 0;
+    const buddyFlightAvailable = buddyFlightValue > 0 && !!die;
+    const buddyInfo = buddyFlightAvailable ? getEffectiveSpendDie(s, p, die, {
+      useFlameShieldOverride: spendUi.useFlameShield,
+      useAmyRaise: spendUi.amyRaise,
+      buddyFlightDelta: spendUi.buddyFlightDelta
+    }) : null;
+    const buddyDeltaLabel = buddyInfo
+      ? (buddyInfo.buddyFlightDelta > 0 ? `+${buddyInfo.buddyFlightDelta}` : `${buddyInfo.buddyFlightDelta}`)
+      : "0";
+    const buddyRange = buddyInfo ? getBuddyFlightDeltaRange(buddyFlightValue, buddyInfo.buddyFlightBaseValue) : { min: 0, max: 0 };
     spendPanel.innerHTML = `
       <div class="pill tiny">Die: ${dieLabel}</div>
       ${canAmyRaise ? `<div class="row target-actions">
         <button id="btnAmyRaise">${spendUi.amyRaise ? "Piko Piko Hammer (+1) ON" : "Use Piko Piko Hammer (+1)"}</button>
       </div>` : ""}
+      ${buddyFlightAvailable ? `
+        <div class="pill tiny">
+          <b>Buddy Flight</b>
+          <div class="die buddy-flight">${buildDieFaceHtml(buddyFlightValue)}</div>
+          <span class="muted">Adjust ${buddyInfo.buddyFlightBaseValue} → ${buddyInfo.buddyFlightAdjustedValue} (${buddyDeltaLabel})</span>
+        </div>
+        <div class="row target-actions">
+          <button id="buddyFlightDown">-1</button>
+          <button id="buddyFlightReset">Reset</button>
+          <button id="buddyFlightUp">+1</button>
+        </div>
+      ` : ""}
       <div class="target-list"></div>
       <div class="row target-actions">
         <button id="btnConfirmSpend">Confirm Spend</button>
@@ -3461,6 +3596,44 @@ function render() {
         }
         render();
       });
+    }
+    if (buddyFlightAvailable) {
+      const btnDown = spendPanel.querySelector("#buddyFlightDown");
+      const btnUp = spendPanel.querySelector("#buddyFlightUp");
+      const btnReset = spendPanel.querySelector("#buddyFlightReset");
+      if (btnDown) {
+        btnDown.disabled = buddyInfo.buddyFlightDelta <= buddyRange.min;
+        btnDown.addEventListener("click", () => {
+          spendUi.buddyFlightDelta = buddyInfo.buddyFlightDelta - 1;
+          const ok = refreshSpendTargets(STATE, die);
+          if (!ok) {
+            log(s, "No legal spend targets with Buddy Flight adjustment.");
+          }
+          render();
+        });
+      }
+      if (btnUp) {
+        btnUp.disabled = buddyInfo.buddyFlightDelta >= buddyRange.max;
+        btnUp.addEventListener("click", () => {
+          spendUi.buddyFlightDelta = buddyInfo.buddyFlightDelta + 1;
+          const ok = refreshSpendTargets(STATE, die);
+          if (!ok) {
+            log(s, "No legal spend targets with Buddy Flight adjustment.");
+          }
+          render();
+        });
+      }
+      if (btnReset) {
+        btnReset.disabled = buddyInfo.buddyFlightDelta === 0;
+        btnReset.addEventListener("click", () => {
+          spendUi.buddyFlightDelta = 0;
+          const ok = refreshSpendTargets(STATE, die);
+          if (!ok) {
+            log(s, "No legal spend targets with Buddy Flight adjustment.");
+          }
+          render();
+        });
+      }
     }
     const list = spendPanel.querySelector(".target-list");
     for (const t of spendUi.targets) {
