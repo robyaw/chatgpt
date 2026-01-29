@@ -242,6 +242,11 @@
       border:1px solid #e8f3ff;
       box-shadow: 0 4px 12px rgba(0,0,0,.35);
       position:relative;
+      text-shadow:
+        -1px -1px 0 rgba(0,0,0,.7),
+        1px -1px 0 rgba(0,0,0,.7),
+        -1px 1px 0 rgba(0,0,0,.7),
+        1px 1px 0 rgba(0,0,0,.7);
     }
     .zone-level-name::after {
       content:"";
@@ -397,7 +402,7 @@
 </head>
 <body>
   <div class="header-bar">
-    <h1>Sonic Roll – Rules Engine + Web App (Dashboards Implemented)</h1>
+    <h1 class="header-logo"><img src="img/Sonic_Roll_Logo.webp" alt="Sonic Roll"></h1>
     <div id="top-bar" class="top-bar">
       <div id="menuWrapper" class="menu-wrapper">
         <button id="menuBtn" class="menu-button" aria-label="Menu">
