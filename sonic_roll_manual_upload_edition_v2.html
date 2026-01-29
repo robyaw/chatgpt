@@ -2032,7 +2032,11 @@ function formatActRewardHtml(reward) {
     return `<div class="act-reward-circle"><span class="act-reward-text">HAZARD</span></div>`;
   }
   if (reward.type === "lose_die") {
-    return `<div class="act-reward-circle"><span class="act-reward-text">LOSE DIE</span></div>`;
+    return `
+      <div class="act-reward-circle">
+        <img src="img/lose_die.png" alt="Lose Die">
+      </div>
+    `;
   }
   return `<div class="act-reward-circle"><span class="act-reward-text">${escapeHtml(formatRewardLabel(reward))}</span></div>`;
 }
