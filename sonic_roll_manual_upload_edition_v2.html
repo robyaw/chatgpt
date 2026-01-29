@@ -817,6 +817,25 @@ function readCharacterSelections(playerCount) {
    ======================= */
 const BIG_RING_AMOUNT = 5; // Reference value for Big Ring rewards (Bonus Stage trigger).
 
+// Zone-specific Badnik decks (swap per zone via badnikDeckId).
+const BASE_BADNIK_DECK = [
+  { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+  { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+  { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+  { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
+];
+
+const BADNIK_DECKS = {
+  default: BASE_BADNIK_DECK,
+  green_hill: BASE_BADNIK_DECK,
+  stardust_speedway: [
+    { name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
+  ]
+};
+
 const CONFIG = {
   characters: {
     Sonic: {
@@ -964,14 +983,6 @@ const CONFIG = {
     }
   },
 
-  // Simplified Badnik deck used just to test attack timing and spend rules
-  badnikDeck: [
-    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
-  ],
-
   // Simplified Zone generator (placeholder until we encode real Zone Cards)
   zoneGenerator: {
     challengesMin: 5,
@@ -988,6 +999,7 @@ const CONFIG = {
     green_hill: {
       id: "green_hill",
       name: "Green Hill Zone Act 1",
+      badnikDeckId: "green_hill",
       zoneGenerator: {
         actBoardName: "Green Hill Zone Act 1",
         actBoardRewards: {
@@ -1001,6 +1013,7 @@ const CONFIG = {
     stardust_speedway: {
       id: "stardust_speedway",
       name: "Stardust Speedway Zone Act 1",
+      badnikDeckId: "stardust_speedway",
       zoneGenerator: {
         actBoardName: "Stardust Speedway Zone Act 1",
         actBoardRewards: {
@@ -1493,7 +1506,9 @@ function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
 
   const zoneConfig = getZoneConfig(zoneId);
   const zoneGen = { ...CONFIG.zoneGenerator, ...zoneConfig.zoneGenerator };
-  const badnikDeck = shuffle(clone(CONFIG.badnikDeck));
+  const badnikDeckId = zoneConfig.badnikDeckId || "default";
+  const badnikDeckSeed = BADNIK_DECKS[badnikDeckId] || BADNIK_DECKS.default || [];
+  const badnikDeck = shuffle(clone(badnikDeckSeed));
   const zone = generateZone(zoneGen, playerCount);
   const actBoard = generateActBoard(zoneGen);
   const powerUpDeck = buildPowerUpDeck();
