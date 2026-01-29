@@ -1660,6 +1660,11 @@ function queueBadnikRewardChoice(state, count = 1) {
       log(state, "Badnik reward: no eligible players can draw (all at 3).");
       continue;
     }
+    if (state.players.length === 1) {
+      drawBadnik(state, eligible[0]);
+      log(state, "Badnik reward: solo game -> extra Badnik assigned to the only player.");
+      continue;
+    }
     if (!state.pendingBadnikReward) {
       state.pendingBadnikReward = { remaining: 0 };
     }
