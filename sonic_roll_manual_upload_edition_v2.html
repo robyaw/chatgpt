@@ -1248,9 +1248,9 @@ function canStartBonusStage(state) {
 
 function queueBonusStage(state, reason) {
   if (!state) return;
-  if (state.bonusStage?.open) return;
-  if (!canStartBonusStage(state)) {
-    state.pendingBonusStage = { reason };
+  if (!canStartBonusStage(state) || state.bonusStage?.open) {
+    if (!state.pendingBonusStage) state.pendingBonusStage = { reasons: [] };
+    state.pendingBonusStage.reasons.push(reason);
     log(state, `Bonus Stage queued: ${reason}`);
     return;
   }
@@ -3112,8 +3112,8 @@ function render() {
   if (!s) return;
 
   if (s.pendingBonusStage && !s.bonusStage?.open && canStartBonusStage(s)) {
-    const reason = s.pendingBonusStage.reason;
-    s.pendingBonusStage = null;
+    const reason = s.pendingBonusStage.reasons.shift();
+    if (!s.pendingBonusStage.reasons.length) s.pendingBonusStage = null;
     enterBonusStage(s, reason);
   }
 
