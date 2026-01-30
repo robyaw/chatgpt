@@ -103,10 +103,23 @@
       width:46px;
       height:46px;
       border-width:2px;
+      --reward-border: 2px;
+      --reward-gap: 1px;
+    }
+    .track-reward .reward-inner-mask {
+      padding-top: 10%;
+      box-sizing: border-box;
+    }
+    .track-reward .reward-inner-mask .reward-star-post {
+      width:31%;
     }
     .track-reward .act-reward-circle img {
       width:24px;
       height:24px;
+    }
+    .track-reward .act-reward-circle img.reward-star-post {
+      width:31%;
+      height:auto;
     }
     .track-reward .act-reward-tag {
       font-size:7px;
@@ -332,11 +345,14 @@
       border-bottom:12px solid transparent;
     }
     .act-reward-circle {
+      --reward-border: 6px;
+      --reward-gap: 1px;
+      --reward-inset: calc(var(--reward-border) + var(--reward-gap));
       width:110px;
       height:110px;
       border-radius:50%;
-      background:radial-gradient(circle at 30% 30%, #ffffff, #b6c8ff);
-      border:3px solid #7aa8ff;
+      background:transparent;
+      border:var(--reward-border) solid #d8b24c;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -346,10 +362,35 @@
       text-align:center;
       padding:8px;
       box-sizing:border-box;
+      overflow:hidden;
     }
+    .act-reward-circle::before {
+      content:"";
+      position:absolute;
+      inset:var(--reward-inset);
+      border-radius:50%;
+      background:radial-gradient(circle at 30% 30%, #ffffff, #b6c8ff);
+      z-index:0;
+    }
+    .act-reward-circle > * { position:relative; z-index:1; }
     .act-reward-circle img {
       width:52px;
       height:52px;
+      display:block;
+    }
+    .reward-inner-mask {
+      position:absolute;
+      inset:var(--reward-inset);
+      border-radius:50%;
+      overflow:hidden;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      z-index:1;
+    }
+    .reward-inner-mask .reward-star-post {
+      width:26%;
+      height:auto;
       display:block;
     }
     .act-reward-tag {
@@ -2047,7 +2088,9 @@ function formatActRewardHtml(reward) {
   if (reward.type === "star_post") {
     return `
       <div class="act-reward-circle">
-        <img src="img/star_post.png" alt="Star Post">
+        <div class="reward-inner-mask">
+          <img class="reward-star-post" src="img/star_post.png" alt="Star Post">
+        </div>
       </div>
     `;
   }
