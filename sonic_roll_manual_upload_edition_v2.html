@@ -2099,7 +2099,14 @@ function formatActRewardHtml(reward) {
   }
   if (reward.type === "hazard") {
     const amount = reward.amount ?? 1;
-    const label = amount > 1 ? `HAZARD x${amount}` : "HAZARD";
+    if (amount === 1) {
+      return `
+        <div class="act-reward-circle">
+          <img src="img/dice_black.png" alt="Hazard Die">
+        </div>
+      `;
+    }
+    const label = `HAZARD x${amount}`;
     return `<div class="act-reward-circle"><span class="act-reward-text">${label}</span></div>`;
   }
   if (reward.type === "lose_die") {
