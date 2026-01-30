@@ -1641,14 +1641,18 @@ function applyDamage(state, reason) {
   return state;
 }
 
-function hazardRoll(state) {
+function hazardRoll(state, count = 1) {
   const p = state.players[state.activePlayer];
-  const v = rollD6();
-  log(state, `⚠️ Hazard Die rolled: ${v}`);
-  if (p.dicePool.some(d => d.value === v)) {
-    takeDamage(state, `Hazard matched a die value (${v})`);
+  const rolls = [];
+  const total = Math.max(1, count || 1);
+  for (let i = 0; i < total; i++) rolls.push(rollD6());
+  log(state, `Hazard dice rolled (x${total}): ${rolls.join(", ")}`);
+  const poolValues = new Set(p.dicePool.map(d => d.value));
+  const matchedValues = [...new Set(rolls.filter(v => poolValues.has(v)))];
+  if (matchedValues.length) {
+    takeDamage(state, `Hazard matched a die value (${matchedValues.join(", ")})`);
   } else {
-    log(state, `Hazard did not match Dice Pool → no damage.`);
+    log(state, "Hazard did not match Dice Pool -> no damage.");
   }
 }
 
@@ -1863,7 +1867,7 @@ function applyReward(state, reward) {
       queueBadnikRewardChoice(state, 1);
     }
   } else if (effectiveReward.type === "hazard") {
-    for (let i=0;i<effectiveReward.amount;i++) hazardRoll(state);
+    hazardRoll(state, effectiveReward.amount);
   } else if (effectiveReward.type === "lose_die") {
     queueLoseDieReward(state, "reward");
   } else if (effectiveReward.type === "star_post") {
@@ -2050,7 +2054,9 @@ function formatActRewardHtml(reward) {
     return `<div class="act-reward-circle"><span class="act-reward-text">BADNIK</span></div>`;
   }
   if (reward.type === "hazard") {
-    return `<div class="act-reward-circle"><span class="act-reward-text">HAZARD</span></div>`;
+    const amount = reward.amount ?? 1;
+    const label = amount > 1 ? `HAZARD x${amount}` : "HAZARD";
+    return `<div class="act-reward-circle"><span class="act-reward-text">${label}</span></div>`;
   }
   if (reward.type === "lose_die") {
     return `
@@ -4050,3 +4056,4 @@ startNewGame();
 </script>
 </body>
 </html>
+
