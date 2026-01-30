@@ -37,7 +37,8 @@
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     .badge { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid #2d3b73; background:#0f1733; }
     .roll-action-btn { padding:8px 10px; border-radius:10px; border:1px solid #2d3b73; background:#0f1733; color:#e8ecff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:90px; }
-    .roll-action-icon { font-size:16px; line-height:1; }
+    .roll-action-icon { display:flex; align-items:center; justify-content:center; gap:2px; min-height:18px; }
+    .roll-action-icon .dice-hint-icon { width:16px; height:16px; display:block; }
     .roll-action-btn.active { border-color:#7cb6ff; box-shadow: 0 0 0 2px rgba(124,182,255,.35); background:#15234a; }
     .die {
       width: 44px; height: 44px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;
@@ -2975,14 +2976,18 @@ function escapeHtml(str) {
 function buildRollActionDiceHint(diceSpec) {
   if (!diceSpec) return "none";
   const order = [
-    { key: "blue", emoji: "🟦" },
-    { key: "red", emoji: "🟥" },
-    { key: "yellow", emoji: "🟨" }
+    { key: "blue", src: "img/dice_blue.png" },
+    { key: "red", src: "img/dice_red.png" },
+    { key: "yellow", src: "img/dice_yellow.png" }
   ];
   let out = "";
   for (const item of order) {
     const count = diceSpec[item.key] || 0;
-    if (count > 0) out += item.emoji.repeat(count);
+    if (count > 0) {
+      for (let i = 0; i < count; i++) {
+        out += `<img class="dice-hint-icon" src="${item.src}" alt="${item.key} die">`;
+      }
+    }
   }
   return out || "none";
 }
