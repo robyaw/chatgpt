@@ -36,8 +36,27 @@
     .tiny { font-size: 12px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     .badge { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid #2d3b73; background:#0f1733; }
-    .roll-action-btn { padding:8px 10px; border-radius:10px; border:1px solid #2d3b73; background:#0f1733; color:#e8ecff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:90px; }
-    .roll-action-icon { display:flex; align-items:center; justify-content:center; gap:2px; min-height:18px; }
+    .roll-action-btn { padding:8px 10px; border-radius:10px; border:1px solid #2d3b73; background:#0f1733; color:#e8ecff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:90px; }
+    .roll-action-icon { display:grid; grid-template-columns: repeat(2, 16px); grid-auto-rows: 16px; gap:2px; justify-content:center; align-content:center; }
+    .roll-action-icon-box {
+      background:#f2c84b;
+      border-radius:8px;
+      padding:4px 6px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      height:74px;
+      min-height:74px;
+      min-width:70px;
+      box-sizing:border-box;
+    }
+    .roll-action-label {
+      font-family: Jost, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-style: italic;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
     .roll-action-icon .dice-hint-icon { width:16px; height:16px; display:block; }
     .roll-action-btn.active { border-color:#7cb6ff; box-shadow: 0 0 0 2px rgba(124,182,255,.35); background:#15234a; }
     .die {
@@ -3112,16 +3131,24 @@ function buildRollActionDiceHint(diceSpec) {
     { key: "red", src: "img/dice_red.png" },
     { key: "yellow", src: "img/dice_yellow.png" }
   ];
-  let out = "";
+  const icons = [];
   for (const item of order) {
     const count = diceSpec[item.key] || 0;
-    if (count > 0) {
-      for (let i = 0; i < count; i++) {
-        out += `<img class="dice-hint-icon" src="${item.src}" alt="${item.key} die">`;
-      }
+    for (let i = 0; i < count; i++) {
+      icons.push({ src: item.src, key: item.key });
     }
   }
-  return out || "none";
+  if (!icons.length) return "none";
+  const total = icons.length;
+  let out = "";
+  for (let i = 0; i < total; i++) {
+    const icon = icons[i];
+    const isSolo = total % 2 === 1 && i === 0;
+    const span = isSolo ? "1 / span 2" : "auto";
+    const align = isSolo ? "justify-self:center;" : "";
+    out += `<img class="dice-hint-icon" src="${icon.src}" alt="${icon.key} die" style="grid-column:${span};${align}">`;
+  }
+  return out;
 }
 
 function getBadnikDisplayLabels(b) {
@@ -3584,8 +3611,10 @@ function render() {
     const hint = buildRollActionDiceHint(a.dice);
     btn.className = `roll-action-btn ${p.rollActionSelectedThisTurn && p.chosenRollAction === a.name ? "active" : ""}`;
     btn.innerHTML = `
-      <div class="roll-action-icon">${hint === "none" ? "" : hint}</div>
-      <div>${escapeHtml(a.name)}</div>
+      <div class="roll-action-icon-box">
+        <div class="roll-action-icon">${hint === "none" ? "" : hint}</div>
+      </div>
+      <div class="roll-action-label">${escapeHtml(a.name)}</div>
     `;
     btn.disabled = s.phase !== "ROLL_ACTION" || actionBlocked;
     btn.addEventListener("click", () => {
