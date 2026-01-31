@@ -1064,10 +1064,12 @@ const CONFIG = {
           Bottom: { type:"power_up" }
         },
         cardGradient: [
-          { color: "#1f2a7a", stop: 0 },
-          { color: "#4a1c7a", stop: 50 },
-          { color: "#ffd400", stop: 50 },
-          { color: "#b48fe6", stop: 100 }
+          { color: "#14246b", stop: 0 },
+          { color: "#4a1c7a", stop: 47 },
+          { color: "#b7c800", stop: 47 },
+          { color: "#8f5dcc", stop: 52 },
+          { color: "#6a2a7a", stop: 80 },
+          { color: "#54286f", stop: 100 }
         ]
       }
     },
@@ -1088,6 +1090,25 @@ const CONFIG = {
           { color: "#e37a2f", stop: 66 },
           { color: "#c7743f", stop: 66 },
           { color: "#8a5a36", stop: 100 }
+        ]
+      }
+    },
+    chemical_plant: {
+      id: "chemical_plant",
+      name: "Chemical Plant Zone Act 1",
+      badnikDeckId: "chemical_plant",
+      zoneGenerator: {
+        actBoardName: "Chemical Plant Zone Act 1",
+        actBoardRewards: {
+          Top: { type:"big_ring" },
+          Middle: { type:"star_post", amount:1 },
+          Bottom: { type:"power_up" }
+        },
+        cardGradient: [
+          { color: "#3a3a3a", stop: 0 },
+          { color: "#3a3a3a", stop: 15 },
+          { color: "#fdfdfd", stop: 80 },
+          { color: "#fdfdfd", stop: 100 }
         ]
       }
     }
