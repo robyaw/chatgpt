@@ -881,17 +881,56 @@ function readCharacterSelections(playerCount) {
 const BIG_RING_AMOUNT = 5; // Reference value for Big Ring rewards (Bonus Stage trigger).
 
 // Zone-specific Badnik decks (swap per zone via badnikDeckId).
-const BASE_BADNIK_DECK = [
-  { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-  { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-  { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-  { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
-];
-
 const BADNIK_DECKS = {
-  default: BASE_BADNIK_DECK,
-  green_hill: BASE_BADNIK_DECK,
+  default: [
+    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
+  ],
+  green_hill: [
+    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
+  ],
   stardust_speedway: [
+    { name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
     { name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
     { name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
     { name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
