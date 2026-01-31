@@ -24,7 +24,7 @@
     .controls-card[data-character="Tails"] { background:#3a220f; border-color:#8b5b2a; }
     .controls-card[data-character="Knuckles"] { background:#3a0f12; border-color:#8a2a2a; }
     .controls-card[data-character="Amy"] { background:#351126; border-color:#7a2d53; }
-    .character-heading { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:18px; font-weight:700; margin:0 0 6px; color:#e8ecff; }
+    .character-heading { display:flex; flex-direction:column; align-items:flex-start; gap:4px; font-size:18px; font-weight:700; margin:0 0 6px; color:#e8ecff; }
     .badge-tight { padding:2px 6px; font-size:11px; }
     button, select, input { background:#1a2550; border:1px solid #2d3b73; color:#e8ecff; padding:8px 10px; border-radius:10px; cursor:pointer; }
     button:hover { filter:brightness(1.1); }
@@ -64,6 +64,7 @@
       margin:4px; font-weight:700; border:1px solid transparent; background:#0f1733; color:#f7f9ff;
       user-select:none; opacity:.82; transform:scale(1);
     }
+    .die.roll-shake { animation: dice-shake 0.25s ease-in-out; }
     .die.blue { background:#2f7cff; border-color:#2f7cff; outline:2px solid #2f7cff; }
     .die.yellow { background:#e7c240; border-color:#e7c240; color:#f7f9ff; outline:2px solid #e7c240; }
     .die.red { background:#ff3b30; border-color:#ff3b30; outline:2px solid #ff3b30; }
@@ -87,6 +88,13 @@
     .pip.on { opacity:1; }
     .die.selected { box-shadow: 0 0 0 2px #b8c6ff; opacity:1; transform:scale(1.05); }
     .die.disabled { opacity:.35; cursor:not-allowed; }
+    @keyframes dice-shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      50% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+      100% { transform: translateX(0); }
+    }
     textarea { width:100%; min-height:120px; border-radius:10px; background:#0f1733; border:1px solid #2d3b73; color:#e8ecff; padding:10px; }
     .hr { height:1px; background:#23305a; margin:10px 0; }
     .ok { color:#b8ffcf; }
@@ -342,7 +350,7 @@
       display:flex;
       align-items:center;
       gap:10px;
-      background:rgba(0,0,0,.2);
+      background:#0f1733;
       border:1px solid rgba(255,255,255,.08);
       border-radius:12px;
       padding:8px;
@@ -480,7 +488,7 @@
   </div>
 
   <div class="row">
-    <div id="controlsCard" class="card controls-card" style="flex:1; min-width:340px;">
+    <div id="controlsCard" class="card controls-card" style="flex:0.85; min-width:300px;">
       <div id="characterHeading" class="character-heading"></div>
       <div class="hr"></div>
 
@@ -550,8 +558,12 @@
 
       <div class="hr"></div>
 
-      <h2>Debug</h2>
-      <button id="btnForceBonusStage">Force Bonus Stage</button>
+      <h2>Badniks (Simplified)</h2>
+      <p class="tiny muted">
+        Badniks attack only dice being rerolled. Destroy/Avoid are simplified (exact match).
+      </p>
+      <div id="badnikView"></div>
+
     </div>
 
     <div class="card" style="flex:1.2; min-width:360px;">
@@ -568,12 +580,9 @@
       </div>
     </div>
 
-    <div class="card" style="flex:0 0 320px; min-width:320px;">
-      <h2>Badniks (Simplified)</h2>
-      <p class="tiny muted">
-        Badniks attack only dice being rerolled. Destroy/Avoid are simplified (exact match).
-      </p>
-      <div id="badnikView"></div>
+    <div class="card" style="flex:0 0 380px; min-width:360px;">
+      <h2>Debug</h2>
+      <button id="btnForceBonusStage">Force Bonus Stage</button>
 
       <div class="hr"></div>
 
@@ -733,6 +742,7 @@ function buildGradientCss(colors) {
   }).filter(Boolean);
   return `linear-gradient(180deg, ${stops.join(", ")})`;
 }
+
 
 function isGameOver(state) {
   if (state.timeTokens <= 0) return "Time ran out (0 Time Tokens)";
@@ -2769,6 +2779,8 @@ else {
 
   makeVulnerable(p); // unless damage happened previously
   state.phase = "SPENDING";
+  if (!state.ui) state.ui = { spend: null, discard: null, starPost: null };
+  state.ui.rollAnim = true;
   log(state, `${p.name} Dice Pool built: ${p.dicePool.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")}`);
   return state;
 }
@@ -3114,6 +3126,8 @@ function rerollStep(state) {
   // Reroll all remaining dice
   for (const d of p.dicePool) d.value = rollD6();
   log(state, `${p.name} rerolls Dice Pool: ${p.dicePool.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")}`);
+  if (!state.ui) state.ui = { spend: null, discard: null, starPost: null };
+  state.ui.rollAnim = true;
 
   // Reroll ends invulnerability
   makeVulnerable(p);
@@ -3358,6 +3372,9 @@ function render() {
   const s = STATE;
   if (!s) return;
 
+  const animateDice = !!s.ui?.rollAnim;
+  if (animateDice && s.ui) s.ui.rollAnim = false;
+
   if (s.pendingBonusStage && !s.bonusStage?.open && canStartBonusStage(s)) {
     const reason = s.pendingBonusStage.reasons.shift();
     if (!s.pendingBonusStage.reasons.length) s.pendingBonusStage = null;
@@ -3375,7 +3392,7 @@ function render() {
     const label = `${p.name} — ${p.character}`;
     characterHeading.innerHTML = `
       <span>${escapeHtml(label)}</span>
-      <span class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken} | Chaos Ready ${chaosCounts.ready} | Chaos Spent ${chaosCounts.spent}</span>
+      <div class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken} | Chaos Ready ${chaosCounts.ready} | Chaos Spent ${chaosCounts.spent}</div>
     `;
   }
 
@@ -3726,7 +3743,7 @@ function render() {
   const selectedDieId = discardUi?.open ? discardUi.selectedDieId : p.selectedDieId;
   for (const d of p.dicePool) {
     const el = document.createElement("div");
-    el.className = `die ${d.color}` + (selectedDieId === d.id ? " selected" : "");
+    el.className = `die ${d.color}` + (selectedDieId === d.id ? " selected" : "") + (animateDice ? " roll-shake" : "");
     el.innerHTML = buildDieFaceHtml(d.value);
     el.title = d.color;
     el.addEventListener("click", () => {
