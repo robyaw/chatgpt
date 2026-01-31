@@ -3420,7 +3420,6 @@ function render() {
     : "";
   counters.innerHTML = `
     <div class="pill tiny"><b>spentSinceLastReroll</b> ${p.spentSinceLastReroll}</div>
-    <div class="pill tiny"><b>Roll Action</b> ${escapeHtml(ra.name)}</div>
     ${buddyFlightMarkup}
     ${p.lastChainSpendRule ? `<div class="pill tiny warn"><b>Chain rule</b> ${p.lastChainSpendRule.color.toUpperCase()} must be lower than ${p.lastChainSpendRule.lastSpentValue}</div>` : ""}
   `;
