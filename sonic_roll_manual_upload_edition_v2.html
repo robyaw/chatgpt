@@ -67,7 +67,6 @@
     .die.blue { background:#2f7cff; border-color:#2f7cff; outline:2px solid #2f7cff; }
     .die.yellow { background:#e7c240; border-color:#e7c240; color:#f7f9ff; outline:2px solid #e7c240; }
     .die.red { background:#ff3b30; border-color:#ff3b30; outline:2px solid #ff3b30; }
-    .die.buddy-flight { background:#f0b44b; border-color:#f0b44b; color:#2a1a00; outline:2px solid #f0b44b; }
     .die.black { background:#2d2d2d; border-color:#2d2d2d; outline:2px solid #2d2d2d; }
     .pip-grid {
       display:grid;
@@ -3400,7 +3399,7 @@ function render() {
   const counters = document.getElementById("counters");
   const buddyFlightValue = s.buddyFlight?.value ?? 0;
   const buddyFlightMarkup = buddyFlightValue > 0
-    ? `<div class="pill tiny"><b>Buddy Flight</b><div class="die buddy-flight">${buildDieFaceHtml(buddyFlightValue)}</div></div>`
+    ? `<div class="pill tiny"><b>Buddy Flight</b><div class="die yellow">${buildDieFaceHtml(buddyFlightValue)}</div></div>`
     : "";
   counters.innerHTML = `
     <div class="pill tiny"><b>spentSinceLastReroll</b> ${p.spentSinceLastReroll}</div>
@@ -3877,7 +3876,7 @@ function render() {
       ${buddyFlightAvailable ? `
         <div class="pill tiny">
           <b>Buddy Flight</b>
-          <div class="die buddy-flight">${buildDieFaceHtml(buddyFlightValue)}</div>
+          <div class="die yellow">${buildDieFaceHtml(buddyFlightValue)}</div>
           <span class="muted">Adjust ${buddyInfo.buddyFlightBaseValue} → ${buddyInfo.buddyFlightAdjustedValue} (${buddyDeltaLabel})</span>
         </div>
         <div class="row target-actions">
