@@ -1110,6 +1110,8 @@ const CONFIG = {
           Bottom: { type:"power_up" }
         },
         actBoardArrowColors: { start: "#58b6ff", end: "#2f7cff" },
+        rewardWeightMultipliers: { time: 0.6 },
+        hazardAmountChances: { two: 0.06, three: 0.01 },
         cardGradient: ["#1c2d66", "#2f7cff", "#78b5ff"]
       }
     },
@@ -1168,6 +1170,7 @@ const CONFIG = {
           Bottom: { type:"add_dice", amount:1 }
         },
         actBoardArrowColors: { start: "#58b6ff", end: "#2f7cff" },
+        hazardAmountChances: { two: 0.18, three: 0.04 },
         cardGradient: [
           { color: "#3a3a3a", stop: 0 },
           { color: "#3a3a3a", stop: 15 },
@@ -1491,17 +1494,51 @@ function generateZoneCard(genCfg) {
   }
 
   function rollReward() {
-    const rr = rng()();
     const rrr = rng()();
     const hr = rng()();
-    return rr < 0.25 ? { type:"rings", amount: (rrr<0.1?4:(rrr<0.3?3:2)) } :
-           rr < 0.50  ? { type:"boost", amount:1 } :
-           rr < 0.70 ? { type:"badnik", amount:1 } :
-           rr < 0.75 ? { type:"hazard", amount: (hr < 0.88 ? 1 : (hr < 0.98 ? 2 : 3)) } :
-           rr < 0.80 ? { type:"lose_die", amount:1 } :
-           rr < 0.88 ? { type:"star_post", amount:1 } :
-           rr < 0.93 ? { type:"big_ring" } :
-                       { type:"power_up" };
+    const baseRewards = [
+      { type: "rings", weight: 0.25 },
+      { type: "boost", weight: 0.23 },
+      { type: "badnik", weight: 0.20 },
+      { type: "hazard", weight: 0.05 },
+      { type: "lose_die", weight: 0.05 },
+      { type: "star_post", weight: 0.07 },
+      { type: "time", weight: 0.05 },
+      { type: "big_ring", weight: 0.04 },
+      { type: "power_up", weight: 0.06 }
+    ];
+    const multipliers = genCfg.rewardWeightMultipliers || {};
+    const weighted = baseRewards.map(entry => ({
+      ...entry,
+      weight: entry.weight * (multipliers[entry.type] ?? 1)
+    }));
+    const totalWeight = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+    let pick = rng()() * totalWeight;
+    let rewardType = weighted[weighted.length - 1].type;
+    for (const entry of weighted) {
+      if (pick < entry.weight) { rewardType = entry.type; break; }
+      pick -= entry.weight;
+    }
+    if (rewardType === "rings") {
+      return { type:"rings", amount: (rrr<0.1?4:(rrr<0.3?3:2)) };
+    }
+    if (rewardType === "boost") return { type:"boost", amount:1 };
+    if (rewardType === "badnik") return { type:"badnik", amount:1 };
+    if (rewardType === "hazard") {
+      const hazardCfg = genCfg.hazardAmountChances || {};
+      const baseTwo = Number.isFinite(hazardCfg.two) ? hazardCfg.two : 0.10;
+      const baseThree = Number.isFinite(hazardCfg.three) ? hazardCfg.three : 0.02;
+      const two = Math.max(0, Math.min(1, baseTwo));
+      const three = Math.max(0, Math.min(1 - two, baseThree));
+      const one = Math.max(0, 1 - two - three);
+      const amount = hr < one ? 1 : (hr < one + two ? 2 : 3);
+      return { type:"hazard", amount };
+    }
+    if (rewardType === "lose_die") return { type:"lose_die", amount:1 };
+    if (rewardType === "star_post") return { type:"star_post", amount:1 };
+    if (rewardType === "time") return { type:"time", amount:1 };
+    if (rewardType === "big_ring") return { type:"big_ring" };
+    return { type:"power_up" };
   }
 
   const minChallenges = genCfg.challengesMin ?? genCfg.challengesPerCard ?? 7;
@@ -2020,6 +2057,14 @@ function applyReward(state, reward) {
   } else if (effectiveReward.type === "boost") {
     p.boost += effectiveReward.amount;
     log(state, `Reward: +${effectiveReward.amount} Boost (Boost=${p.boost})`);
+  } else if (effectiveReward.type === "time") {
+    if (state.timeTokens <= 0) {
+      log(state, "Reward: Time Token (none available).");
+    } else {
+      state.timeTokens -= 1;
+      p.timeTokensTaken += 1;
+      log(state, `Reward: +1 Time Token (Time left: ${state.timeTokens}).`);
+    }
   } else if (effectiveReward.type === "badnik") {
     for (let i=0;i<effectiveReward.amount;i++) {
       drawBadnik(state, p);
@@ -2149,6 +2194,7 @@ function resolveAvoidBubble(state) {
 function formatRewardLabel(reward) {
   if (!reward) return "none";
   if (reward.type === "lose_die") return "lose die";
+  if (reward.type === "time") return "time";
   if (reward.type === "add_dice") return "add dice";
   if (reward.type === "star_post") return "star post";
   if (reward.type === "big_ring") return "big ring";
@@ -2167,6 +2213,9 @@ function formatRewardDisplayHtml(reward) {
   }
   if (reward.type === "star_post") {
     return `<span class="reward-icon" title="star post"><img src="img/star_post.png" alt="Star Post"></span>`;
+  }
+  if (reward.type === "time") {
+    return `<span class="reward-icon" title="time"><img src="img/time.png" alt="Time"></span>`;
   }
   return formatRewardLabel(reward);
 }
@@ -2212,6 +2261,13 @@ function formatActRewardHtml(reward) {
     return `
       <div class="act-reward-circle">
         <img src="img/boost.png" alt="Boost">
+      </div>
+    `;
+  }
+  if (reward.type === "time") {
+    return `
+      <div class="act-reward-circle">
+        <img src="img/time.png" alt="Time">
       </div>
     `;
   }
