@@ -1455,7 +1455,7 @@ function generateZoneCard(genCfg) {
     const rr = rng()();
     const rrr = rng()();
     const hr = rng()();
-    return rr < 0.25 ? { type:"rings", amount: (rrr<0.1?4:(rrr<0.3?3:(rrr<0.6?2:1))) } :
+    return rr < 0.25 ? { type:"rings", amount: (rrr<0.1?4:(rrr<0.3?3:2)) } :
            rr < 0.50  ? { type:"boost", amount:1 } :
            rr < 0.70 ? { type:"badnik", amount:1 } :
            rr < 0.75 ? { type:"hazard", amount: (hr < 0.88 ? 1 : (hr < 0.98 ? 2 : 3)) } :
