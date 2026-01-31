@@ -302,6 +302,8 @@
     }
     .act-board {
       flex:0 0 200px;
+      --act-arrow-start: #58b6ff;
+      --act-arrow-end: #2f7cff;
       background:linear-gradient(180deg, #0f2347, #0a142b);
       border:1px solid #23305a;
       border-radius:14px;
@@ -330,7 +332,7 @@
     .act-lane-arrow {
       width:44px;
       height:24px;
-      background:linear-gradient(135deg, #58b6ff, #2f7cff);
+      background:linear-gradient(135deg, var(--act-arrow-start), var(--act-arrow-end));
       border-radius:8px;
       position:relative;
       flex:0 0 56px;
@@ -340,7 +342,7 @@
       position:absolute;
       right:-8px;
       top:0;
-      border-left:8px solid #2f7cff;
+      border-left:8px solid var(--act-arrow-end);
       border-top:12px solid transparent;
       border-bottom:12px solid transparent;
     }
@@ -1049,7 +1051,8 @@ const CONFIG = {
           Middle: { type:"star_post", amount:1 },
           Bottom: { type:"power_up" }
         },
-        cardGradient: ["#1c2d66", "#2f7cff", "#8bd3ff"]
+        actBoardArrowColors: { start: "#58b6ff", end: "#2f7cff" },
+        cardGradient: ["#1c2d66", "#2f7cff", "#78b5ff"]
       }
     },
     stardust_speedway: {
@@ -1059,10 +1062,11 @@ const CONFIG = {
       zoneGenerator: {
         actBoardName: "Stardust Speedway Zone Act 1",
         actBoardRewards: {
-          Top: { type:"big_ring" },
+          Top: { type:"rings", amount:5 },
           Middle: { type:"star_post", amount:1 },
-          Bottom: { type:"power_up" }
+          Bottom: { type:"boost", amount:1 }
         },
+        actBoardArrowColors: { start: "#58b6ff", end: "#2f7cff" },
         cardGradient: [
           { color: "#14246b", stop: 0 },
           { color: "#4a1c7a", stop: 47 },
@@ -1080,10 +1084,11 @@ const CONFIG = {
       zoneGenerator: {
         actBoardName: "Lava Reef Zone Act 1",
         actBoardRewards: {
-          Top: { type:"big_ring" },
-          Middle: { type:"star_post", amount:1 },
-          Bottom: { type:"power_up" }
+          Top: { type:"power_up" },
+          Middle: { type:"hazard", amount:2 },
+          Bottom: { type:"big_ring" }
         },
+        actBoardArrowColors: { start: "#58b6ff", end: "#2f7cff" },
         cardGradient: [
           { color: "#d65a2a", stop: 0 },
           { color: "#ffd257", stop: 33 },
@@ -1100,10 +1105,11 @@ const CONFIG = {
       zoneGenerator: {
         actBoardName: "Chemical Plant Zone Act 1",
         actBoardRewards: {
-          Top: { type:"big_ring" },
-          Middle: { type:"star_post", amount:1 },
-          Bottom: { type:"power_up" }
+          Top: { type:"badnik", amount:1 },
+          Middle: { type:"big_ring" },
+          Bottom: { type:"add_dice", amount:1 }
         },
+        actBoardArrowColors: { start: "#58b6ff", end: "#2f7cff" },
         cardGradient: [
           { color: "#3a3a3a", stop: 0 },
           { color: "#3a3a3a", stop: 15 },
@@ -1511,7 +1517,8 @@ function generateActBoard(genCfg) {
   return {
     name: genCfg.actBoardName || "Act 1",
     routes,
-    cardGradient: genCfg.cardGradient || null
+    cardGradient: genCfg.cardGradient || null,
+    arrowColors: genCfg.actBoardArrowColors || null
   };
 }
 
@@ -1879,6 +1886,17 @@ function resolveOneUp(state, color) {
   processQueuedPowerUps(state);
 }
 
+function resolveAddDice(state, color) {
+  const p = state.players[state.activePlayer];
+  const pending = state.pendingPowerUp;
+  if (!pending || pending.kind !== "add_dice") return;
+  const d = makeDie(color, rollD6());
+  p.dicePool.push(d);
+  log(state, `${p.name} gains a ${color.toUpperCase()} die (${d.value}).`);
+  state.pendingPowerUp = null;
+  processQueuedPowerUps(state);
+}
+
 function resolveShieldSwap(state, keepCurrent) {
   const p = state.players[state.activePlayer];
   const pending = state.pendingPowerUp;
@@ -1957,6 +1975,13 @@ function applyReward(state, reward) {
     queueStarPostReward(state, "reward");
   } else if (effectiveReward.type === "big_ring") {
     queueBonusStage(state, "Big Ring reward");
+  } else if (effectiveReward.type === "add_dice") {
+    if (state.pendingPowerUp) {
+      log(state, "Add Dice reward pending: resolve current choice first.");
+      return;
+    }
+    state.pendingPowerUp = { kind: "add_dice" };
+    log(state, "Reward: Add Dice. Choose a die color to add.");
   } else if (effectiveReward.type === "power_up") {
     const powerUpId = effectiveReward.powerUp || drawPowerUp(state);
     if (!powerUpId) return;
@@ -2066,6 +2091,7 @@ function resolveAvoidBubble(state) {
 function formatRewardLabel(reward) {
   if (!reward) return "none";
   if (reward.type === "lose_die") return "lose die";
+  if (reward.type === "add_dice") return "add dice";
   if (reward.type === "star_post") return "star post";
   if (reward.type === "big_ring") return "big ring";
   if (reward.type === "power_up") return "power up";
@@ -2098,7 +2124,12 @@ function formatActRewardHtml(reward) {
   }
   if (reward.type === "rings") {
     const amount = reward.amount ?? 1;
-    const ringSrc = amount === 2 ? "img/ring_2.png" : amount === 3 ? "img/ring_3.png" : amount === 4 ? "img/ring_4.png" : "img/ring.png";
+    const ringSrc =
+      amount === 2 ? "img/ring_2.png" :
+      amount === 3 ? "img/ring_3.png" :
+      amount === 4 ? "img/ring_4.png" :
+      amount === 5 ? "img/ring_5.png" :
+      "img/ring.png";
     return `
       <div class="act-reward-circle">
         <img src="${ringSrc}" alt="Rings">
@@ -2149,6 +2180,9 @@ function formatActRewardHtml(reward) {
     }
     const label = `HAZARD x${amount}`;
     return `<div class="act-reward-circle"><span class="act-reward-text">${label}</span></div>`;
+  }
+  if (reward.type === "add_dice") {
+    return `<div class="act-reward-circle"><span class="act-reward-text">ADD DICE</span></div>`;
   }
   if (reward.type === "lose_die") {
     return `
@@ -3368,6 +3402,27 @@ function render() {
           resolveOneUp(STATE, DieColor.RED);
           render();
         });
+      } else if (s.pendingPowerUp.kind === "add_dice") {
+        powerPanel.innerHTML = `
+          <div class="pill tiny warn"><b>Add Dice</b> Choose a die color to add.</div>
+          <div class="row">
+            <button id="addDiceBlue">Blue Die</button>
+            <button id="addDiceYellow">Yellow Die</button>
+            <button id="addDiceRed">Red Die</button>
+          </div>
+        `;
+        powerPanel.querySelector("#addDiceBlue").addEventListener("click", () => {
+          resolveAddDice(STATE, DieColor.BLUE);
+          render();
+        });
+        powerPanel.querySelector("#addDiceYellow").addEventListener("click", () => {
+          resolveAddDice(STATE, DieColor.YELLOW);
+          render();
+        });
+        powerPanel.querySelector("#addDiceRed").addEventListener("click", () => {
+          resolveAddDice(STATE, DieColor.RED);
+          render();
+        });
       } else if (s.pendingPowerUp.kind === "shield_swap") {
         const pendingShield = s.pendingPowerUp.newShield;
         powerPanel.innerHTML = `
@@ -3797,6 +3852,11 @@ function render() {
   }
   const actBoardView = document.getElementById("actBoardView");
   if (actBoardView) {
+    const actGradient = buildGradientCss(s.actBoard?.cardGradient);
+    actBoardView.style.background = actGradient || "";
+    const arrowColors = s.actBoard?.arrowColors;
+    if (arrowColors?.start) actBoardView.style.setProperty("--act-arrow-start", arrowColors.start);
+    if (arrowColors?.end) actBoardView.style.setProperty("--act-arrow-end", arrowColors.end);
     const routes = ["Top","Middle","Bottom"].map(name => ({
       name,
       reward: getActBoardReward(s, name)
