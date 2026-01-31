@@ -1443,7 +1443,7 @@ function generateZoneCard(genCfg) {
 
   function rollBaseColor() {
     const r = rng()();
-    return r < 0.1 ? DieColor.BLUE : r < 0.2 ? DieColor.YELLOW : r < 0.3 ? DieColor.RED : null;
+    return r < 0.08 ? DieColor.BLUE : r < 0.16 ? DieColor.YELLOW : r < 0.24 ? DieColor.RED : null;
   }
 
   function rollBumperColor() {
