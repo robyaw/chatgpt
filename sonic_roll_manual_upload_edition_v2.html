@@ -1338,12 +1338,10 @@ function addPowerUpToDiscard(state, powerUpId) {
 }
 
 function clearInvinciblePowerUps(state, p, reason) {
-  if (!p.invincibleTokens) return;
-  for (let i = 0; i < p.invincibleTokens; i++) {
-    addPowerUpToDiscard(state, "invincible");
-  }
+  if (!p.invincible) return;
+  addPowerUpToDiscard(state, "invincible");
   log(state, `${p.name} discards Invincible (${reason}).`);
-  p.invincibleTokens = 0;
+  p.invincible = false;
 }
 
 function buildChaosEmeraldDeck() {
@@ -1729,7 +1727,7 @@ function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
       timeTokensTaken: 0,
       chaosEmeralds: [],
       hyperRing: false,
-      invincibleTokens: 0,
+      invincible: false,
       shield: null,
       flameShieldArmed: false,
       lightningShieldArmed: false,
@@ -1809,7 +1807,7 @@ function takeDamage(state, reason) {
     return state;
   }
 
-  if (p.invincibleTokens > 0 && p.dicePool.length > 0) {
+  if (p.invincible && p.dicePool.length > 0) {
     clearSpendUi(state);
     clearDiscardUi(state);
     clearStarPostUi(state);
@@ -1993,7 +1991,12 @@ function applyPowerUp(state, powerUpId) {
     return;
   }
   if (powerUpId === "invincible") {
-    p.invincibleTokens += 1;
+    if (p.invincible) {
+      addPowerUpToDiscard(state, powerUpId);
+      log(state, "Power Up: Invincible already held -> drawn Invincible discarded.");
+      return;
+    }
+    p.invincible = true;
     removePowerUpFromDiscard(state, powerUpId);
     log(state, "Power Up: Invincible (discard a die to ignore damage this turn).");
     return;
@@ -2085,7 +2088,6 @@ function confirmInvincibleDiscard(state) {
   if (idx < 0) return;
   const removed = p.dicePool.splice(idx, 1)[0];
   if (p.selectedDieId === removed.id) p.selectedDieId = null;
-  p.invincibleTokens = Math.max(0, p.invincibleTokens - 1);
   state.pendingDamage = null;
   log(state, `${p.name} uses Invincible: discards ${removed.color.toUpperCase()}-${removed.value} to ignore damage.`);
   if (pending.resetAfterReroll) {
@@ -3477,8 +3479,7 @@ function render() {
   if (powerStatus) {
     const shieldImg = getShieldImageSrc(p.shield?.type);
     const hyperImg = p.hyperRing ? "img/power_up_hyper_ring.png" : "img/power_up_hyper_ring_off.png";
-    const invImg = p.invincibleTokens > 0 ? "img/power_up_invincible.png" : "img/power_up_invincible_off.png";
-    const invCount = p.invincibleTokens > 1 ? `<span class="power-up-count">x${p.invincibleTokens}</span>` : "";
+    const invImg = p.invincible ? "img/power_up_invincible.png" : "img/power_up_invincible_off.png";
     powerStatus.innerHTML = `
       <div class="power-up-status">
         <div class="power-up-slot" title="Shield">
@@ -3489,7 +3490,6 @@ function render() {
         </div>
         <div class="power-up-slot" title="Invincible">
           <img src="${invImg}" alt="Invincible">
-          ${invCount}
         </div>
       </div>
       ${p.flameShieldArmed ? `<div class="pill tiny warn"><b>Flame Armed</b> yes</div>` : ""}
