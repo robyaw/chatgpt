@@ -112,6 +112,23 @@
       width:100%;
       flex-wrap:nowrap;
     }
+    .track-list-even.spaces-7 {
+      justify-content:space-between;
+      gap:0;
+    }
+    .track-space {
+      display:flex;
+      flex-direction:column;
+      align-items:stretch;
+      gap:4px;
+    }
+    .space-reward {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:52px;
+    }
+    .space-reward.empty { visibility:hidden; }
     .track-item {
       border:1px solid #2d3b73;
       border-radius:10px;
@@ -121,8 +138,20 @@
       display:flex;
       flex-direction:column;
       justify-content:flex-start;
+      min-height:120px;
+      box-sizing:border-box;
+    }
+    .track-item.single {
+      justify-content:center;
+    }
+    .track-item.multi {
+      justify-content:space-between;
     }
     .track-item.cleared { opacity:.55; text-decoration: line-through; }
+    .track-label.cleared,
+    .track-reward.cleared { opacity:.55; text-decoration: line-through; }
+    .track-label.locked,
+    .track-reward.locked { opacity:.5; }
     .track-label { font-weight:600; font-size:14px; }
     .track-reward { color:#b0b8e8; font-size:12px; }
     .track-reward .act-reward-circle {
@@ -154,7 +183,7 @@
     .track-reward .act-reward-text {
       font-size:8px;
     }
-    .req-chip { display:inline-flex; align-items:center; justify-content:center; width:46px; height:46px; padding:0; border-radius:8px; border:1px solid #2d3b73; background:#d7dbe6; color:#111; font-weight:700; letter-spacing:.02em; }
+    .req-chip { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; padding:0; border-radius:8px; border:1px solid #2d3b73; background:#d7dbe6; color:#111; font-weight:700; letter-spacing:.02em; }
     .req-chip img { width:28px; height:28px; display:block; }
     .req-chip.req-blue { background:#5aa3ff; color:#0b1020; }
     .req-chip.req-yellow { background:#ffd756; color:#3a2a00; }
@@ -316,6 +345,7 @@
       max-width:460px;
       width:100%;
       min-height:230px;
+      padding:2px 6px;
     }
     .zone-layout {
       display:flex;
@@ -626,6 +656,7 @@
     <div class="card" style="flex:0 0 380px; min-width:360px;">
       <h2>Debug</h2>
       <button id="btnForceBonusStage">Force Bonus Stage</button>
+      <button id="btnShowPowerUpDeck">Show Power-Up Deck Order</button>
 
       <div class="hr"></div>
 
@@ -1142,6 +1173,8 @@ const CONFIG = {
     challengesMin: 5,
     challengesMax: 7,
     deckCounts: { 1: 8, 2: 8, 3: 9, 4: 10 },
+    splitChance: 0.3,
+    splitStreakChance: 0.6,
     bumper: {
       maxGroups: 1,
       groupChance: 0.55,
@@ -1599,49 +1632,100 @@ function generateZoneCard(genCfg) {
 
   const minChallenges = genCfg.challengesMin ?? genCfg.challengesPerCard ?? 7;
   const maxChallenges = genCfg.challengesMax ?? genCfg.challengesPerCard ?? minChallenges;
-  const totalChallenges = minChallenges + Math.floor(rng()() * (maxChallenges - minChallenges + 1));
+  const totalSpaces = minChallenges + Math.floor(rng()() * (maxChallenges - minChallenges + 1));
+  const splitChance = genCfg.splitChance ?? 0.3;
+  const splitStreakChance = genCfg.splitStreakChance ?? splitChance;
 
-  const challenges = [];
+  const spaces = [];
+  let hasSplit = false;
+  let prevSplit = false;
   let lastRewardType = null;
-  for (let i=0;i<totalChallenges;i++) {
-    const n = rollD6();
-    const color = rollBaseColor();
-    let reward = rollReward();
-    let attempts = 0;
-    while (reward?.type === lastRewardType && attempts < 6) {
-      reward = rollReward();
-      attempts++;
-    }
-    lastRewardType = reward?.type ?? null;
-    challenges.push({ id: uuid(), n, color, cleared:false, reward });
-  }
-
-  const occupied = Array(challenges.length).fill(false);
-  const groupCount = Math.min(maxGroups, challenges.length > 2 ? maxGroups : 0);
-  for (let g=0; g<groupCount; g++) {
-    if (rng()() > groupChance) continue;
-    const length = rng()() < tripleChance ? 3 : 2;
-    if (length > challenges.length) continue;
-    let placed = false;
-    for (let attempts=0; attempts<25; attempts++) {
-      const start = Math.floor(rng()() * (challenges.length - length + 1));
-      if (occupied.slice(start, start + length).some(Boolean)) continue;
-      const groupId = uuid();
-      const bumperColor = rng()() < colorChance ? rollBumperColor() : null;
-      for (let i=0;i<length;i++) {
-        const ch = challenges[start + i];
-        ch.bumper = { id: groupId, index: i, length };
-        ch.n = null;
-        ch.color = bumperColor;
-        occupied[start + i] = true;
+  for (let i = 0; i < totalSpaces; i++) {
+    const chance = prevSplit ? splitStreakChance : splitChance;
+    const isSplit = rng()() < chance;
+    prevSplit = isSplit;
+    if (isSplit) hasSplit = true;
+    const lanes = isSplit ? ["top", "bottom"] : ["shared"];
+    const challenges = lanes.map(lane => {
+      const n = rollD6();
+      const color = rollBaseColor();
+      let reward = rollReward();
+      let attempts = 0;
+      while (reward?.type === lastRewardType && attempts < 6) {
+        reward = rollReward();
+        attempts++;
       }
-      placed = true;
-      break;
-    }
-    if (!placed) break;
+      lastRewardType = reward?.type ?? null;
+      return { id: uuid(), n, color, cleared:false, reward, lane, next: [] };
+    });
+    spaces.push({ id: uuid(), challenges });
   }
 
-  return { id: uuid(), challenges, bumperLocks: {} };
+  function applyBumperGroupsToList(list) {
+    if (!list.length) return;
+    const occupied = Array(list.length).fill(false);
+    const groupCount = Math.min(maxGroups, list.length > 2 ? maxGroups : 0);
+    for (let g = 0; g < groupCount; g++) {
+      if (rng()() > groupChance) continue;
+      const length = rng()() < tripleChance ? 3 : 2;
+      if (length > list.length) continue;
+      let placed = false;
+      for (let attempts = 0; attempts < 25; attempts++) {
+        const start = Math.floor(rng()() * (list.length - length + 1));
+        if (occupied.slice(start, start + length).some(Boolean)) continue;
+        const groupId = uuid();
+        const bumperColor = rng()() < colorChance ? rollBumperColor() : null;
+        for (let i = 0; i < length; i++) {
+          const ch = list[start + i];
+          ch.bumper = { id: groupId, index: i, length };
+          ch.n = null;
+          ch.color = bumperColor;
+          occupied[start + i] = true;
+        }
+        placed = true;
+        break;
+      }
+      if (!placed) break;
+    }
+  }
+
+  if (!hasSplit) {
+    applyBumperGroupsToList(spaces.map(space => space.challenges[0]));
+  } else {
+    const topLane = [];
+    const bottomLane = [];
+    for (const space of spaces) {
+      const top = space.challenges.find(ch => ch.lane === "top");
+      const bottom = space.challenges.find(ch => ch.lane === "bottom");
+      if (top) topLane.push(top);
+      if (bottom) bottomLane.push(bottom);
+    }
+    applyBumperGroupsToList(topLane);
+    applyBumperGroupsToList(bottomLane);
+  }
+
+  for (let i = 0; i < spaces.length - 1; i++) {
+    const current = spaces[i].challenges;
+    const next = spaces[i + 1].challenges;
+    if (current.length === 1) {
+      current[0].next = next.map(ch => ch.id);
+      continue;
+    }
+    const top = current.find(ch => ch.lane === "top");
+    const bottom = current.find(ch => ch.lane === "bottom");
+    if (next.length === 1) {
+      const nextId = next[0].id;
+      if (top) top.next = [nextId];
+      if (bottom) bottom.next = [nextId];
+    } else {
+      const nextTop = next.find(ch => ch.lane === "top");
+      const nextBottom = next.find(ch => ch.lane === "bottom");
+      if (top && nextTop) top.next = [nextTop.id];
+      if (bottom && nextBottom) bottom.next = [nextBottom.id];
+    }
+  }
+
+  return { id: uuid(), spaces, bumperLocks: {}, lastClearedChallengeId: null };
 }
 
 function generateZone(genCfg, playerCount) {
@@ -2163,7 +2247,7 @@ function applyReward(state, reward) {
 function completeZoneCard(state, route) {
   const card = route.activeCard;
   if (!card) return;
-  if (card.challenges.some(ch => !ch.cleared)) return;
+  if (!isCardComplete(card)) return;
 
   const p = state.players[state.activePlayer];
   p.zoneCardsCompleted = (p.zoneCardsCompleted || 0) + 1;
@@ -2476,6 +2560,58 @@ function applyBumperLock(ch, card, die) {
   }
 }
 
+function getCardChallengeMap(card) {
+  const map = new Map();
+  if (!card?.spaces?.length) return map;
+  for (let i = 0; i < card.spaces.length; i++) {
+    const space = card.spaces[i];
+    for (const ch of (space.challenges || [])) {
+      map.set(ch.id, { challenge: ch, spaceIndex: i, spaceId: space.id });
+    }
+  }
+  return map;
+}
+
+function getChallengeNextIds(card, entry) {
+  if (!card || !entry) return [];
+  const explicit = entry.challenge?.next;
+  if (Array.isArray(explicit)) return explicit;
+  const nextSpace = card.spaces?.[entry.spaceIndex + 1];
+  return nextSpace?.challenges?.map(ch => ch.id) || [];
+}
+
+function getCardAvailableChallengeIds(card) {
+  if (!card?.spaces?.length) return [];
+  const map = getCardChallengeMap(card);
+  if (!card.lastClearedChallengeId) {
+    const first = card.spaces[0];
+    return (first?.challenges || [])
+      .map(ch => ch.id)
+      .filter(id => map.get(id) && !map.get(id).challenge.cleared);
+  }
+  const entry = map.get(card.lastClearedChallengeId);
+  if (!entry) return [];
+  return getChallengeNextIds(card, entry)
+    .filter(id => map.get(id) && !map.get(id).challenge.cleared);
+}
+
+function getCardAvailableChallenges(card) {
+  const map = getCardChallengeMap(card);
+  return getCardAvailableChallengeIds(card)
+    .map(id => map.get(id)?.challenge)
+    .filter(Boolean);
+}
+
+function isChallengeAvailable(card, challengeId) {
+  return getCardAvailableChallengeIds(card).includes(challengeId);
+}
+
+function isCardComplete(card) {
+  if (!card?.spaces?.length) return true;
+  if (!card.lastClearedChallengeId) return false;
+  return getCardAvailableChallengeIds(card).length === 0;
+}
+
 function getBuddyFlightValue(state) {
   return Math.max(0, Number(state?.buddyFlight?.value) || 0);
 }
@@ -2553,9 +2689,9 @@ function buildSpendTargets(state, die) {
 
   for (const route of state.zone.routes) {
     const card = route.activeCard;
-    const ch = card?.challenges.find(x=>!x.cleared);
-    if (!ch) continue;
-    if (isDieLegalForChallenge(ch, card, die)) {
+    const available = getCardAvailableChallenges(card);
+    for (const ch of available) {
+      if (!isDieLegalForChallenge(ch, card, die)) continue;
       const rewardLabel = formatRewardLabel(ch.reward);
       const reqLabel = formatChallengeRequirement(ch, card);
       const label = `Zone: ${route.name} ${reqLabel} (reward: ${rewardLabel})`;
@@ -3041,14 +3177,17 @@ function spendDieOnTarget(state, die, target, spendMeta) {
   if (target.type === "zone") {
     const route = state.zone.routes.find(r => r.id === target.routeId);
     const card = route?.activeCard;
-    const ch = card?.challenges.find(c => c.id === target.challengeId);
-    const next = card?.challenges.find(x => !x.cleared);
+    const challengeMap = getCardChallengeMap(card);
+    const entry = challengeMap.get(target.challengeId);
+    const ch = entry?.challenge;
+    const availableIds = new Set(getCardAvailableChallengeIds(card));
     const legal = ch && isDieLegalForChallenge(ch, card, effectiveDie);
-    if (!route || !ch || !next || next.id !== ch.id || !legal) {
+    if (!route || !ch || !availableIds.has(ch.id) || !legal) {
       log(state, "Spend failed: zone target no longer legal.");
       return state;
     }
     ch.cleared = true;
+    if (card) card.lastClearedChallengeId = ch.id;
     applyBumperLock(ch, card, effectiveDie);
     spendTarget = { type:"zone", route: route.name, challengeId: ch.id };
     const reqLabel = formatChallengeRequirement(ch, card);
@@ -3141,7 +3280,7 @@ function spendDieOnTarget(state, die, target, spendMeta) {
   }
 
   if (challengeReward) applyReward(state, challengeReward);
-  if (completedRoute) completeZoneCard(state, completedRoute);
+  if (completedRoute && isCardComplete(completedRoute.activeCard)) completeZoneCard(state, completedRoute);
   if (state.ui?.discard?.open) {
     state.ui.discard.postSpend = { spentDieColor: spentDie.color };
     return state;
@@ -4075,23 +4214,70 @@ function render() {
   }
   for (const route of s.zone.routes) {
     const cardData = route.activeCard;
-    const next = cardData?.challenges.find(x=>!x.cleared);
     const card = document.createElement("div");
-    card.className = `card zone-card ${next ? "clickable" : ""}`;
+    card.className = "card zone-card";
     const gradient = buildGradientCss(s.actBoard?.cardGradient);
     if (gradient) card.style.background = gradient;
-    const challengeCount = cardData?.challenges?.length ?? 0;
-    const evenLayout = challengeCount === 5 || challengeCount === 6;
-    const trackClass = evenLayout ? "track-list track-list-even" : "track-list";
+    const spaceCount = cardData?.spaces?.length ?? 0;
+    const evenLayout = spaceCount === 5 || spaceCount === 6 || spaceCount === 7;
+    const trackClass = evenLayout
+      ? `track-list track-list-even${spaceCount === 7 ? " spaces-7" : ""}`
+      : "track-list";
     const trackStyle = "";
+    const availableIds = new Set(getCardAvailableChallengeIds(cardData));
+    const renderChallenge = (ch) => {
+      const laneClass = `lane-${ch.lane || "shared"}`;
+      const req = formatChallengeChip(ch, cardData);
+      const reward = formatActRewardHtml(ch.reward);
+      const isAvailable = availableIds.has(ch.id);
+      const labelClasses = ["track-label"];
+      const rewardClasses = ["track-reward"];
+      labelClasses.push(laneClass);
+      rewardClasses.push(laneClass);
+      if (ch.cleared) {
+        labelClasses.push("cleared");
+        rewardClasses.push("cleared");
+      } else if (!isAvailable) {
+        labelClasses.push("locked");
+        rewardClasses.push("locked");
+      }
+      if (isAvailable) labelClasses.push("clickable");
+      const labelHtml = `<div class="${labelClasses.join(" ")}" data-challenge-id="${ch.id}">${req}</div>`;
+      const rewardHtml = `<div class="${rewardClasses.join(" ")}">${reward}</div>`;
+      return { labelHtml, rewardHtml };
+    };
     const trackHtml = cardData
       ? `<div class="${trackClass}"${trackStyle}>
-          ${cardData.challenges.map(ch => {
-            const req = formatChallengeChip(ch, cardData);
-            const reward = formatActRewardHtml(ch.reward);
-            return `<div class="track-item ${ch.cleared ? "cleared" : ""}">
-              <div class="track-label">${req}</div>
-              <div class="track-reward">${reward}</div>
+          ${cardData.spaces.map(space => {
+            const challenges = space.challenges || [];
+            if (challenges.length === 1) {
+              const ch = challenges[0];
+              const rendered = renderChallenge(ch);
+              return `<div class="track-space">
+                <div class="space-reward space-reward-top empty"></div>
+                <div class="track-item single">
+                  ${rendered.labelHtml}
+                </div>
+                <div class="space-reward space-reward-bottom">
+                  ${rendered.rewardHtml}
+                </div>
+              </div>`;
+            }
+            const top = challenges.find(ch => ch.lane === "top") || challenges[0];
+            const bottom = challenges.find(ch => ch.lane === "bottom") || challenges[1];
+            const topRendered = renderChallenge(top);
+            const bottomRendered = renderChallenge(bottom);
+            return `<div class="track-space">
+              <div class="space-reward space-reward-top">
+                ${topRendered.rewardHtml}
+              </div>
+              <div class="track-item multi">
+                ${topRendered.labelHtml}
+                ${bottomRendered.labelHtml}
+              </div>
+              <div class="space-reward space-reward-bottom">
+                ${bottomRendered.rewardHtml}
+              </div>
             </div>`;
           }).join("")}
         </div>`
@@ -4099,10 +4285,14 @@ function render() {
     card.innerHTML = `
       ${trackHtml}
     `;
-    if (next) {
-      card.title = "Click to preselect spend target";
-      card.addEventListener("click", () => {
-        preselectSpendTarget(STATE, { type:"zone", routeId: route.id, challengeId: next.id });
+    if (cardData) {
+      card.title = "Click a challenge to preselect spend target";
+      card.addEventListener("click", (event) => {
+        const target = event.target.closest("[data-challenge-id]");
+        if (!target) return;
+        const challengeId = target.getAttribute("data-challenge-id");
+        if (!availableIds.has(challengeId)) return;
+        preselectSpendTarget(STATE, { type:"zone", routeId: route.id, challengeId });
         render();
       });
     }
@@ -4413,6 +4603,21 @@ if (forceBonusBtn) {
       return;
     }
     enterBonusStage(STATE, "Debug trigger");
+    render();
+  });
+}
+
+const showPowerUpDeckBtn = document.getElementById("btnShowPowerUpDeck");
+if (showPowerUpDeckBtn) {
+  showPowerUpDeckBtn.addEventListener("click", () => {
+    if (!STATE) return;
+    const deck = STATE.powerUpDeck || [];
+    if (!deck.length) {
+      log(STATE, "Power-Up Deck is empty.");
+    } else {
+      const labels = deck.map(id => getPowerUpLabel(id)).join(", ");
+      log(STATE, `Power-Up Deck order: ${labels}`);
+    }
     render();
   });
 }
