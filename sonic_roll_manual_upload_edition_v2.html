@@ -450,6 +450,49 @@
       height:18px;
       display:block;
     }
+    .power-up-status {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .power-up-slot {
+      width:40px;
+      height:40px;
+      border-radius:10px;
+      border:1px solid #2d3b73;
+      background:#0f1733;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+    }
+    .power-up-slot img {
+      width:28px;
+      height:auto;
+      display:block;
+    }
+    .power-up-count {
+      position:absolute;
+      right:-6px;
+      top:-6px;
+      background:#0a47c8;
+      color:#fff;
+      border-radius:999px;
+      font-size:10px;
+      padding:1px 5px;
+      border:1px solid #2d3b73;
+    }
+    .power-up-discard-grid {
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+    }
+    .power-up-discard-grid img {
+      width:24px;
+      height:auto;
+      display:block;
+    }
     .chaos-emerald-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
     .chaos-emerald-card {
       display:flex;
@@ -1235,6 +1278,12 @@ function getShieldLabel(type) {
   if (type === "lightning") return "Lightning Shield";
   if (type === "blue") return "Blue Shield";
   return type;
+}
+
+function getShieldImageSrc(type) {
+  if (!type) return "img/power_up_shield_off.png";
+  const id = `shield_${type}`;
+  return `img/power_up_${id}.png`;
 }
 
 function isShieldPowerUp(id) {
@@ -3426,10 +3475,23 @@ function render() {
 
   const powerStatus = document.getElementById("powerUpStatus");
   if (powerStatus) {
+    const shieldImg = getShieldImageSrc(p.shield?.type);
+    const hyperImg = p.hyperRing ? "img/power_up_hyper_ring.png" : "img/power_up_hyper_ring_off.png";
+    const invImg = p.invincibleTokens > 0 ? "img/power_up_invincible.png" : "img/power_up_invincible_off.png";
+    const invCount = p.invincibleTokens > 1 ? `<span class="power-up-count">x${p.invincibleTokens}</span>` : "";
     powerStatus.innerHTML = `
-      <div class="pill tiny"><b>Shield</b> ${p.shield ? getShieldLabel(p.shield.type) : "None"}</div>
-      <div class="pill tiny"><b>Hyper Ring</b> ${p.hyperRing ? "ON" : "OFF"}</div>
-      <div class="pill tiny"><b>Invincible</b> ${p.invincibleTokens}</div>
+      <div class="power-up-status">
+        <div class="power-up-slot" title="Shield">
+          <img src="${shieldImg}" alt="Shield">
+        </div>
+        <div class="power-up-slot" title="Hyper Ring">
+          <img src="${hyperImg}" alt="Hyper Ring">
+        </div>
+        <div class="power-up-slot" title="Invincible">
+          <img src="${invImg}" alt="Invincible">
+          ${invCount}
+        </div>
+      </div>
       ${p.flameShieldArmed ? `<div class="pill tiny warn"><b>Flame Armed</b> yes</div>` : ""}
       ${p.lightningShieldArmed ? `<div class="pill tiny warn"><b>Lightning Armed</b> yes</div>` : ""}
     `;
@@ -4080,8 +4142,10 @@ function render() {
   const powerDiscardEl = document.getElementById("powerUpDiscardView");
   if (powerDiscardEl) {
     const discards = s.powerUpDiscard || [];
-    powerDiscardEl.textContent = discards.length
-      ? discards.map(id => getPowerUpLabel(id)).join(", ")
+    powerDiscardEl.innerHTML = discards.length
+      ? `<div class="power-up-discard-grid">${
+          discards.map(id => `<img src="img/power_up_${id}.png" alt="${escapeHtml(getPowerUpLabel(id))}" title="${escapeHtml(getPowerUpLabel(id))}">`).join("")
+        }</div>`
       : "No discarded Power Ups.";
   }
   const badnikDiscardEl = document.getElementById("badnikDiscardView");
