@@ -1889,6 +1889,9 @@ function takeDamage(state, reason) {
     if (shieldType === "blue") p.blueShieldLostThisTurn = true;
     addPowerUpToDiscard(state, getShieldPowerUpId(shieldType));
     log(state, `${p.name} ignores damage with ${getShieldLabel(shieldType)} (shield discarded).`);
+    if (state.phase === "AVOID" || p.dicePool.length === 0) {
+      state.phase = "END_TURN";
+    }
     return state;
   }
 
