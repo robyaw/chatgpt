@@ -4300,9 +4300,23 @@ function generateSeed() {
   return Math.floor(Math.random() * 1000000000).toString();
 }
 
+function getSeedFromQuery() {
+  const params = new URLSearchParams(window.location.search || "");
+  const raw = params.get("seed");
+  if (!raw) return null;
+  const value = Number.parseInt(raw, 10);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return value.toString();
+}
+
 function ensureSeedValue() {
   const seedInput = document.getElementById("seed");
-  if (!seedInput) return generateSeed();
+  const querySeed = getSeedFromQuery();
+  if (!seedInput) return querySeed || generateSeed();
+  if (querySeed) {
+    seedInput.value = querySeed;
+    return seedInput.value;
+  }
   if (!seedInput.value.trim()) seedInput.value = generateSeed();
   return seedInput.value;
 }
