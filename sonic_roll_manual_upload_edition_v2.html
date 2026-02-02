@@ -400,9 +400,13 @@
       height:100%;
       pointer-events:none;
       z-index:1;
-      --connector-stroke: 8;
+      --connector-stroke: 9;
       --connector-active: #c01818;
       --connector-muted: #e8ecff;
+      --chevron-height: 7px;
+      --chevron-width: 7px;
+      --chevron-gap: 0.01px;
+      --chevron-angle-factor: 0.45;
     }
     .track-connectors line {
       stroke: var(--connector-muted);
@@ -893,6 +897,44 @@ function buildGradientCss(colors) {
     return "";
   }).filter(Boolean);
   return `linear-gradient(180deg, ${stops.join(", ")})`;
+}
+
+function getGradientEndpoints(colors) {
+  if (!Array.isArray(colors) || !colors.length) return null;
+  if (colors.length === 1 && typeof colors[0] === "string") {
+    return { start: colors[0], end: colors[0] };
+  }
+  const points = colors.map((entry, index) => {
+    if (typeof entry === "string") {
+      const pct = colors.length > 1 ? (index / (colors.length - 1)) * 100 : 0;
+      return { color: entry, stop: pct };
+    }
+    if (entry && typeof entry === "object") {
+      const pct = Number.isFinite(entry.stop)
+        ? entry.stop
+        : (colors.length > 1 ? (index / (colors.length - 1)) * 100 : 0);
+      return { color: entry.color, stop: pct };
+    }
+    return null;
+  }).filter(Boolean);
+  if (!points.length) return null;
+  let minPoint = points[0];
+  let maxPoint = points[0];
+  for (const point of points) {
+    if (point.stop < minPoint.stop) minPoint = point;
+    if (point.stop > maxPoint.stop) maxPoint = point;
+  }
+  return { start: minPoint.color, end: maxPoint.color };
+}
+
+function getChevronGradient(zoneConfig) {
+  const zoneGen = zoneConfig?.zoneGenerator;
+  const cardGradient = zoneGen?.cardGradient;
+  const fromCard = getGradientEndpoints(cardGradient);
+  if (fromCard) return fromCard;
+  const fallback = zoneGen?.chevronGradient || zoneGen?.actBoardArrowColors || CONFIG.zoneGenerator?.chevronGradient;
+  if (fallback?.start && fallback?.end) return fallback;
+  return { start: "#58b6ff", end: "#2f7cff" };
 }
 
 
@@ -2711,6 +2753,7 @@ function renderZoneCardConnectors(cardEl, cardData) {
   const challengeMap = getCardChallengeMap(cardData);
   const trackEl = cardEl.querySelector(".track-list");
   if (!trackEl) return;
+  const chevronColors = cardEl._chevronColors || null;
   const labelNodes = cardEl.querySelectorAll("[data-challenge-id]");
   const clearedIds = new Set();
   for (const [id, entry] of challengeMap.entries()) {
@@ -2747,6 +2790,11 @@ function renderZoneCardConnectors(cardEl, cardData) {
 
   const originLeft = trackRect.left;
   const originTop = trackRect.top;
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  svg.appendChild(defs);
+  let gradientIndex = 0;
+  const spaceCount = cardData.spaces.length;
+  const baseChevronCount = spaceCount === 5 || spaceCount === 6 ? 4 : 3;
 
   for (const [id, entry] of challengeMap.entries()) {
     const fromEl = elById.get(id);
@@ -2764,6 +2812,8 @@ function renderZoneCardConnectors(cardEl, cardData) {
     for (const nextId of nextIds) {
       const toEl = elById.get(nextId);
       if (!toEl) continue;
+      const nextEntry = challengeMap.get(nextId);
+      const spanSpaces = nextEntry ? Math.max(1, nextEntry.spaceIndex - entry.spaceIndex) : 1;
       const toRect = toEl.getBoundingClientRect();
       const toCenter = {
         x: (toRect.left + toRect.right) / 2,
@@ -2790,13 +2840,67 @@ function renderZoneCardConnectors(cardEl, cardData) {
       line.setAttribute("x2", `${x2}`);
       line.setAttribute("y2", `${y2}`);
       svg.appendChild(line);
+
+      if (chevronColors?.start && chevronColors?.end) {
+        const count = spanSpaces >= 2 ? (spanSpaces * baseChevronCount + 1) : baseChevronCount;
+        if (count > 0) {
+          const gradId = `chevron-grad-${gradientIndex++}`;
+          const grad = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+          grad.setAttribute("id", gradId);
+          grad.setAttribute("gradientUnits", "userSpaceOnUse");
+          grad.setAttribute("x1", `${x1}`);
+          grad.setAttribute("y1", `${y1}`);
+          grad.setAttribute("x2", `${x2}`);
+          grad.setAttribute("y2", `${y2}`);
+          const stopA = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+          stopA.setAttribute("offset", "0%");
+          stopA.setAttribute("stop-color", chevronColors.start);
+          const stopB = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+          stopB.setAttribute("offset", "100%");
+          stopB.setAttribute("stop-color", chevronColors.end);
+          grad.appendChild(stopA);
+          grad.appendChild(stopB);
+          defs.appendChild(grad);
+
+          const segDx = x2 - x1;
+          const segDy = y2 - y1;
+          const segLen = Math.hypot(segDx, segDy) || 1;
+          const chevronHeight = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-height")) || 10;
+          const chevronWidth = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-width")) || 12;
+          const gap = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-gap")) || 4;
+          const angleFactor = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-angle-factor")) || 0.85;
+          const clusterLen = count * chevronWidth + (count - 1) * gap;
+          const startOffset = (segLen - clusterLen) / 2;
+          const angle = Math.atan2(segDy, segDx) * 180 / Math.PI;
+          const halfH = chevronHeight / 2;
+          const halfW = chevronWidth / 2;
+          const delta = Math.max(chevronWidth * 0.1, Math.min(halfW * 0.98, halfW * angleFactor));
+          const back = -halfW;
+          const tip = halfW;
+          const mid = tip - delta;
+          const notch = back + delta;
+          const pathD = `M ${back} ${-halfH} L ${mid} ${-halfH} L ${tip} 0 L ${mid} ${halfH} L ${back} ${halfH} L ${notch} 0 Z`;
+
+          for (let i = 0; i < count; i++) {
+            const offset = startOffset + i * (chevronWidth + gap) + chevronWidth / 2;
+            const cx = x1 + (segDx / segLen) * offset;
+            const cy = y1 + (segDy / segLen) * offset;
+            const chevron = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            chevron.setAttribute("d", pathD);
+            chevron.setAttribute("fill", `url(#${gradId})`);
+            chevron.setAttribute("transform", `translate(${cx} ${cy}) rotate(${angle})`);
+            svg.appendChild(chevron);
+          }
+        }
+      }
     }
   }
 }
 
-function scheduleZoneCardConnectors(cardEl, cardData) {
+function scheduleZoneCardConnectors(cardEl, cardData, chevronColors) {
   if (!cardEl || !cardData) return;
   if (cardEl.dataset.connectorsPending) return;
+  cardEl._chevronColors = chevronColors || null;
   cardEl.dataset.connectorsPending = "1";
   requestAnimationFrame(() => {
     delete cardEl.dataset.connectorsPending;
@@ -4416,6 +4520,7 @@ function render() {
   const zoneSpaceBg = zoneConfig?.zoneGenerator?.spaceBackground
     || CONFIG.zoneGenerator?.spaceBackground
     || "#0f1733";
+  const chevronGradient = getChevronGradient(zoneConfig);
   const actBoardView = document.getElementById("actBoardView");
   if (actBoardView) {
     const actGradient = buildGradientCss(s.actBoard?.cardGradient);
@@ -4524,7 +4629,7 @@ function render() {
       });
     }
     zv.appendChild(card);
-    scheduleZoneCardConnectors(card, cardData);
+    scheduleZoneCardConnectors(card, cardData, chevronGradient);
   }
 
   // Badniks
