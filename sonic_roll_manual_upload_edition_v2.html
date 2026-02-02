@@ -466,8 +466,17 @@
     .track-connectors line.active { stroke: var(--connector-active); }
     .zone-layout {
       display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:stretch;
+    }
+    .zone-row {
+      display:flex;
       gap:6px;
       align-items:stretch;
+    }
+    .zone-secret-row {
+      align-items:flex-start;
     }
     .zone-cards {
       flex:1;
@@ -486,6 +495,13 @@
       gap:10px;
       box-shadow: 0 8px 25px rgba(0,0,0,.25);
     }
+    .act-board-mini {
+      flex:0 0 320px;
+      min-height:230px;
+      padding:10px;
+    }
+    .act-board-mini .act-board-lanes { gap:0; height:100%; }
+    .act-board-mini .act-lane { min-height:0; }
     .act-board-lanes {
       display:flex;
       flex-direction:column;
@@ -776,10 +792,18 @@
     <div class="card" style="flex:1.2; min-width:360px;">
       <h2 style="display:none;">Zone (Simplified Track)</h2>
       <div class="zone-layout">
-        <div class="zone-cards">
-          <div id="zoneView" class="grid"></div>
+        <div class="zone-row">
+          <div class="zone-cards">
+            <div id="zoneView" class="grid"></div>
+          </div>
+          <div id="actBoardView" class="act-board"></div>
         </div>
-        <div id="actBoardView" class="act-board"></div>
+        <div id="secretPassageRow" class="zone-row zone-secret-row" style="display:none;">
+          <div class="zone-cards">
+            <div id="secretPassageView" class="grid"></div>
+          </div>
+          <div id="secretActBoardView" class="act-board act-board-mini"></div>
+        </div>
       </div>
     </div>
 
@@ -1465,6 +1489,114 @@ const CONFIG = {
   }
 };
 
+const SECRET_PASSAGE_STYLE = {
+  cardGradient: ["#d65a2a", "#c9461f"],
+  spaceBackground: "#1b120c"
+};
+
+const SECRET_PASSAGE_TEMPLATE = {
+  id: "secret_passage",
+  name: "Secret Passage",
+  spaces: [
+    {
+      id: "secret_passage_1",
+      challenges: [
+        {
+          id: "secret_passage_1_s",
+          n: null,
+          color: null,
+          reward: { type: "rings", amount: 2 },
+          lane: "shared",
+          next: ["secret_passage_2_s"],
+          bumper: { id: "secret_passage_bump", index: 0, length: 2 }
+        }
+      ]
+    },
+    {
+      id: "secret_passage_2",
+      challenges: [
+        {
+          id: "secret_passage_2_s",
+          n: null,
+          color: null,
+          reward: { type: "rings", amount: 2 },
+          lane: "shared",
+          next: ["secret_passage_3_top", "secret_passage_3_bottom"],
+          bumper: { id: "secret_passage_bump", index: 1, length: 2 }
+        }
+      ]
+    },
+    {
+      id: "secret_passage_3",
+      challenges: [
+        {
+          id: "secret_passage_3_top",
+          n: 5,
+          color: null,
+          reward: { type: "boost", amount: 1 },
+          lane: "top",
+          next: ["secret_passage_4_s"]
+        },
+        {
+          id: "secret_passage_3_bottom",
+          n: 5,
+          color: "red",
+          reward: { type: "power_up" },
+          lane: "bottom",
+          next: ["secret_passage_4_s"]
+        }
+      ]
+    },
+    {
+      id: "secret_passage_4",
+      challenges: [
+        {
+          id: "secret_passage_4_s",
+          n: 4,
+          color: null,
+          reward: { type: "rings", amount: 2 },
+          lane: "shared",
+          next: ["secret_passage_5_top", "secret_passage_5_bottom"]
+        }
+      ]
+    },
+    {
+      id: "secret_passage_5",
+      challenges: [
+        {
+          id: "secret_passage_5_top",
+          n: 3,
+          color: "yellow",
+          reward: { type: "power_up" },
+          lane: "top",
+          next: ["secret_passage_6_s"]
+        },
+        {
+          id: "secret_passage_5_bottom",
+          n: 3,
+          color: null,
+          reward: { type: "boost", amount: 1 },
+          lane: "bottom",
+          next: ["secret_passage_6_s"]
+        }
+      ]
+    },
+    {
+      id: "secret_passage_6",
+      challenges: [
+        {
+          id: "secret_passage_6_s",
+          n: 6,
+          color: null,
+          reward: { type: "rings", amount: 2 },
+          lane: "shared",
+          next: []
+        }
+      ]
+    }
+  ]
+};
+
 const POWER_UPS = [
   { id: "super_ring", label: "Super Ring", count: 3 },
   { id: "hyper_ring", label: "Hyper Ring", count: 2 },
@@ -1957,6 +2089,18 @@ function generateActBoard(genCfg) {
   };
 }
 
+function buildSecretPassageCard() {
+  const card = clone(SECRET_PASSAGE_TEMPLATE);
+  card.lastClearedChallengeId = null;
+  card.bumperLocks = {};
+  for (const space of card.spaces || []) {
+    for (const ch of (space.challenges || [])) {
+      if (ch.cleared == null) ch.cleared = false;
+    }
+  }
+  return card;
+}
+
 function getZoneConfig(zoneId) {
   const zones = CONFIG.zones || {};
   if (zoneId && zones[zoneId]) return zones[zoneId];
@@ -2041,6 +2185,9 @@ function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
   const chaosEmeraldDeck = buildChaosEmeraldDeck();
   const bonusStage = initBonusStageState();
   const buddyFlight = finalChars.includes("Tails") ? { value: 0 } : null;
+  const secretPassage = finalChars.includes("Knuckles")
+    ? { card: buildSecretPassageCard(), completed: false }
+    : null;
 
   const state = {
     phase: "ROLL_ACTION", // ROLL_ACTION | SPENDING | AVOID | REROLL | END_TURN | GAME_OVER
@@ -2065,6 +2212,7 @@ function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
     pendingBonusStage: null,
     bonusStage,
     zoneId: zoneConfig.id,
+    secretPassage,
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
   resetBuddyFlightForTurn(state);
@@ -2472,6 +2620,19 @@ function completeZoneCard(state, route) {
   }
 }
 
+function completeSecretPassage(state) {
+  const card = state.secretPassage?.card;
+  if (!card) return;
+  if (!isCardComplete(card)) return;
+  const p = getActivePlayer(state);
+  p.zoneCardsCompleted = (p.zoneCardsCompleted || 0) + 1;
+  log(state, `${p.name} completed the Secret Passage (total ${p.zoneCardsCompleted}).`);
+  state.secretPassage.completed = true;
+  state.secretPassage.card = null;
+  applyReward(state, { type:"big_ring" });
+  log(state, "Secret Passage reward: Big Ring.");
+}
+
 function clearSpendUi(state) {
   if (state?.ui) state.ui.spend = null;
 }
@@ -2827,6 +2988,108 @@ function getCardAvailableChallenges(card) {
     .filter(Boolean);
 }
 
+function renderActBoard(viewEl, { routes, cardGradient, chevronGradient, idPrefix = "act" }) {
+  if (!viewEl) return;
+  const actGradient = buildGradientCss(cardGradient);
+  viewEl.style.background = actGradient || "";
+  if (chevronGradient?.top) viewEl.style.setProperty("--act-arrow-start", chevronGradient.top);
+  if (chevronGradient?.bottom) viewEl.style.setProperty("--act-arrow-end", chevronGradient.bottom);
+  viewEl.innerHTML = `
+    <div class="act-board-lanes">
+      ${routes.map((route, index) => {
+        const gradId = `${idPrefix}-arrow-${route.name.toLowerCase()}-${index}`;
+        return `
+        <div class="act-lane">
+          <div class="act-lane-arrow">
+            <svg viewBox="0 0 110 82" aria-hidden="true">
+              <defs>
+                <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="82" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="var(--act-arrow-start)" />
+                  <stop offset="100%" stop-color="var(--act-arrow-end)" />
+                </linearGradient>
+                <filter id="${gradId}-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#0a0f1f" flood-opacity="0.55"/>
+                </filter>
+              </defs>
+              <path d="M70 10 L91 10 Q95 10 96.65 13.65 L107.35 37.35 Q109 41 107.35 44.65 L96.65 68.35 Q95 72 91 72 L70 72 Q62 72 65.67 64.89 L76.16 44.56 Q78 41 76.16 37.44 L65.67 17.11 Q62 10 70 10 Z" fill="url(#${gradId})" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" filter="url(#${gradId}-shadow)"/>
+              <path d="M40 10 L61 10 Q65 10 66.65 13.65 L77.35 37.35 Q79 41 77.35 44.65 L66.65 68.35 Q65 72 61 72 L40 72 Q32 72 35.67 64.89 L46.16 44.56 Q48 41 46.16 37.44 L35.67 17.11 Q32 10 40 10 Z" fill="url(#${gradId})" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" filter="url(#${gradId}-shadow)"/>
+              <path d="M10 10 L31 10 Q35 10 36.65 13.65 L47.35 37.35 Q49 41 47.35 44.65 L36.65 68.35 Q35 72 31 72 L10 72 Q2 72 5.67 64.89 L16.16 44.56 Q18 41 16.16 37.44 L5.67 17.11 Q2 10 10 10 Z" fill="url(#${gradId})" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" filter="url(#${gradId}-shadow)"/>
+            </svg>
+          </div>
+          ${formatActRewardHtml(route.reward)}
+        </div>
+      `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function buildCardTrackHtml(cardData) {
+  if (!cardData) return { html: `<div class="tiny muted">No active card.</div>`, availableIds: new Set() };
+  const spaceCount = cardData?.spaces?.length ?? 0;
+  const evenLayout = spaceCount === 5 || spaceCount === 6 || spaceCount === 7;
+  const trackClass = evenLayout
+    ? `track-list track-list-even${spaceCount === 7 ? " spaces-7" : ""}`
+    : "track-list";
+  const availableIds = new Set(getCardAvailableChallengeIds(cardData));
+  const renderChallenge = (ch) => {
+    const laneClass = `lane-${ch.lane || "shared"}`;
+    const req = formatChallengeChip(ch, cardData);
+    const reward = formatActRewardHtml(ch.reward);
+    const isAvailable = availableIds.has(ch.id);
+    const labelClasses = ["track-label"];
+    const rewardClasses = ["track-reward"];
+    labelClasses.push(laneClass);
+    rewardClasses.push(laneClass);
+    if (ch.cleared) {
+      labelClasses.push("cleared");
+      rewardClasses.push("cleared");
+    } else if (!isAvailable) {
+      labelClasses.push("locked");
+      rewardClasses.push("locked");
+    }
+    if (isAvailable) labelClasses.push("clickable");
+    const labelHtml = `<div class="${labelClasses.join(" ")}" data-challenge-id="${ch.id}">${req}</div>`;
+    const rewardHtml = `<div class="${rewardClasses.join(" ")}">${reward}</div>`;
+    return { labelHtml, rewardHtml };
+  };
+  const html = `<div class="${trackClass}">
+      ${cardData.spaces.map(space => {
+        const challenges = space.challenges || [];
+        if (challenges.length === 1) {
+          const ch = challenges[0];
+          const rendered = renderChallenge(ch);
+          return `<div class="track-space">
+            <div class="space-reward space-reward-top empty"></div>
+            <div class="track-item single">
+              ${rendered.labelHtml}
+            </div>
+            <div class="space-reward space-reward-bottom">
+              ${rendered.rewardHtml}
+            </div>
+          </div>`;
+        }
+        const top = challenges.find(ch => ch.lane === "top") || challenges[0];
+        const bottom = challenges.find(ch => ch.lane === "bottom") || challenges[1];
+        const topRendered = renderChallenge(top);
+        const bottomRendered = renderChallenge(bottom);
+        return `<div class="track-space">
+          <div class="space-reward space-reward-top">
+            ${topRendered.rewardHtml}
+          </div>
+          <div class="track-item multi">
+            ${topRendered.labelHtml}
+            ${bottomRendered.labelHtml}
+          </div>
+          <div class="space-reward space-reward-bottom">
+            ${bottomRendered.rewardHtml}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>`;
+  return { html, availableIds };
+}
+
 function renderZoneCardConnectors(cardEl, cardData) {
   if (!cardEl || !cardData?.spaces?.length) return;
   if (!cardEl.isConnected) return;
@@ -3110,6 +3373,23 @@ function buildSpendTargets(state, die) {
     }
   }
 
+  if (p.character === "Knuckles" && state.secretPassage?.card) {
+    const card = state.secretPassage.card;
+    const available = getCardAvailableChallenges(card);
+    for (const ch of available) {
+      if (!isDieLegalForChallenge(ch, card, die)) continue;
+      const rewardLabel = formatRewardLabel(ch.reward);
+      const reqLabel = formatChallengeRequirement(ch, card);
+      const label = `Secret Passage: ${reqLabel} (reward: ${rewardLabel})`;
+      targets.push({
+        id: uuid(),
+        type: "secret_passage",
+        challengeId: ch.id,
+        label
+      });
+    }
+  }
+
   for (let i=0;i<p.badniks.length;i++) {
     const b = p.badniks[i];
     const avoidOk = b.avoid && (b.avoid.color === die.color && b.avoid.value === die.value);
@@ -3192,6 +3472,11 @@ function preselectSpendTarget(state, targetInfo) {
     match = spendUi.targets.find(t =>
       t.type === "zone" &&
       t.routeId === targetInfo.routeId &&
+      t.challengeId === targetInfo.challengeId
+    );
+  } else if (targetInfo.type === "secret_passage") {
+    match = spendUi.targets.find(t =>
+      t.type === "secret_passage" &&
       t.challengeId === targetInfo.challengeId
     );
   } else if (targetInfo.type === "badnik") {
@@ -3570,6 +3855,7 @@ function spendDieOnTarget(state, die, target, spendMeta) {
   let spendTarget = null;
   let challengeReward = null;
   let completedRoute = null;
+  let completedSecretPassage = false;
   let spendLabel = `${die.color.toUpperCase()}-${die.value}`;
   if (useAmyRaise) {
     spendLabel += ` (Piko Piko Hammer -> ${buddyFlightBaseValue})`;
@@ -3599,6 +3885,25 @@ function spendDieOnTarget(state, die, target, spendMeta) {
     log(state, `${p.name} spends ${spendLabel} to clear ${route.name} challenge (${reqLabel}).`);
     challengeReward = ch.reward;
     completedRoute = route;
+  } else if (target.type === "secret_passage") {
+    const card = state.secretPassage?.card;
+    const challengeMap = getCardChallengeMap(card);
+    const entry = challengeMap.get(target.challengeId);
+    const ch = entry?.challenge;
+    const availableIds = new Set(getCardAvailableChallengeIds(card));
+    const legal = ch && isDieLegalForChallenge(ch, card, effectiveDie);
+    if (!card || !ch || !availableIds.has(ch.id) || !legal) {
+      log(state, "Spend failed: Secret Passage target no longer legal.");
+      return state;
+    }
+    ch.cleared = true;
+    if (card) card.lastClearedChallengeId = ch.id;
+    applyBumperLock(ch, card, effectiveDie);
+    spendTarget = { type:"secret_passage", challengeId: ch.id };
+    const reqLabel = formatChallengeRequirement(ch, card);
+    log(state, `${p.name} spends ${spendLabel} to clear Secret Passage challenge (${reqLabel}).`);
+    challengeReward = ch.reward;
+    completedSecretPassage = true;
   } else if (target.type === "badnik") {
     const b = p.badniks[target.badnikIndex];
     if (!b) {
@@ -3686,6 +3991,9 @@ function spendDieOnTarget(state, die, target, spendMeta) {
 
   if (challengeReward) applyReward(state, challengeReward);
   if (completedRoute && isCardComplete(completedRoute.activeCard)) completeZoneCard(state, completedRoute);
+  if (completedSecretPassage && state.secretPassage?.card && isCardComplete(state.secretPassage.card)) {
+    completeSecretPassage(state);
+  }
   if (state.ui?.discard?.open) {
     state.ui.discard.postSpend = { spentDieColor: spentDie.color };
     return state;
@@ -4613,43 +4921,17 @@ function render() {
   const chevronGradient = getChevronGradient(zoneConfig);
   const actBoardView = document.getElementById("actBoardView");
   if (actBoardView) {
-    const actGradient = buildGradientCss(s.actBoard?.cardGradient);
-    actBoardView.style.background = actGradient || "";
     const actChevron = getActChevronGradient(zoneConfig);
-    if (actChevron?.top) actBoardView.style.setProperty("--act-arrow-start", actChevron.top);
-    if (actChevron?.bottom) actBoardView.style.setProperty("--act-arrow-end", actChevron.bottom);
     const routes = ["Top","Middle","Bottom"].map(name => ({
       name,
       reward: getActBoardReward(s, name)
     }));
-    actBoardView.innerHTML = `
-      <div class="act-board-lanes">
-        ${routes.map((route, index) => {
-          const gradId = `actArrowGrad-${route.name.toLowerCase()}-${index}`;
-          return `
-          <div class="act-lane">
-            <div class="act-lane-arrow">
-              <svg viewBox="0 0 110 82" aria-hidden="true">
-                <defs>
-                  <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="82" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stop-color="var(--act-arrow-start)" />
-                    <stop offset="100%" stop-color="var(--act-arrow-end)" />
-                  </linearGradient>
-                  <filter id="${gradId}-shadow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#0a0f1f" flood-opacity="0.55"/>
-                  </filter>
-                </defs>
-                <path d="M70 10 L91 10 Q95 10 96.65 13.65 L107.35 37.35 Q109 41 107.35 44.65 L96.65 68.35 Q95 72 91 72 L70 72 Q62 72 65.67 64.89 L76.16 44.56 Q78 41 76.16 37.44 L65.67 17.11 Q62 10 70 10 Z" fill="url(#${gradId})" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" filter="url(#${gradId}-shadow)"/>
-                <path d="M40 10 L61 10 Q65 10 66.65 13.65 L77.35 37.35 Q79 41 77.35 44.65 L66.65 68.35 Q65 72 61 72 L40 72 Q32 72 35.67 64.89 L46.16 44.56 Q48 41 46.16 37.44 L35.67 17.11 Q32 10 40 10 Z" fill="url(#${gradId})" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" filter="url(#${gradId}-shadow)"/>
-                <path d="M10 10 L31 10 Q35 10 36.65 13.65 L47.35 37.35 Q49 41 47.35 44.65 L36.65 68.35 Q35 72 31 72 L10 72 Q2 72 5.67 64.89 L16.16 44.56 Q18 41 16.16 37.44 L5.67 17.11 Q2 10 10 10 Z" fill="url(#${gradId})" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" filter="url(#${gradId}-shadow)"/>
-              </svg>
-            </div>
-            ${formatActRewardHtml(route.reward)}
-          </div>
-        `;
-        }).join("")}
-      </div>
-    `;
+    renderActBoard(actBoardView, {
+      routes,
+      cardGradient: s.actBoard?.cardGradient,
+      chevronGradient: actChevron,
+      idPrefix: "act"
+    });
   }
   for (const route of s.zone.routes) {
     const cardData = route.activeCard;
@@ -4658,70 +4940,7 @@ function render() {
     const gradient = buildGradientCss(s.actBoard?.cardGradient);
     if (zoneSpaceBg) card.style.setProperty("--zone-space-bg", zoneSpaceBg);
     if (gradient) card.style.setProperty("--zone-card-gradient", gradient);
-    const spaceCount = cardData?.spaces?.length ?? 0;
-    const evenLayout = spaceCount === 5 || spaceCount === 6 || spaceCount === 7;
-    const trackClass = evenLayout
-      ? `track-list track-list-even${spaceCount === 7 ? " spaces-7" : ""}`
-      : "track-list";
-    const trackStyle = "";
-    const availableIds = new Set(getCardAvailableChallengeIds(cardData));
-    const renderChallenge = (ch) => {
-      const laneClass = `lane-${ch.lane || "shared"}`;
-      const req = formatChallengeChip(ch, cardData);
-      const reward = formatActRewardHtml(ch.reward);
-      const isAvailable = availableIds.has(ch.id);
-      const labelClasses = ["track-label"];
-      const rewardClasses = ["track-reward"];
-      labelClasses.push(laneClass);
-      rewardClasses.push(laneClass);
-      if (ch.cleared) {
-        labelClasses.push("cleared");
-        rewardClasses.push("cleared");
-      } else if (!isAvailable) {
-        labelClasses.push("locked");
-        rewardClasses.push("locked");
-      }
-      if (isAvailable) labelClasses.push("clickable");
-      const labelHtml = `<div class="${labelClasses.join(" ")}" data-challenge-id="${ch.id}">${req}</div>`;
-      const rewardHtml = `<div class="${rewardClasses.join(" ")}">${reward}</div>`;
-      return { labelHtml, rewardHtml };
-    };
-    const trackHtml = cardData
-      ? `<div class="${trackClass}"${trackStyle}>
-          ${cardData.spaces.map(space => {
-            const challenges = space.challenges || [];
-            if (challenges.length === 1) {
-              const ch = challenges[0];
-              const rendered = renderChallenge(ch);
-              return `<div class="track-space">
-                <div class="space-reward space-reward-top empty"></div>
-                <div class="track-item single">
-                  ${rendered.labelHtml}
-                </div>
-                <div class="space-reward space-reward-bottom">
-                  ${rendered.rewardHtml}
-                </div>
-              </div>`;
-            }
-            const top = challenges.find(ch => ch.lane === "top") || challenges[0];
-            const bottom = challenges.find(ch => ch.lane === "bottom") || challenges[1];
-            const topRendered = renderChallenge(top);
-            const bottomRendered = renderChallenge(bottom);
-            return `<div class="track-space">
-              <div class="space-reward space-reward-top">
-                ${topRendered.rewardHtml}
-              </div>
-              <div class="track-item multi">
-                ${topRendered.labelHtml}
-                ${bottomRendered.labelHtml}
-              </div>
-              <div class="space-reward space-reward-bottom">
-                ${bottomRendered.rewardHtml}
-              </div>
-            </div>`;
-          }).join("")}
-        </div>`
-      : `<div class="tiny muted">No active card.</div>`;
+    const { html: trackHtml, availableIds } = buildCardTrackHtml(cardData);
     const zoneName = zoneConfig?.name || "Zone";
     card.innerHTML = `
       <div class="zone-card-inner">
@@ -4750,6 +4969,68 @@ function render() {
     }
     zv.appendChild(card);
     scheduleZoneCardConnectors(card, cardData, chevronGradient);
+  }
+
+  const secretRow = document.getElementById("secretPassageRow");
+  const secretView = document.getElementById("secretPassageView");
+  const secretActBoardView = document.getElementById("secretActBoardView");
+  if (secretRow && secretView) {
+    secretView.innerHTML = "";
+  }
+  if (p.character === "Knuckles" && s.secretPassage?.card && secretRow && secretView) {
+    secretRow.style.display = "";
+    const cardData = s.secretPassage.card;
+    const card = document.createElement("div");
+    card.className = "card zone-card";
+    const gradient = buildGradientCss(SECRET_PASSAGE_STYLE.cardGradient);
+    if (SECRET_PASSAGE_STYLE.spaceBackground) {
+      card.style.setProperty("--zone-space-bg", SECRET_PASSAGE_STYLE.spaceBackground);
+    }
+    if (gradient) card.style.setProperty("--zone-card-gradient", gradient);
+    const { html: trackHtml, availableIds } = buildCardTrackHtml(cardData);
+    const zoneName = SECRET_PASSAGE_TEMPLATE.name || "Secret Passage";
+    card.innerHTML = `
+      <div class="zone-card-inner">
+        <div class="zone-card-face zone-card-front">
+          ${trackHtml}
+        </div>
+        <div class="zone-card-face zone-card-back">
+          <div>${escapeHtml(zoneName)}</div>
+        </div>
+      </div>
+    `;
+    if (cardData && !cardData.revealed) {
+      card.classList.add("flip-in");
+      cardData.revealed = true;
+    }
+    if (cardData) {
+      card.title = "Click a challenge to preselect spend target";
+      card.addEventListener("click", (event) => {
+        const target = event.target.closest("[data-challenge-id]");
+        if (!target) return;
+        const challengeId = target.getAttribute("data-challenge-id");
+        if (!availableIds.has(challengeId)) return;
+        preselectSpendTarget(STATE, { type:"secret_passage", challengeId });
+        render();
+      });
+    }
+    secretView.appendChild(card);
+    const secretChevron = getGradientEndpoints(SECRET_PASSAGE_STYLE.cardGradient);
+    scheduleZoneCardConnectors(card, cardData, secretChevron);
+    if (secretActBoardView) {
+      const routes = [{ name: "Secret", reward: { type:"big_ring" } }];
+      const gradient = SECRET_PASSAGE_STYLE.cardGradient;
+      const chevronGradient = secretChevron ? { top: secretChevron.start, bottom: secretChevron.end } : null;
+      renderActBoard(secretActBoardView, {
+        routes,
+        cardGradient: gradient,
+        chevronGradient,
+        idPrefix: "secret"
+      });
+    }
+  } else if (secretRow) {
+    secretRow.style.display = "none";
+    if (secretActBoardView) secretActBoardView.innerHTML = "";
   }
 
   // Badniks
