@@ -138,7 +138,7 @@
     .track-item {
       border:1px solid #2d3b73;
       border-radius:10px;
-      background:#0f1733;
+      background:var(--zone-space-bg, #0f1733);
       padding:4px 6px;
       font-size:13px;
       display:flex;
@@ -349,7 +349,18 @@
       z-index:-1;
       filter:blur(6px);
     }
-    .zone-card { background:#121a33; position:relative; overflow:hidden; z-index:0; }
+    .zone-card {
+      background:#121a33;
+      --zone-card-gradient: linear-gradient(180deg, #121a33, #121a33);
+      --zone-card-texture: url("img/zone_card_checkboard.png");
+      background-image: var(--zone-card-texture), var(--zone-card-gradient);
+      background-repeat: repeat, no-repeat;
+      background-size: auto, cover;
+      background-position: center, center;
+      position:relative;
+      overflow:hidden;
+      z-index:0;
+    }
     .zone-level-name .zone-title {
       white-space:nowrap;
       overflow:hidden;
@@ -1221,6 +1232,7 @@ const CONFIG = {
     deckCounts: { 1: 8, 2: 8, 3: 9, 4: 10 },
     splitChance: 0.3,
     splitStreakChance: 0.6,
+    spaceBackground: "#0f1733",
     bumper: {
       maxGroups: 1,
       groupChance: 0.55,
@@ -1243,7 +1255,8 @@ const CONFIG = {
         actBoardArrowColors: { start: "#58b6ff", end: "#2f7cff" },
         rewardWeightMultipliers: { time: 0.6 },
         hazardAmountChances: { two: 0.06, three: 0.01 },
-        cardGradient: ["#1c2d66", "#2f7cff", "#78b5ff"]
+        cardGradient: ["#1c2d66", "#2f7cff", "#78b5ff"],
+        spaceBackground: "#1f4ea8"
       }
     },
     stardust_speedway: {
@@ -1265,7 +1278,8 @@ const CONFIG = {
           { color: "#8f5dcc", stop: 52 },
           { color: "#6a2a7a", stop: 80 },
           { color: "#54286f", stop: 100 }
-        ]
+        ],
+        spaceBackground: "#0f1733"
       }
     },
     lava_reef: {
@@ -1286,7 +1300,8 @@ const CONFIG = {
           { color: "#e37a2f", stop: 66 },
           { color: "#c7743f", stop: 66 },
           { color: "#8a5a36", stop: 100 }
-        ]
+        ],
+        spaceBackground: "#4b2b1a"
       }
     },
     chemical_plant: {
@@ -1307,7 +1322,8 @@ const CONFIG = {
           { color: "#3a3a3a", stop: 15 },
           { color: "#fdfdfd", stop: 80 },
           { color: "#fdfdfd", stop: 100 }
-        ]
+        ],
+        spaceBackground: "#6b3b14"
       }
     }
   }
@@ -4356,6 +4372,10 @@ function render() {
       </div>
     `;
   }
+  const zoneConfig = getZoneConfig(s.zoneId);
+  const zoneSpaceBg = zoneConfig?.zoneGenerator?.spaceBackground
+    || CONFIG.zoneGenerator?.spaceBackground
+    || "#0f1733";
   const actBoardView = document.getElementById("actBoardView");
   if (actBoardView) {
     const actGradient = buildGradientCss(s.actBoard?.cardGradient);
@@ -4383,7 +4403,8 @@ function render() {
     const card = document.createElement("div");
     card.className = "card zone-card";
     const gradient = buildGradientCss(s.actBoard?.cardGradient);
-    if (gradient) card.style.background = gradient;
+    if (zoneSpaceBg) card.style.setProperty("--zone-space-bg", zoneSpaceBg);
+    if (gradient) card.style.setProperty("--zone-card-gradient", gradient);
     const spaceCount = cardData?.spaces?.length ?? 0;
     const evenLayout = spaceCount === 5 || spaceCount === 6 || spaceCount === 7;
     const trackClass = evenLayout
