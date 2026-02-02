@@ -231,6 +231,13 @@
     .modal-overlay.open { display:flex; }
     .modal { max-width:540px; width:calc(100% - 32px); }
     .modal-actions { justify-content:flex-end; }
+    .zone-json-modal .modal { max-width:720px; }
+    .zone-json-text {
+      width:100%;
+      min-height:320px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:12px;
+    }
     .bonus-stage-modal .modal {
       background:
         linear-gradient(45deg, #fb7 25%, transparent 25%, transparent 75%, #fb7 75%, #fb7),
@@ -709,6 +716,7 @@
       <h2>Debug</h2>
       <button id="btnForceBonusStage">Force Bonus Stage</button>
       <button id="btnShowPowerUpDeck">Show Power-Up Deck Order</button>
+      <button id="btnShowZoneJson">Show Zone Card JSON</button>
 
       <div class="hr"></div>
 
@@ -773,6 +781,17 @@
       <div id="bonusStageGrid" class="bonus-stage-grid"></div>
       <div class="row modal-actions">
         <button id="bonusStageExit">Return to Zone</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="zoneJsonModal" class="modal-overlay zone-json-modal">
+    <div class="card modal">
+      <h2>Zone Card JSON</h2>
+      <textarea id="zoneJsonText" class="zone-json-text" readonly></textarea>
+      <div class="row modal-actions">
+        <button id="zoneJsonCopy">Copy JSON</button>
+        <button id="zoneJsonClose">Close</button>
       </div>
     </div>
   </div>
@@ -4667,6 +4686,21 @@ function closeNewGameModal() {
   if (modal) modal.classList.remove("open");
 }
 
+function openZoneJsonModal(state) {
+  const modal = document.getElementById("zoneJsonModal");
+  const text = document.getElementById("zoneJsonText");
+  if (!modal || !text) return;
+  const data = state?.zone || null;
+  text.value = data ? JSON.stringify(data, null, 2) : "No zone data.";
+  text.scrollTop = 0;
+  modal.classList.add("open");
+}
+
+function closeZoneJsonModal() {
+  const modal = document.getElementById("zoneJsonModal");
+  if (modal) modal.classList.remove("open");
+}
+
 function generateSeed() {
   return Math.floor(Math.random() * 1000000000).toString();
 }
@@ -4800,6 +4834,39 @@ if (showPowerUpDeckBtn) {
       log(STATE, `Power-Up Deck order: ${labels}`);
     }
     render();
+  });
+}
+
+const showZoneJsonBtn = document.getElementById("btnShowZoneJson");
+if (showZoneJsonBtn) {
+  showZoneJsonBtn.addEventListener("click", () => {
+    if (!STATE) return;
+    openZoneJsonModal(STATE);
+  });
+}
+
+const zoneJsonCloseBtn = document.getElementById("zoneJsonClose");
+if (zoneJsonCloseBtn) {
+  zoneJsonCloseBtn.addEventListener("click", () => closeZoneJsonModal());
+}
+
+const zoneJsonCopyBtn = document.getElementById("zoneJsonCopy");
+if (zoneJsonCopyBtn) {
+  zoneJsonCopyBtn.addEventListener("click", () => {
+    const text = document.getElementById("zoneJsonText");
+    if (!text) return;
+    const value = text.value || "";
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(value).then(() => {
+        log(STATE, "Zone JSON copied to clipboard.");
+      }).catch(() => {
+        text.select();
+        document.execCommand("copy");
+      });
+    } else {
+      text.select();
+      document.execCommand("copy");
+    }
   });
 }
 
