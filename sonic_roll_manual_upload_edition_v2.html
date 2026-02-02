@@ -25,6 +25,13 @@
     .controls-card[data-character="Knuckles"] { background:#3a0f12; border-color:#8a2a2a; }
     .controls-card[data-character="Amy"] { background:#351126; border-color:#7a2d53; }
     .character-heading { display:flex; flex-direction:column; align-items:flex-start; gap:4px; font-size:18px; font-weight:700; margin:0 0 6px; color:#e8ecff; }
+    .character-heading-row { display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px; }
+    .character-heading-score { text-align:left; display:inline-flex; align-items:center; gap:6px; }
+    .character-heading-score img { height:14px; width:auto; image-rendering: pixelated; }
+    .score-digits { display:inline-flex; align-items:center; }
+    .score-digit { height:14px; width:auto; image-rendering: pixelated; margin-left:-4px; }
+    .score-digit:first-child { margin-left:0; }
+    .character-heading-name { text-align:right; }
     .badge-tight { padding:2px 6px; font-size:11px; }
     button, select, input { background:#1a2550; border:1px solid #2d3b73; color:#e8ecff; padding:8px 10px; border-radius:10px; cursor:pointer; }
     button:hover { filter:brightness(1.1); }
@@ -2445,6 +2452,20 @@ function formatRewardDisplayHtml(reward) {
   return formatRewardLabel(reward);
 }
 
+function formatPixelScore(value) {
+  const text = String(value ?? 0);
+  const parts = [];
+  for (const ch of text) {
+    if (ch >= "0" && ch <= "9") {
+      parts.push(`<img class="score-digit" src="img/${ch}.png" alt="${ch}">`);
+    } else if (ch === "-") {
+      parts.push(`<img class="score-digit" src="img/-.png" alt="minus">`);
+    }
+  }
+  if (!parts.length) return `<span class="score-digits">0</span>`;
+  return `<span class="score-digits">${parts.join("")}</span>`;
+}
+
 function formatActRewardHtml(reward) {
   if (!reward) return `<div class="act-reward-circle"><span class="act-reward-text">NONE</span></div>`;
   if (reward.type === "big_ring") {
@@ -3770,10 +3791,17 @@ function render() {
   if (controlsCard) controlsCard.dataset.character = p.character;
   const characterHeading = document.getElementById("characterHeading");
   if (characterHeading) {
-    const label = `${p.name} — ${p.character}`;
+    const label = `${p.name} - ${p.character}`;
+    const score = computeScoreSummary(s)?.find(entry => entry.id === p.id)?.totalPoints ?? 0;
     characterHeading.innerHTML = `
-      <span>${escapeHtml(label)}</span>
-      <div class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken} | Chaos Ready ${chaosCounts.ready} | Chaos Spent ${chaosCounts.spent}</div>
+      <div class="character-heading-row">
+        <span class="character-heading-score">
+          <img src="img/hud_score.png" alt="Score">
+          ${formatPixelScore(score)}
+        </span>
+        <span class="character-heading-name">${escapeHtml(label)}</span>
+      </div>
+      <div class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken}</div>
     `;
   }
 
