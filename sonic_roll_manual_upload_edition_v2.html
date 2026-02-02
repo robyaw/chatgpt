@@ -196,7 +196,7 @@
       animation: selectableBorderPulse 2.2s ease-in-out infinite;
     }
     .track-label.cleared .req-chip-border { animation:none; }
-    .req-chip { display:inline-flex; align-items:center; justify-content:center; width:calc(100% - 6px); height:calc(100% - 6px); padding:0; border-radius:8px; border:0; background:#d7dbe6; color:#111; font-weight:700; letter-spacing:.02em; box-sizing:border-box; position:relative; z-index:2; }
+    .req-chip { display:inline-flex; align-items:center; justify-content:center; width:calc(100% - 6px); height:calc(100% - 6px); padding:0; border-radius:5px; border:0; background:#d7dbe6; color:#111; font-weight:700; letter-spacing:.02em; box-sizing:border-box; position:relative; z-index:2; }
     .req-chip img { width:28px; height:28px; display:block; }
     .req-chip.req-blue { background:#5aa3ff; color:#0b1020; }
     .req-chip.req-yellow { background:#ffd756; color:#3a2a00; }
@@ -1696,25 +1696,27 @@ function generateZoneCard(genCfg) {
   const spaces = [];
   let hasSplit = false;
   let prevSplit = false;
-  let lastRewardType = null;
+  let prevSpaceRewardTypes = new Set();
   for (let i = 0; i < totalSpaces; i++) {
     const chance = prevSplit ? splitStreakChance : splitChance;
     const isSplit = rng()() < chance;
     prevSplit = isSplit;
     if (isSplit) hasSplit = true;
     const lanes = isSplit ? ["top", "bottom"] : ["shared"];
+    const spaceRewardTypes = new Set();
     const challenges = lanes.map(lane => {
       const n = rollD6();
       const color = rollBaseColor();
       let reward = rollReward();
       let attempts = 0;
-      while (reward?.type === lastRewardType && attempts < 6) {
+      while ((prevSpaceRewardTypes.has(reward?.type) || spaceRewardTypes.has(reward?.type)) && attempts < 10) {
         reward = rollReward();
         attempts++;
       }
-      lastRewardType = reward?.type ?? null;
+      if (reward?.type) spaceRewardTypes.add(reward.type);
       return { id: uuid(), n, color, cleared:false, reward, lane, next: [] };
     });
+    prevSpaceRewardTypes = spaceRewardTypes;
     spaces.push({ id: uuid(), challenges });
   }
 
