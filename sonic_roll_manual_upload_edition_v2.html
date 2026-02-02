@@ -30,12 +30,18 @@
     button:hover { filter:brightness(1.1); }
     button:disabled { opacity:.5; cursor:not-allowed; }
     .pill { display:inline-flex; gap:8px; padding:6px 10px; border:1px solid #2d3b73; border-radius:999px; background:#0f1733; margin:4px 4px 0 0; align-items:center; }
+    .badge.buddy-flight { background:#e7c240; border-color:#caa62c; color:#2d2d2d; }
+    .buddy-flight-value { font-weight:700; }
     .muted { color:#b0b8e8; }
     .log { max-height: 300px; overflow:auto; font-size: 13px; line-height:1.35; }
     .grid { display:grid; grid-template-columns: minmax(240px, 1fr); gap:10px; }
     .tiny { font-size: 12px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     .badge { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid #2d3b73; background:#0f1733; }
+    .dice-pool-header { align-items:center; justify-content:space-between; }
+    .dice-pool-header h2 { margin:0; }
+    .dice-pool-footer { align-items:center; justify-content:space-between; }
+    .chain-spend-badge { display:flex; justify-content:flex-end; flex:1; }
     .roll-action-btn { padding:8px 10px; border-radius:10px; border:1px solid #2d3b73; background:#0f1733; color:#e8ecff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:90px; }
     .roll-action-icon { display:grid; grid-template-columns: repeat(2, 16px); grid-auto-rows: 16px; gap:2px; justify-content:center; align-content:center; }
     .roll-action-icon-box {
@@ -185,7 +191,7 @@
     .req-chip-stack { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; position:relative; }
     .req-chip-border { position:absolute; inset:0; background:#111; border-radius:8px; z-index:0; }
     .req-chip-border.bumper { background:#8f8f8f; }
-    .track-label.cleared .req-chip-border { background:#f3c95a; }
+    .track-label.cleared .req-chip-border { background:#c01818; }
     .track-label.clickable .req-chip-border {
       animation: selectableBorderPulse 2.2s ease-in-out infinite;
     }
@@ -370,7 +376,7 @@
       pointer-events:none;
       z-index:1;
       --connector-stroke: 8;
-      --connector-active: #f3c95a;
+      --connector-active: #c01818;
       --connector-muted: #e8ecff;
     }
     .track-connectors line {
@@ -619,13 +625,20 @@
       <div class="tiny row">
         <div><span class="badge">Phase</span> <span id="phase"></span></div>
         <div><span class="badge">Invulnerable</span> <span id="invuln"></span></div>
+        <div><span class="badge">Spent Since Reroll</span> <span id="spentSinceReroll"></span></div>
+        <div id="buddyFlightBadge"></div>
       </div>
 
       <div class="hr"></div>
 
-      <h2>Dice Pool</h2>
+      <div class="row dice-pool-header">
+        <h2>Dice Pool</h2>
+      </div>
       <div id="dicePool"></div>
-      <div class="tiny muted">Click a die to select it for spending.</div>
+      <div class="row dice-pool-footer">
+        <div class="tiny muted">Click a die to select it for spending.</div>
+        <div id="chainSpendRuleBadge" class="chain-spend-badge"></div>
+      </div>
 
       <div class="hr"></div>
 
@@ -3748,17 +3761,24 @@ function render() {
 
   document.getElementById("phase").textContent = s.phase;
   document.getElementById("invuln").textContent = p.invulnerable ? "YES" : "NO";
+  document.getElementById("spentSinceReroll").textContent = p.spentSinceLastReroll;
 
-  const counters = document.getElementById("counters");
   const buddyFlightValue = s.buddyFlight?.value ?? 0;
   const buddyFlightMarkup = buddyFlightValue > 0
-    ? `<div class="pill tiny"><b>Buddy Flight</b><div class="die yellow">${buildDieFaceHtml(buddyFlightValue)}</div></div>`
+    ? `<div><span class="badge buddy-flight">Buddy Flight</span> <span class="buddy-flight-value">${buddyFlightValue}</span></div>`
     : "";
-  counters.innerHTML = `
-    <div class="pill tiny"><b>spentSinceLastReroll</b> ${p.spentSinceLastReroll}</div>
-    ${buddyFlightMarkup}
-    ${p.lastChainSpendRule ? `<div class="pill tiny warn"><b>Chain rule</b> ${p.lastChainSpendRule.color.toUpperCase()} must be lower than ${p.lastChainSpendRule.lastSpentValue}</div>` : ""}
-  `;
+  const buddyFlightBadge = document.getElementById("buddyFlightBadge");
+  if (buddyFlightBadge) buddyFlightBadge.innerHTML = buddyFlightMarkup;
+  const counters = document.getElementById("counters");
+  if (counters) {
+    counters.innerHTML = "";
+  }
+  const chainBadge = document.getElementById("chainSpendRuleBadge");
+  if (chainBadge) {
+    chainBadge.innerHTML = p.lastChainSpendRule
+      ? `<div class="pill tiny warn"><b>Chain rule</b> ${p.lastChainSpendRule.color.toUpperCase()} must be lower than ${p.lastChainSpendRule.lastSpentValue}</div>`
+      : "";
+  }
 
   const powerStatus = document.getElementById("powerUpStatus");
   if (powerStatus) {
