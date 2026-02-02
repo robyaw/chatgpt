@@ -105,7 +105,7 @@
     .target-item { padding:6px 8px; border:1px solid #2d3b73; border-radius:10px; background:#0f1733; cursor:pointer; }
     .target-item.selected { outline:2px solid rgba(120,200,255,.6); background:#15234a; }
     .target-actions { margin-top:8px; }
-    .track-list { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+    .track-list { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; position:relative; }
     .track-list-even {
       justify-content:space-between;
       gap:0;
@@ -147,11 +147,7 @@
     .track-item.multi {
       justify-content:space-between;
     }
-    .track-item.cleared { opacity:.55; text-decoration: line-through; }
-    .track-label.cleared,
-    .track-reward.cleared { opacity:.55; text-decoration: line-through; }
-    .track-label.locked,
-    .track-reward.locked { opacity:.5; }
+    .track-reward.cleared { text-decoration: line-through; }
     .track-label { font-weight:600; font-size:14px; }
     .track-reward { color:#b0b8e8; font-size:12px; }
     .track-reward .act-reward-circle {
@@ -183,14 +179,26 @@
     .track-reward .act-reward-text {
       font-size:8px;
     }
-    .req-chip { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; padding:0; border-radius:8px; border:3px solid #111; background:#d7dbe6; color:#111; font-weight:700; letter-spacing:.02em; box-sizing:border-box; }
-    .req-chip.bumper { border-color:#8f8f8f; }
+    .req-chip-stack { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; position:relative; }
+    .req-chip-border { position:absolute; inset:0; background:#111; border-radius:8px; z-index:0; }
+    .req-chip-border.bumper { background:#8f8f8f; }
+    .track-label.cleared .req-chip-border { background:#f3c95a; }
+    .track-label.clickable .req-chip-border {
+      animation: selectableBorderPulse 2.2s ease-in-out infinite;
+    }
+    .track-label.cleared .req-chip-border { animation:none; }
+    .req-chip { display:inline-flex; align-items:center; justify-content:center; width:calc(100% - 6px); height:calc(100% - 6px); padding:0; border-radius:8px; border:0; background:#d7dbe6; color:#111; font-weight:700; letter-spacing:.02em; box-sizing:border-box; position:relative; z-index:2; }
     .req-chip img { width:28px; height:28px; display:block; }
     .req-chip.req-blue { background:#5aa3ff; color:#0b1020; }
     .req-chip.req-yellow { background:#ffd756; color:#3a2a00; }
     .req-chip.req-red { background:#ff6a6a; color:#2a0b0b; }
     .req-chip.req-any { background:#d7dbe6; color:#111; }
     .req-number { font-size:1.15em; }
+    @keyframes selectableBorderPulse {
+      0% { background:#111; }
+      50% { background:#c5cbd8; }
+      100% { background:#111; }
+    }
     .player-setup { display:flex; flex-direction:column; gap:6px; }
     .player-setup-row { display:flex; align-items:center; gap:8px; }
     .player-setup-row select { min-width:150px; }
@@ -329,7 +337,7 @@
       z-index:-1;
       filter:blur(6px);
     }
-    .zone-card { background:#121a33; }
+    .zone-card { background:#121a33; position:relative; overflow:hidden; z-index:0; }
     .zone-level-name .zone-title {
       white-space:nowrap;
       overflow:hidden;
@@ -348,6 +356,24 @@
       min-height:230px;
       padding:2px 6px;
     }
+    .track-connectors {
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      pointer-events:none;
+      z-index:1;
+      --connector-stroke: 8;
+      --connector-active: rgba(243, 201, 90, 0.95);
+      --connector-muted: rgba(232, 236, 255, 0.9);
+    }
+    .track-connectors line {
+      stroke: var(--connector-muted);
+      stroke-width: var(--connector-stroke);
+      stroke-linecap: butt;
+      vector-effect: non-scaling-stroke;
+    }
+    .track-connectors line.active { stroke: var(--connector-active); }
     .zone-layout {
       display:flex;
       gap:6px;
@@ -2536,12 +2562,12 @@ function formatChallengeChip(ch, card) {
   if (ch?.bumper) {
     const lock = getBumperLock(card, ch.bumper.id);
     const tip = lock == null ? "Bumper: any value" : `Bumper locked to ${lock}`;
-    return `<span class="req-chip ${cls} bumper" title="${tip}"><img src="img/bumper.png" alt="Bumper"></span>`;
+    return `<span class="req-chip-stack" title="${tip}"><span class="req-chip-border bumper"></span><span class="req-chip ${cls}"><img src="img/bumper.png" alt="Bumper"></span></span>`;
   }
   if (ch?.n != null) {
-    return `<span class="req-chip ${cls}"><img src="img/${ch.n}.png" alt="${ch.n}"></span>`;
+    return `<span class="req-chip-stack"><span class="req-chip-border"></span><span class="req-chip ${cls}"><img src="img/${ch.n}.png" alt="${ch.n}"></span></span>`;
   }
-  return `<span class="req-chip ${cls}">ANY</span>`;
+  return `<span class="req-chip-stack"><span class="req-chip-border"></span><span class="req-chip ${cls}">ANY</span></span>`;
 }
 
 function isDieLegalForChallenge(ch, card, die) {
@@ -2604,6 +2630,114 @@ function getCardAvailableChallenges(card) {
   return getCardAvailableChallengeIds(card)
     .map(id => map.get(id)?.challenge)
     .filter(Boolean);
+}
+
+function renderZoneCardConnectors(cardEl, cardData) {
+  if (!cardEl || !cardData?.spaces?.length) return;
+  if (!cardEl.isConnected) return;
+  const challengeMap = getCardChallengeMap(cardData);
+  const trackEl = cardEl.querySelector(".track-list");
+  if (!trackEl) return;
+  const labelNodes = cardEl.querySelectorAll("[data-challenge-id]");
+  const clearedIds = new Set();
+  for (const [id, entry] of challengeMap.entries()) {
+    if (entry.challenge?.cleared) clearedIds.add(id);
+  }
+  const availableIds = new Set(getCardAvailableChallengeIds(cardData));
+  const elById = new Map();
+  for (const label of labelNodes) {
+    const id = label.getAttribute("data-challenge-id");
+    if (!id) continue;
+    const chip = label.querySelector(".req-chip") || label.querySelector(".req-chip-stack") || label;
+    elById.set(id, chip);
+  }
+
+  let svg = trackEl.querySelector(".track-connectors");
+  if (!svg) {
+    svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.classList.add("track-connectors");
+    svg.setAttribute("aria-hidden", "true");
+    trackEl.appendChild(svg);
+  }
+
+  const strokeWidth = parseFloat(getComputedStyle(svg).getPropertyValue("--connector-stroke")) || 8;
+  const connectorInset = strokeWidth / 2;
+
+  const trackRect = trackEl.getBoundingClientRect();
+  const width = Math.max(1, trackRect.width);
+  const height = Math.max(1, trackRect.height);
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+  svg.style.width = "100%";
+  svg.style.height = "100%";
+  svg.innerHTML = "";
+
+  const originLeft = trackRect.left;
+  const originTop = trackRect.top;
+
+  for (const [id, entry] of challengeMap.entries()) {
+    const fromEl = elById.get(id);
+    if (!fromEl) continue;
+    const nextIds = getChallengeNextIds(cardData, entry);
+    if (!Array.isArray(nextIds) || !nextIds.length) continue;
+    const fromRect = fromEl.getBoundingClientRect();
+    const fromCenter = {
+      x: (fromRect.left + fromRect.right) / 2,
+      y: (fromRect.top + fromRect.bottom) / 2
+    };
+    const fromSize = Math.min(fromRect.width, fromRect.height);
+    const fromOffset = Math.max(0, fromSize / 2 - connectorInset);
+
+    for (const nextId of nextIds) {
+      const toEl = elById.get(nextId);
+      if (!toEl) continue;
+      const toRect = toEl.getBoundingClientRect();
+      const toCenter = {
+        x: (toRect.left + toRect.right) / 2,
+        y: (toRect.top + toRect.bottom) / 2
+      };
+      const dx = toCenter.x - fromCenter.x;
+      const dy = toCenter.y - fromCenter.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const toSize = Math.min(toRect.width, toRect.height);
+      const toOffset = Math.max(0, toSize / 2 - connectorInset);
+      const x1 = fromCenter.x + ux * fromOffset - originLeft;
+      const y1 = fromCenter.y + uy * fromOffset - originTop;
+      const x2 = toCenter.x - ux * toOffset - originLeft;
+      const y2 = toCenter.y - uy * toOffset - originTop;
+
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      if (clearedIds.has(id) && (clearedIds.has(nextId) || availableIds.has(nextId))) {
+        line.classList.add("active");
+      }
+      line.setAttribute("x1", `${x1}`);
+      line.setAttribute("y1", `${y1}`);
+      line.setAttribute("x2", `${x2}`);
+      line.setAttribute("y2", `${y2}`);
+      svg.appendChild(line);
+    }
+  }
+}
+
+function scheduleZoneCardConnectors(cardEl, cardData) {
+  if (!cardEl || !cardData) return;
+  if (cardEl.dataset.connectorsPending) return;
+  cardEl.dataset.connectorsPending = "1";
+  requestAnimationFrame(() => {
+    delete cardEl.dataset.connectorsPending;
+    renderZoneCardConnectors(cardEl, cardData);
+  });
+}
+
+let zoneConnectorResizeBound = false;
+function ensureZoneConnectorResizeHandler() {
+  if (zoneConnectorResizeBound) return;
+  zoneConnectorResizeBound = true;
+  window.addEventListener("resize", () => {
+    if (typeof render === "function") render();
+  });
 }
 
 function isChallengeAvailable(card, challengeId) {
@@ -3565,6 +3699,7 @@ function computeScoreSummary(state) {
 function render() {
   const s = STATE;
   if (!s) return;
+  ensureZoneConnectorResizeHandler();
 
   const animateDice = !!s.ui?.rollAnim;
   if (animateDice && s.ui) s.ui.rollAnim = false;
@@ -4301,6 +4436,7 @@ function render() {
       });
     }
     zv.appendChild(card);
+    scheduleZoneCardConnectors(card, cardData);
   }
 
   // Badniks
