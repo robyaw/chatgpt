@@ -676,11 +676,6 @@
 
       <div class="hr"></div>
 
-      <h2>Per-Turn Counters</h2>
-      <div id="counters" class="tiny"></div>
-
-      <div class="hr"></div>
-
       <h2>Power Ups</h2>
       <div id="powerUpStatus" class="tiny"></div>
       <div id="powerUpPanel" class="tiny muted">No pending Power Ups.</div>
@@ -3785,10 +3780,6 @@ function render() {
     : "";
   const buddyFlightBadge = document.getElementById("buddyFlightBadge");
   if (buddyFlightBadge) buddyFlightBadge.innerHTML = buddyFlightMarkup;
-  const counters = document.getElementById("counters");
-  if (counters) {
-    counters.innerHTML = "";
-  }
   const chainBadge = document.getElementById("chainSpendRuleBadge");
   if (chainBadge) {
     chainBadge.innerHTML = p.lastChainSpendRule
