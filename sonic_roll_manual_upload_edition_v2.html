@@ -140,12 +140,14 @@
       align-items:center;
       justify-content:center;
       min-height:52px;
+      position:relative;
+      z-index:2;
     }
     .space-reward.empty { visibility:hidden; }
     .track-item {
-      border:1px solid #2d3b73;
+      border:none;
       border-radius:10px;
-      background:var(--zone-space-bg, #0f1733);
+      background:transparent;
       padding:4px 6px;
       font-size:13px;
       display:flex;
@@ -153,6 +155,24 @@
       justify-content:flex-start;
       min-height:120px;
       box-sizing:border-box;
+      position:relative;
+      z-index:1;
+    }
+    .track-item::before {
+      content:"";
+      position:absolute;
+      left:0;
+      right:0;
+      top:-12px;
+      bottom:-12px;
+      background:var(--zone-space-bg, #0f1733);
+      border:1px solid #2d3b73;
+      border-radius:10px;
+      z-index:0;
+    }
+    .track-item > * {
+      position:relative;
+      z-index:1;
     }
     .track-item.single {
       justify-content:center;
