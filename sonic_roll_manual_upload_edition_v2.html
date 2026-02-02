@@ -153,9 +153,9 @@
     .track-reward .act-reward-circle {
       width:46px;
       height:46px;
-      border-width:2px;
-      --reward-border: 2px;
-      --reward-gap: 1px;
+      border-width:3px;
+      --reward-border: 1px;
+      --reward-gap: 0px;
     }
     .track-reward .reward-inner-mask {
       padding-top: 10%;
@@ -167,6 +167,9 @@
     .track-reward .act-reward-circle img {
       width:24px;
       height:24px;
+    }
+    .track-reward .act-reward-circle img.reward-ring-2 {
+      height:auto;
     }
     .track-reward .act-reward-circle img.reward-star-post {
       width:31%;
@@ -463,6 +466,7 @@
       height:52px;
       display:block;
     }
+    .act-reward-circle img.reward-ring-2 { height:auto; }
     .reward-inner-mask {
       position:absolute;
       inset:var(--reward-inset);
@@ -2411,9 +2415,10 @@ function formatActRewardHtml(reward) {
       amount === 4 ? "img/ring_4.png" :
       amount === 5 ? "img/ring_5.png" :
       "img/ring.png";
+    const ringClass = amount === 2 ? "reward-ring-2" : "";
     return `
       <div class="act-reward-circle">
-        <img src="${ringSrc}" alt="Rings">
+        <img src="${ringSrc}" alt="Rings" class="${ringClass}">
       </div>
     `;
   }
