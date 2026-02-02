@@ -373,16 +373,12 @@
       filter:blur(6px);
     }
     .zone-card {
-      background:#121a33;
-      --zone-card-gradient: linear-gradient(180deg, #121a33, #121a33);
-      --zone-card-texture: url("img/zone_card_checkboard.png");
-      background-image: var(--zone-card-texture), var(--zone-card-gradient);
-      background-repeat: repeat, no-repeat;
-      background-size: auto, cover;
-      background-position: center, center;
+      background:transparent;
       position:relative;
       overflow:hidden;
       z-index:0;
+      perspective:1200px;
+      padding:0;
     }
     .zone-level-name .zone-title {
       white-space:nowrap;
@@ -400,7 +396,51 @@
       max-width:460px;
       width:100%;
       min-height:230px;
+    }
+    .zone-card-inner {
+      position:relative;
+      width:100%;
+      min-height:100%;
+      transform-style:preserve-3d;
+      transform:rotateY(0deg);
+    }
+    .zone-card.flip-in .zone-card-inner {
+      animation: card-flip-in 0.7s ease;
+    }
+    @keyframes card-flip-in {
+      0% { transform: rotateY(180deg); }
+      100% { transform: rotateY(0deg); }
+    }
+    .zone-card-face {
+      backface-visibility:hidden;
+      border-radius:14px;
+      overflow:hidden;
+      box-sizing:border-box;
+    }
+    .zone-card-front {
+      position:relative;
+      --zone-card-texture: url("img/zone_card_checkboard.png");
+      background-image: var(--zone-card-texture), var(--zone-card-gradient, linear-gradient(180deg, #121a33, #121a33));
+      background-repeat: repeat, no-repeat;
+      background-size: auto, cover;
+      background-position: center, center;
       padding:2px 6px;
+    }
+    .zone-card-back {
+      position:absolute;
+      inset:0;
+      transform: rotateY(180deg);
+      background:#f2d86a;
+      border:3px solid #ffffff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:16px;
+      color:#1b2a3d;
+      text-transform:uppercase;
+      font-weight:800;
+      letter-spacing:.08em;
     }
     .track-connectors {
       position:absolute;
@@ -2943,10 +2983,19 @@ function scheduleZoneCardConnectors(cardEl, cardData, chevronColors) {
   if (cardEl.dataset.connectorsPending) return;
   cardEl._chevronColors = chevronColors || null;
   cardEl.dataset.connectorsPending = "1";
-  requestAnimationFrame(() => {
+  const finish = () => {
     delete cardEl.dataset.connectorsPending;
     renderZoneCardConnectors(cardEl, cardData);
-  });
+  };
+  const inner = cardEl.querySelector(".zone-card-inner");
+  if (cardEl.classList.contains("flip-in") && inner) {
+    inner.addEventListener("animationend", () => {
+      cardEl.classList.remove("flip-in");
+      finish();
+    }, { once: true });
+    return;
+  }
+  requestAnimationFrame(finish);
 }
 
 let zoneConnectorResizeBound = false;
@@ -4673,9 +4722,21 @@ function render() {
           }).join("")}
         </div>`
       : `<div class="tiny muted">No active card.</div>`;
+    const zoneName = zoneConfig?.name || "Zone";
     card.innerHTML = `
-      ${trackHtml}
+      <div class="zone-card-inner">
+        <div class="zone-card-face zone-card-front">
+          ${trackHtml}
+        </div>
+        <div class="zone-card-face zone-card-back">
+          <div>${escapeHtml(zoneName)}</div>
+        </div>
+      </div>
     `;
+    if (cardData && !cardData.revealed) {
+      card.classList.add("flip-in");
+      cardData.revealed = true;
+    }
     if (cardData) {
       card.title = "Click a challenge to preselect spend target";
       card.addEventListener("click", (event) => {
