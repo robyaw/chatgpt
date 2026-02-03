@@ -156,6 +156,7 @@
       min-height:120px;
       box-sizing:border-box;
       position:relative;
+      --space-bg-image: none;
     }
     .track-item::before {
       content:"";
@@ -164,7 +165,11 @@
       right:0;
       top:-12px;
       bottom:-12px;
-      background:var(--zone-space-bg, #0f1733);
+      background-color:var(--zone-space-bg, #0f1733);
+      background-image:var(--space-bg-image);
+      background-repeat:no-repeat;
+      background-position:center;
+      background-size:contain;
       border:1px solid #2d3b73;
       border-radius:10px;
       z-index:0;
@@ -423,7 +428,8 @@
       transform:rotateY(0deg);
     }
     .zone-card.flip-in .zone-card-inner {
-      animation: card-flip-in 0.7s ease;
+      transform: rotateY(180deg);
+      animation: card-flip-in 0.7s ease 0.4s;
     }
     @keyframes card-flip-in {
       0% { transform: rotateY(180deg); }
@@ -459,6 +465,10 @@
       text-transform:uppercase;
       font-weight:800;
       letter-spacing:.08em;
+    }
+    .secret-passage-back {
+      background:#7a1b1b;
+      color:#ffffff;
     }
     .track-connectors {
       position:absolute;
@@ -1518,6 +1528,7 @@ const SECRET_PASSAGE_TEMPLATE = {
   spaces: [
     {
       id: "secret_passage_1",
+      backgroundImage: "img/zone_bg/secret_passage_01.png",
       challenges: [
         {
           id: "secret_passage_1_s",
@@ -1532,6 +1543,7 @@ const SECRET_PASSAGE_TEMPLATE = {
     },
     {
       id: "secret_passage_2",
+      backgroundImage: "img/zone_bg/secret_passage_01.png",
       challenges: [
         {
           id: "secret_passage_2_s",
@@ -1567,6 +1579,7 @@ const SECRET_PASSAGE_TEMPLATE = {
     },
     {
       id: "secret_passage_4",
+      backgroundImage: "img/zone_bg/secret_passage_02.png",
       challenges: [
         {
           id: "secret_passage_4_s",
@@ -1601,6 +1614,7 @@ const SECRET_PASSAGE_TEMPLATE = {
     },
     {
       id: "secret_passage_6",
+      backgroundImage: "img/zone_bg/secret_passage_01.png",
       challenges: [
         {
           id: "secret_passage_6_s",
@@ -3073,13 +3087,14 @@ function buildCardTrackHtml(cardData) {
   };
   const html = `<div class="${trackClass}">
       ${cardData.spaces.map(space => {
+        const bgImage = space?.backgroundImage ? ` style="--space-bg-image: url('${space.backgroundImage}');"` : "";
         const challenges = space.challenges || [];
         if (challenges.length === 1) {
           const ch = challenges[0];
           const rendered = renderChallenge(ch);
           return `<div class="track-space">
             <div class="space-reward space-reward-top empty"></div>
-            <div class="track-item single">
+            <div class="track-item single"${bgImage}>
               ${rendered.labelHtml}
             </div>
             <div class="space-reward space-reward-bottom">
@@ -3095,7 +3110,7 @@ function buildCardTrackHtml(cardData) {
           <div class="space-reward space-reward-top">
             ${topRendered.rewardHtml}
           </div>
-          <div class="track-item multi">
+          <div class="track-item multi"${bgImage}>
             ${topRendered.labelHtml}
             ${bottomRendered.labelHtml}
           </div>
@@ -4954,7 +4969,7 @@ function render() {
   for (const route of s.zone.routes) {
     const cardData = route.activeCard;
     const card = document.createElement("div");
-    card.className = "card zone-card";
+    card.className = "card zone-card secret-passage";
     const gradient = buildGradientCss(s.actBoard?.cardGradient);
     if (zoneSpaceBg) card.style.setProperty("--zone-space-bg", zoneSpaceBg);
     if (gradient) card.style.setProperty("--zone-card-gradient", gradient);
@@ -5012,7 +5027,7 @@ function render() {
         <div class="zone-card-face zone-card-front">
           ${trackHtml}
         </div>
-        <div class="zone-card-face zone-card-back">
+        <div class="zone-card-face zone-card-back secret-passage-back">
           <div>${escapeHtml(zoneName)}</div>
         </div>
       </div>
