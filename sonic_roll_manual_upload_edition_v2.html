@@ -657,6 +657,226 @@
       height:18px;
       display:block;
     }
+    .badnik-card {
+      width:336px;
+      max-width:100%;
+      aspect-ratio: 7 / 5;
+      border:8px solid #000;
+      border-radius:14px;
+      overflow:hidden;
+      display:grid;
+      grid-template-columns: 56px 16px 1fr;
+      background:#111;
+      box-shadow: 0 6px 12px rgba(0,0,0,.35);
+      cursor:pointer;
+    }
+    #badnikView {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .badnik-attack-col {
+      background:#b7bec6;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      padding:8px 6px 0;
+      gap:0;
+      position:relative;
+      --attack-die-size: 42px;
+    }
+    .badnik-attack-dice {
+      display:flex;
+      flex-direction:column;
+      gap:0;
+      margin-bottom:0;
+      position:relative;
+      width:100%;
+      align-items:center;
+      overflow:visible;
+    }
+    .badnik-attack-top {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .badnik-attack-overlap {
+      position:absolute;
+      top:calc(var(--attack-die-size) + 3px);
+      left:50%;
+      transform:translateX(-50%);
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      z-index:2;
+    }
+    .badnik-connector {
+      background:#101010;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+    }
+    .badnik-connector.vertical {
+      width:18px;
+      flex:1;
+      padding:0;
+      align-self:center;
+      margin-top:0;
+      border-radius:0;
+    }
+    .badnik-connector.horizontal {
+      height:16px;
+      width:var(--badnik-connector-width, 86px);
+      padding:0 6px;
+    }
+    .badnik-chevrons {
+      display:flex;
+      gap:1px;
+    }
+    .badnik-connector.vertical .badnik-chevrons {
+      flex-direction:column;
+    }
+    .badnik-chevron {
+      width:10px;
+      height:8px;
+      background:#d85a2a;
+      clip-path: polygon(0 0, 70% 0, 100% 50%, 70% 100%, 0 100%, 30% 50%);
+    }
+    .badnik-connector.vertical .badnik-chevron {
+      transform: rotate(90deg);
+    }
+    .badnik-sonic {
+      width:46px;
+      height:46px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:absolute;
+      left:50%;
+      bottom:6px;
+      transform:translateX(-50%);
+      z-index:2;
+      pointer-events:none;
+    }
+    .badnik-sonic img {
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      display:block;
+    }
+    .badnik-hatch {
+      background: repeating-linear-gradient(135deg, #f0c84a 0 16.2px, #111 16.2px 32.4px);
+      border-left:3px solid #000;
+      border-right:3px solid #000;
+    }
+    .badnik-main {
+      position:relative;
+      background:var(--badnik-panel-base, #3a2315);
+      overflow:hidden;
+      padding:8px;
+    }
+    .badnik-main::before {
+      content:"";
+      position:absolute;
+      left:0;
+      right:0;
+      top:0;
+      bottom:20%;
+      background-image:var(--badnik-art, none);
+      background-size:cover;
+      background-position:center;
+      border-bottom:3px solid #000;
+      opacity:1;
+      z-index:0;
+    }
+    .badnik-name {
+      position:absolute;
+      top:8px;
+      left:8px;
+      background:#d02424;
+      color:#fff;
+      padding:4px 8px;
+      font-weight:400;
+      font-style:italic;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-size:12px;
+      z-index:2;
+      border-radius:4px;
+    }
+    .badnik-right {
+      position:absolute;
+      right:-8px;
+      top:16px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      z-index:2;
+      align-items:flex-end;
+    }
+    .badnik-right-row {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      position:relative;
+      --badnik-connector-width: 85px;
+      --badnik-animal-size: 34px;
+    }
+    .badnik-right-row .req-chip-stack {
+      margin-right:-14px;
+      z-index:2;
+    }
+    .badnik-animal {
+      position:absolute;
+      right: calc(var(--badnik-connector-width) / 2 - var(--badnik-animal-size) / 2);
+      top:50%;
+      transform:translateY(-50%);
+      width:var(--badnik-animal-size);
+      height:var(--badnik-animal-size);
+      border-radius:50%;
+      background:#fff;
+      border:2px solid #d8b24c;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:9px;
+      font-weight:700;
+      color:#111;
+      z-index:3;
+    }
+    .badnik-animal img {
+      width:75%;
+      height:75%;
+      object-fit:contain;
+      display:block;
+      border-radius:50%;
+    }
+    .badnik-penalty {
+      position:absolute;
+      left:8px;
+      right:8px;
+      top:80%;
+      transform:translateY(-50%);
+      background:#0a0a0a;
+      border:1px solid #ffffff;
+      color:#ffffff;
+      padding:6px 8px;
+      font-size:10px;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      z-index:2;
+    }
+    .badnik-zone {
+      position:absolute;
+      right:6px;
+      bottom:4px;
+      font-size:12px;
+      font-weight:700;
+      color:#ffffff;
+      text-shadow: 0 1px 2px rgba(0,0,0,.7);
+      z-index:3;
+    }
     .power-up-status {
       display:flex;
       gap:8px;
@@ -1445,7 +1665,8 @@ const CONFIG = {
         hazardAmountChances: { two: 0.06, three: 0.01 },
         cardGradient: ["#1c2d66", "#2f7cff", "#78b5ff"],
         actChevronGradient: { top: "#1c2d66", bottom: "#78b5ff" },
-        spaceBackground: "#1f4ea8"
+        spaceBackground: "#1f4ea8",
+        badnikPanelColor: "#2c5fb3"
       }
     },
     stardust_speedway: {
@@ -1469,7 +1690,8 @@ const CONFIG = {
           { color: "#54286f", stop: 100 }
         ],
         actChevronGradient: { top: "#b7c800", bottom: "#6a2a7a" },
-        spaceBackground: "#0f1733"
+        spaceBackground: "#0f1733",
+        badnikPanelColor: "#3a1b5a"
       }
     },
     lava_reef: {
@@ -1492,7 +1714,8 @@ const CONFIG = {
           { color: "#8a5a36", stop: 100 }
         ],
         actChevronGradient: { top: "#7a3a12", bottom: "#ff8c2a" },
-        spaceBackground: "#4b2b1a"
+        spaceBackground: "#4b2b1a",
+        badnikPanelColor: "#d65a2a"
       }
     },
     chemical_plant: {
@@ -1515,7 +1738,8 @@ const CONFIG = {
           { color: "#fdfdfd", stop: 100 }
         ],
         actChevronGradient: { top: "#d15a1f", bottom: "#3fa64a" },
-        spaceBackground: "#6b3b14"
+        spaceBackground: "#6b3b14",
+        badnikPanelColor: "#8ad63e"
       }
     }
   }
@@ -4230,6 +4454,94 @@ function getBadnikDisplayLabels(b) {
   return { attacksLabel, avoidLabel, destroyLabel };
 }
 
+function getZoneInitials(zoneId) {
+  const map = {
+    green_hill: "GHZ",
+    stardust_speedway: "SSZ",
+    lava_reef: "LRZ",
+    chemical_plant: "CPZ"
+  };
+  if (map[zoneId]) return map[zoneId];
+  if (!zoneId) return "ZONE";
+  return zoneId.replace(/[^a-z]/gi, "").slice(0, 3).toUpperCase() || "ZONE";
+}
+
+function getBadnikPanelColor(zoneId) {
+  const zoneConfig = getZoneConfig(zoneId);
+  return zoneConfig?.zoneGenerator?.badnikPanelColor || "#3a2315";
+}
+
+function formatDieChip(n, color) {
+  const cls = color ? `req-${color}` : "req-any";
+  const content = n != null
+    ? `<img src="img/${n}.png" alt="${n}">`
+    : "ANY";
+  return `<span class="req-chip-stack"><span class="req-chip-border"></span><span class="req-chip ${cls}">${content}</span></span>`;
+}
+
+function buildBadnikConnectorHtml(direction = "horizontal", count = 4) {
+  const chevrons = Array.from({ length: count }, () => `<span class="badnik-chevron"></span>`).join("");
+  return `
+    <div class="badnik-connector ${direction}">
+      <div class="badnik-chevrons">${chevrons}</div>
+    </div>
+  `;
+}
+
+function getBadnikPenaltyText(b) {
+  if (!b?.ability?.type) return "Penalty: TBD";
+  return `Penalty: ${b.ability.type.replace(/_/g, " ").toUpperCase()}`;
+}
+
+function buildBadnikCardHtml(b, zoneId, index) {
+  const attackList = (b.attacks || []).map(a => formatDieChip(a.value ?? null, a.color ?? null));
+  const attackTop = attackList[0] || "";
+  const attackRest = attackList.slice(1).join("");
+  const avoidChip = b.avoid ? formatDieChip(b.avoid.value ?? null, b.avoid.color ?? null) : "";
+  const destroyChip = b.destroy ? formatDieChip(b.destroy.value ?? null, b.destroy.color ?? "red") : "";
+  const artSrc = b.image || "img/badnik.png";
+  const penalty = getBadnikPenaltyText(b);
+  const zone = getZoneInitials(zoneId);
+  const panelColor = getBadnikPanelColor(zoneId);
+  return `
+    <div class="badnik-card" data-badnik-index="${index}" style="--badnik-art: url('${artSrc}'); --badnik-panel-base: ${panelColor};">
+      <div class="badnik-attack-col">
+      <div class="badnik-attack-dice">
+        <div class="badnik-attack-top">${attackTop}</div>
+        ${attackRest ? `<div class="badnik-attack-overlap">${attackRest}</div>` : ""}
+      </div>
+      ${buildBadnikConnectorHtml("vertical", 7)}
+      <div class="badnik-sonic">
+        <img src="img/sonic_damage.png" alt="Sonic damage">
+      </div>
+    </div>
+      <div class="badnik-hatch"></div>
+      <div class="badnik-main">
+        <div class="badnik-name">${escapeHtml(b.name || "BADNIK")}</div>
+        <div class="badnik-right">
+          ${destroyChip ? `
+            <div class="badnik-right-row" data-badnik-mode="destroy">
+              ${destroyChip}
+              ${buildBadnikConnectorHtml("horizontal", 4)}
+              <div class="badnik-animal">
+                <img src="img/animal_flicky.png" alt="Animal token">
+              </div>
+            </div>
+          ` : ""}
+          ${avoidChip ? `
+            <div class="badnik-right-row" data-badnik-mode="avoid">
+              ${avoidChip}
+              ${buildBadnikConnectorHtml("horizontal", 4)}
+            </div>
+          ` : ""}
+        </div>
+        <div class="badnik-penalty">${escapeHtml(penalty)}</div>
+        <div class="badnik-zone">${escapeHtml(zone)}</div>
+      </div>
+    </div>
+  `;
+}
+
 function getTimeBonusPoints(playerCount, place) {
   const table = {
     2: { 1: 100, 2: 0 },
@@ -5096,22 +5408,26 @@ function render() {
   if (!p.badniks.length) {
     bv.innerHTML = `<div class="tiny muted">No Badniks.</div>`;
   } else {
-    for (let i = 0; i < p.badniks.length; i++) {
-      const b = p.badniks[i];
-      const labels = getBadnikDisplayLabels(b);
-      const el = document.createElement("div");
-      el.className = "pill tiny clickable";
-      el.innerHTML = `<b>${escapeHtml(b.name)}</b>
-        <span class="muted">attacks:</span> ${labels.attacksLabel}
-        <span class="muted">avoid:</span> ${labels.avoidLabel}
-        <span class="muted">destroy:</span> ${labels.destroyLabel}`;
-      el.title = "Click to preselect spend target";
-      el.addEventListener("click", () => {
-        preselectSpendTarget(STATE, { type:"badnik", badnikIndex: i });
+    bv.innerHTML = p.badniks.map((b, i) => buildBadnikCardHtml(b, s.zoneId, i)).join("");
+    const cards = bv.querySelectorAll(".badnik-card");
+    cards.forEach(card => {
+      const idx = Number(card.getAttribute("data-badnik-index"));
+      if (!Number.isFinite(idx)) return;
+      card.title = "Click to preselect spend target";
+      card.addEventListener("click", () => {
+        preselectSpendTarget(STATE, { type:"badnik", badnikIndex: idx });
         render();
       });
-      bv.appendChild(el);
-    }
+      const modes = card.querySelectorAll("[data-badnik-mode]");
+      modes.forEach(el => {
+        const mode = el.getAttribute("data-badnik-mode");
+        el.addEventListener("click", (event) => {
+          event.stopPropagation();
+          preselectSpendTarget(STATE, { type:"badnik", badnikIndex: idx, mode });
+          render();
+        });
+      });
+    });
   }
 
   // Log
