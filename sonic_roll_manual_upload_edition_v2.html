@@ -210,7 +210,8 @@
     .track-reward .act-reward-circle img.reward-big-ring,
     .track-reward .act-reward-circle img.reward-badnik,
     .track-reward .act-reward-circle img.reward-time,
-    .track-reward .act-reward-circle img.reward-hazard-2 {
+    .track-reward .act-reward-circle img.reward-hazard-2,
+    .track-reward .act-reward-circle img.reward-hazard-3 {
       height:auto;
     }
     .track-reward .act-reward-circle img.reward-ring-2 {
@@ -605,7 +606,8 @@
     .act-reward-circle img.reward-big-ring,
     .act-reward-circle img.reward-badnik,
     .act-reward-circle img.reward-time,
-    .act-reward-circle img.reward-hazard-2 {
+    .act-reward-circle img.reward-hazard-2,
+    .act-reward-circle img.reward-hazard-3 {
       height:auto;
     }
     .act-reward-circle img.reward-ring-2 { height:auto; }
@@ -2851,6 +2853,13 @@ function formatActRewardHtml(reward) {
       return `
         <div class="act-reward-circle">
           <img src="img/hazard_2.png" alt="Hazard x2" class="reward-hazard-2">
+        </div>
+      `;
+    }
+    if (amount === 3) {
+      return `
+        <div class="act-reward-circle">
+          <img src="img/hazard_3.png" alt="Hazard x3" class="reward-hazard-3">
         </div>
       `;
     }
