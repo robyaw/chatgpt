@@ -2264,18 +2264,6 @@ function takeDamage(state, reason) {
     return state;
   }
 
-  if (p.shield) {
-    const shieldType = p.shield.type;
-    p.shield = null;
-    if (shieldType === "blue") p.blueShieldLostThisTurn = true;
-    addPowerUpToDiscard(state, getShieldPowerUpId(shieldType));
-    log(state, `${p.name} ignores damage with ${getShieldLabel(shieldType)} (shield discarded).`);
-    if (state.phase === "AVOID" || p.dicePool.length === 0) {
-      state.phase = "END_TURN";
-    }
-    return state;
-  }
-
   if (p.invincible && p.dicePool.length > 0) {
     clearSpendUi(state);
     clearDiscardUi(state);
@@ -2290,6 +2278,18 @@ function takeDamage(state, reason) {
     return state;
   }
 
+  if (p.shield) {
+    const shieldType = p.shield.type;
+    p.shield = null;
+    if (shieldType === "blue") p.blueShieldLostThisTurn = true;
+    addPowerUpToDiscard(state, getShieldPowerUpId(shieldType));
+    log(state, `${p.name} ignores damage with ${getShieldLabel(shieldType)} (shield discarded).`);
+    if (state.phase === "AVOID" || p.dicePool.length === 0) {
+      state.phase = "END_TURN";
+    }
+    return state;
+  }
+
   return applyDamage(state, reason);
 }
 
@@ -2300,16 +2300,26 @@ function applyDamage(state, reason) {
   clearStarPostUi(state);
 
   const heldBefore = p.heldRings;
+  let lost = 0;
   if (heldBefore > 0 && p.hyperRing) {
     const kept = Math.ceil(heldBefore / 2);
-    const lost = heldBefore - kept;
+    lost = heldBefore - kept;
     p.heldRings = kept;
     log(state, `DAMAGE (${reason}): Hyper Ring keeps ${kept} Held Rings (lost ${lost}).`);
   } else {
+    lost = heldBefore;
     p.heldRings = 0;
     if (heldBefore > 0) {
       log(state, `DAMAGE (${reason}): ${p.name} loses all Held Rings (${heldBefore}).`);
     }
+  }
+
+  if (heldBefore > 0) {
+    state.pendingDamage = null;
+    makeInvulnerable(p);
+    state.phase = "SPENDING";
+    log(state, `Damage taken: ${p.name} becomes invulnerable and continues turn.`);
+    return state;
   }
 
   if (heldBefore === 0) {
@@ -4053,7 +4063,9 @@ function spendDieOnTarget(state, die, target, spendMeta) {
    ======================= */
 function rerollStep(state) {
   const p = getActivePlayer(state);
-  const canRerollNow = state.phase === "REROLL" || (state.phase === "SPENDING" && p.spentSinceLastReroll > 0);
+  const canRerollNow = state.phase === "REROLL"
+    || (state.phase === "SPENDING" && p.spentSinceLastReroll > 0)
+    || (state.phase === "SPENDING" && p.invulnerable && p.dicePool.length > 0);
   if (!canRerollNow) return log(state, `Cannot reroll: phase=${state.phase}`);
   clearSpendUi(state);
   clearDiscardUi(state);
@@ -4673,7 +4685,8 @@ function render() {
   dis("btnBuildPool", s.phase !== "ROLL_ACTION" || actionBlocked || !p.rollActionSelectedThisTurn);
   dis("btnSpendDie", s.phase !== "SPENDING" || !p.dicePool.length || actionBlocked);
   const canOptionalReroll = s.phase === "SPENDING" && p.spentSinceLastReroll > 0 && p.dicePool.length > 0;
-  dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll) || actionBlocked);
+  const canInvulnReroll = s.phase === "SPENDING" && p.invulnerable && p.dicePool.length > 0;
+  dis("btnRerollStep", !(s.phase === "REROLL" || canOptionalReroll || canInvulnReroll) || actionBlocked);
   const canUseBoost =
     (s.phase === "SPENDING" && p.boost > 0 && p.dicePool.length > 0);
   dis("btnUseBoostToken", !canUseBoost || actionBlocked);
