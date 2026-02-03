@@ -2013,7 +2013,7 @@ function generateZoneCard(genCfg) {
     const spaceRewardTypes = new Set();
     const challenges = lanes.map(lane => {
       const n = rollD6();
-      const color = rollBaseColor();
+      const color = isSplit ? rollBaseColor() : null;
       let reward = rollReward();
       let attempts = 0;
       while ((prevSpaceRewardTypes.has(reward?.type) || spaceRewardTypes.has(reward?.type)) && attempts < 10) {
@@ -2027,7 +2027,7 @@ function generateZoneCard(genCfg) {
     spaces.push({ id: uuid(), challenges });
   }
 
-  function applyBumperGroupsToList(list) {
+  function applyBumperGroupsToList(list, allowColor = true) {
     if (!list.length) return;
     const occupied = Array(list.length).fill(false);
     const groupCount = Math.min(maxGroups, list.length > 2 ? maxGroups : 0);
@@ -2040,7 +2040,7 @@ function generateZoneCard(genCfg) {
         const start = Math.floor(rng()() * (list.length - length + 1));
         if (occupied.slice(start, start + length).some(Boolean)) continue;
         const groupId = uuid();
-        const bumperColor = rng()() < colorChance ? rollBumperColor() : null;
+        const bumperColor = allowColor && rng()() < colorChance ? rollBumperColor() : null;
         for (let i = 0; i < length; i++) {
           const ch = list[start + i];
           ch.bumper = { id: groupId, index: i, length };
@@ -2056,7 +2056,7 @@ function generateZoneCard(genCfg) {
   }
 
   if (!hasSplit) {
-    applyBumperGroupsToList(spaces.map(space => space.challenges[0]));
+    applyBumperGroupsToList(spaces.map(space => space.challenges[0]), false);
   } else {
     const topLane = [];
     const bottomLane = [];
@@ -2066,8 +2066,8 @@ function generateZoneCard(genCfg) {
       if (top) topLane.push(top);
       if (bottom) bottomLane.push(bottom);
     }
-    applyBumperGroupsToList(topLane);
-    applyBumperGroupsToList(bottomLane);
+    applyBumperGroupsToList(topLane, true);
+    applyBumperGroupsToList(bottomLane, true);
   }
 
   for (let i = 0; i < spaces.length - 1; i++) {
