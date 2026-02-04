@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sonic Roll – Rules Engine (Dashboards Implemented)</title>
+  <title>Sonic Roll - Rules Engine (Dashboards Implemented)</title>
   <style>
     :root { font-family: Jost, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     body {
@@ -669,6 +669,19 @@
       background:#111;
       box-shadow: 0 6px 12px rgba(0,0,0,.35);
       cursor:pointer;
+      transition: transform 0.35s ease;
+      transform-origin: center;
+      will-change: transform;
+    }
+    .badnik-card.flipped {
+      transform: rotate(180deg);
+    }
+    .badnik-card.flip-anim {
+      animation: badnikFlip 0.35s ease;
+    }
+    @keyframes badnikFlip {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(180deg); }
     }
     #badnikView {
       display:flex;
@@ -1427,63 +1440,277 @@ function readCharacterSelections(playerCount) {
    ======================= */
 const BIG_RING_AMOUNT = 5; // Reference value for Big Ring rewards (Bonus Stage trigger).
 
+const BADNIK_TYPES = [
+  { id:"moto_bug", name:"Moto Bug", image:"img/badniks/moto_bug.png" },
+  { id:"newtron", name:"Newtron", image:"img/badniks/newtron.png" },
+  { id:"buzz_bomber", name:"Buzz Bomber", image:"img/badniks/buzz_bomber.png" },
+  { id:"chopper", name:"Chopper", image:"img/badniks/chopper.png" },
+  { id:"fireworm", name:"Fireworm", image:"img/badniks/fireworm.png" },
+  { id:"iwamodoki", name:"Iwamodoki", image:"img/badniks/iwamodoki.png" },
+  { id:"rexon", name:"Rexon", image:"img/badniks/rexon.png" },
+  { id:"toxomister", name:"Toxomister", image:"img/badniks/toxomister.png" },
+  { id:"catakiller_jr", name:"Catakiller Jr.", image:"img/badniks/catakiller_jr.png" },
+  { id:"grabber", name:"Grabber", image:"img/badniks/grabber.png" },
+  { id:"spiny", name:"Spiny", image:"img/badniks/spiny.png" },
+  { id:"sweep", name:"Sweep", image:"img/badniks/sweep.png" },
+  { id:"horatu", name:"Horatu", image:"img/badniks/horatu.png" },
+  { id:"kabasira", name:"Kabasira", image:"img/badniks/kabasira.png" },
+  { id:"dango", name:"Dango", image:"img/badniks/dango.png" },
+  { id:"kanabun", name:"Kanabun", image:"img/badniks/kanabun.png" }
+];
+const BADNIK_TYPE_MAP = Object.fromEntries(BADNIK_TYPES.map(t => [t.id, t]));
+
 // Zone-specific Badnik decks (swap per zone via badnikDeckId).
 const BADNIK_DECKS = {
   default: [
-    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
+    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
   ],
   green_hill: [
-    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Crabmeat", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
+    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
   ],
   stardust_speedway: [
-    { name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
+    { type:"horatu", name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"kabasira", name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"dango", name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"kanabun", name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"horatu", name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"kabasira", name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"dango", name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"kanabun", name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"horatu", name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"kabasira", name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"dango", name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"kanabun", name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"horatu", name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"kabasira", name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"dango", name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"kanabun", name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
   ]
 };
+
+const LAVA_REEF_FIREWORMS = [
+  {
+    type:"fireworm",
+    name:"Fireworm",
+    attacks:[{color:"yellow", value:5},{color:"yellow", value:2}],
+    avoid:{color:"yellow", value:4},
+    destroy:{color:"red", value:4},
+    ability:{ type:"passive", effect:"rule", rule:"no_power_ups" },
+    text:"Cannot draw Power Ups"
+  },
+  {
+    type:"fireworm",
+    name:"Fireworm",
+    attacks:[{color:"yellow", value:5},{color:"yellow", value:2}],
+    avoid:{color:"yellow", value:6},
+    destroy:{color:"red", value:6},
+    ability:{ type:"passive", effect:"rule", rule:"no_power_ups" },
+    text:"Cannot draw Power Ups"
+  },
+  {
+    type:"fireworm",
+    name:"Fireworm",
+    attacks:[{color:"yellow", value:6},{color:"yellow", value:1}],
+    avoid:{color:"yellow", value:5},
+    destroy:{color:"red", value:5},
+    ability:{ type:"passive", effect:"rule", rule:"no_power_ups" },
+    text:"Cannot draw Power Ups"
+  },
+  {
+    type:"fireworm",
+    name:"Fireworm",
+    attacks:[{color:"yellow", value:6},{color:"yellow", value:3}],
+    avoid:{color:"yellow", value:2},
+    destroy:{color:"red", value:2},
+    ability:{ type:"passive", effect:"rule", rule:"no_power_ups" },
+    text:"Cannot draw Power Ups"
+  },
+  {
+    type:"fireworm",
+    name:"Fireworm",
+    attacks:[{color:"yellow", value:4},{color:"yellow", value:1}],
+    avoid:{color:"yellow", value:1},
+    destroy:{color:"red", value:1},
+    ability:{ type:"passive", effect:"rule", rule:"no_power_ups" },
+    text:"Cannot draw Power Ups"
+  }
+];
+
+const LAVA_REEF_REXONS = [
+  {
+    type:"rexon",
+    name:"Rexon",
+    attacks:[{value:5}],
+    avoid:{color:"yellow", value:2},
+    destroy:{color:"red", value:2},
+    ability:{ type:"defeat", effect:"hazard_if_no_yellow", amount:2 },
+    text:"Roll two hazard dice if no yellow dice are in your Dice Pool."
+  },
+  {
+    type:"rexon",
+    name:"Rexon",
+    attacks:[{value:4}],
+    avoid:{color:"yellow", value:5},
+    destroy:{color:"red", value:5},
+    ability:{ type:"defeat", effect:"hazard_if_no_yellow", amount:2 },
+    text:"Roll two hazard dice if no yellow dice are in your Dice Pool."
+  },
+  {
+    type:"rexon",
+    name:"Rexon",
+    attacks:[{value:2}],
+    avoid:{color:"yellow", value:6},
+    destroy:{color:"red", value:6},
+    ability:{ type:"defeat", effect:"hazard_if_no_yellow", amount:2 },
+    text:"Roll two hazard dice if no yellow dice are in your Dice Pool."
+  },
+  {
+    type:"rexon",
+    name:"Rexon",
+    attacks:[{value:3}],
+    avoid:{color:"yellow", value:1},
+    destroy:{color:"red", value:1},
+    ability:{ type:"defeat", effect:"hazard_if_no_yellow", amount:2 },
+    text:"Roll two hazard dice if no yellow dice are in your Dice Pool."
+  },
+  {
+    type:"rexon",
+    name:"Rexon",
+    attacks:[{value:1}],
+    avoid:{color:"yellow", value:3},
+    destroy:{color:"red", value:3},
+    ability:{ type:"defeat", effect:"hazard_if_no_yellow", amount:2 },
+    text:"Roll two hazard dice if no yellow dice are in your Dice Pool."
+  }
+];
+
+const LAVA_REEF_TOXOMISTERS = [
+  {
+    type:"toxomister",
+    name:"Toxomister",
+    attacks:[{color:"blue", value:6}],
+    avoid:{color:"blue", value:2},
+    destroy:{color:"red", value:2},
+    ability:{ type:"reroll", effect:"discard_ring" },
+    text:"Discard a ring."
+  },
+  {
+    type:"toxomister",
+    name:"Toxomister",
+    attacks:[{color:"blue", value:1}],
+    avoid:{color:"blue", value:3},
+    destroy:{color:"red", value:3},
+    ability:{ type:"reroll", effect:"discard_ring" },
+    text:"Discard a ring."
+  },
+  {
+    type:"toxomister",
+    name:"Toxomister",
+    attacks:[{color:"blue", value:2}],
+    avoid:{color:"blue", value:5},
+    destroy:{color:"red", value:5},
+    ability:{ type:"reroll", effect:"discard_ring" },
+    text:"Discard a ring."
+  },
+  {
+    type:"toxomister",
+    name:"Toxomister",
+    attacks:[{color:"blue", value:4}],
+    avoid:{color:"blue", value:1},
+    destroy:{color:"red", value:1},
+    ability:{ type:"reroll", effect:"discard_ring" },
+    text:"Discard a ring."
+  },
+  {
+    type:"toxomister",
+    name:"Toxomister",
+    attacks:[{color:"blue", value:5}],
+    avoid:{color:"blue", value:6},
+    destroy:{color:"red", value:6},
+    ability:{ type:"reroll", effect:"discard_ring" },
+    text:"Discard a ring."
+  }
+];
+
+const LAVA_REEF_IWAMODOKIS = [
+  {
+    type:"iwamodoki",
+    name:"Iwamodoki",
+    attacks:[],
+    avoid:{value:1},
+    ability:{ type:"end_turn", effect:"damage", discardOnTrigger:true },
+    text:"Take damage and discard this Badnik"
+  },
+  {
+    type:"iwamodoki",
+    name:"Iwamodoki",
+    attacks:[],
+    avoid:{value:2},
+    ability:{ type:"end_turn", effect:"damage", discardOnTrigger:true },
+    text:"Take damage and discard this Badnik"
+  },
+  {
+    type:"iwamodoki",
+    name:"Iwamodoki",
+    attacks:[],
+    avoid:{value:4},
+    ability:{ type:"end_turn", effect:"damage", discardOnTrigger:true },
+    text:"Take damage and discard this Badnik"
+  },
+  {
+    type:"iwamodoki",
+    name:"Iwamodoki",
+    attacks:[],
+    avoid:{value:5},
+    ability:{ type:"end_turn", effect:"damage", discardOnTrigger:true },
+    text:"Take damage and discard this Badnik"
+  },
+  {
+    type:"iwamodoki",
+    name:"Iwamodoki",
+    attacks:[],
+    avoid:{value:6},
+    ability:{ type:"end_turn", effect:"damage", discardOnTrigger:true },
+    text:"Take damage and discard this Badnik"
+  }
+];
+
+BADNIK_DECKS.lava_reef = [
+  ...LAVA_REEF_FIREWORMS,
+  ...LAVA_REEF_REXONS,
+  ...LAVA_REEF_TOXOMISTERS,
+  ...LAVA_REEF_IWAMODOKIS
+];
 
 const CONFIG = {
   characters: {
@@ -2425,6 +2652,7 @@ function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
       selectedDieId: null,
 
       invulnerable: false,
+      turnsTaken: 0,
       spentSinceLastReroll: 0,
       hasRerolledThisTurn: false,
       propellerTailBonusGivenSinceReroll: false,
@@ -2474,6 +2702,7 @@ function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
     secretPassage,
     log: [`Game started (${playerCount}P), seed="${seedStr}"`]
   };
+  if (state.players[0]) state.players[0].turnsTaken = 1;
   resetBuddyFlightForTurn(state);
   return state;
 }
@@ -2601,6 +2830,124 @@ function hazardRoll(state, count = 1) {
   }
 }
 
+function normalizeBadnikTiming(value) {
+  if (!value) return null;
+  return value.toString().trim().toUpperCase().replace(/\s+/g, "_").replace(/-/g, "_");
+}
+
+function getBadnikAbilityTiming(b) {
+  const raw = b?.ability?.timing || b?.ability?.type;
+  return normalizeBadnikTiming(raw);
+}
+
+function getBadnikHitsRequired(b) {
+  if (!b) return 1;
+  if (Number.isFinite(b.hitsRequired)) return Math.max(1, b.hitsRequired);
+  return 1;
+}
+
+function initBadnikState(b) {
+  if (!b) return b;
+  if (!Number.isFinite(b.hitsTaken)) b.hitsTaken = 0;
+  if (b.flipped == null) b.flipped = false;
+  if (!Number.isFinite(b.drawnTurn)) b.drawnTurn = -1;
+  return b;
+}
+
+function getBadnikTargetConstraints(b) {
+  return b?.targeting || b?.targetConstraints || b?.constraints || b?.ability?.targeting || null;
+}
+
+function isBadnikTargetEligible(state, p, b) {
+  const constraints = getBadnikTargetConstraints(b);
+  if (!constraints) return true;
+  const parity = constraints.diceCountParity || constraints.diceParity || null;
+  if (parity) {
+    const isEven = p.dicePool.length % 2 === 0;
+    if (parity.toString().toLowerCase() === "even" && !isEven) return false;
+    if (parity.toString().toLowerCase() === "odd" && isEven) return false;
+  }
+  const requiresFirst = constraints.requiresFirstSpend ?? constraints.requiresFirstDie ?? constraints.firstDieOnly ?? constraints.firstSpendOnly;
+  if (requiresFirst && p.spentSinceLastReroll > 0) return false;
+  return true;
+}
+
+function discardBadnikFromPlayer(state, p, b, reason) {
+  const idx = p.badniks.indexOf(b);
+  if (idx === -1) return false;
+  p.badniks.splice(idx, 1);
+  state.badnikDiscard.push(b);
+  if (reason) log(state, reason);
+  return true;
+}
+
+function applyBadnikAbilityEffect(state, p, b, ability, context = {}) {
+  if (!ability) return { halt: false };
+  let effect = normalizeBadnikTiming(ability.effect || ability.action || ability.result);
+  if (!effect && ability.damage) effect = "DAMAGE";
+  if (!effect) return { halt: false };
+  if (effect === "DAMAGE") {
+    log(state, `Badnik ability (${b.name}): damage.`);
+    takeDamage(state, `Badnik ability (${b.name})`);
+    if (ability.discardOnTrigger || ability.discardSelf) {
+      discardBadnikFromPlayer(state, p, b, `${p.name} discards Badnik "${b.name}" after its ability triggers.`);
+    }
+    return { halt: true };
+  }
+  if (effect === "HAZARD_IF_NO_YELLOW") {
+    const spentDie = context?.spentDie;
+    const remaining = spentDie
+      ? p.dicePool.filter(d => d.id !== spentDie.id)
+      : p.dicePool;
+    const hasYellow = remaining.some(d => d.color === DieColor.YELLOW);
+    if (!hasYellow) {
+      const count = Number.isFinite(ability.amount) ? ability.amount : 2;
+      log(state, `Badnik ability (${b.name}): no yellow dice -> roll ${count} hazard dice.`);
+      hazardRoll(state, count);
+      if (state.pendingDamage) return { halt: true };
+    }
+    return { halt: false };
+  }
+  if (effect === "DISCARD_RING") {
+    const before = p.heldRings || 0;
+    if (before > 0) {
+      p.heldRings = Math.max(0, before - 1);
+      log(state, `Badnik ability (${b.name}): discard 1 held ring (${before} -> ${p.heldRings}).`);
+    } else {
+      log(state, `Badnik ability (${b.name}): discard 1 held ring (none to lose).`);
+    }
+    return { halt: false };
+  }
+  if (effect === "LOG") {
+    const msg = ability.message || `Badnik ability triggered: ${b.name}.`;
+    log(state, msg);
+  }
+  return { halt: false };
+}
+
+function triggerBadnikAbility(state, p, b, timing, context = {}) {
+  const abilityTiming = getBadnikAbilityTiming(b);
+  const normalizedTiming = normalizeBadnikTiming(timing);
+  if (!abilityTiming || abilityTiming !== normalizedTiming) return { halt: false };
+  if (normalizedTiming === "END_TURN") {
+    const drawnTurn = Number.isFinite(b.drawnTurn) ? b.drawnTurn : -1;
+    if (drawnTurn === p.turnsTaken) return { halt: false };
+  }
+  return applyBadnikAbilityEffect(state, p, b, b.ability, context);
+}
+
+function runBadnikAbilities(state, timing, context = {}) {
+  const p = getActivePlayer(state);
+  const normalizedTiming = normalizeBadnikTiming(timing);
+  const phaseBefore = state.phase;
+  for (const b of [...p.badniks]) {
+    const result = triggerBadnikAbility(state, p, b, normalizedTiming, context);
+    if (result?.halt) return { halt: true };
+    if (state.pendingDamage || state.phase !== phaseBefore) return { halt: true };
+  }
+  return { halt: false };
+}
+
 function drawBadnik(state, targetPlayer) {
   const p = targetPlayer;
   if (p.badniks.length >= 3) { log(state, `${p.name} cannot draw more Badniks (already 3).`); return; }
@@ -2609,7 +2956,8 @@ function drawBadnik(state, targetPlayer) {
     state.badnikDiscard = [];
     log(state, `Badnik deck reshuffled from discard.`);
   }
-  const b = state.badnikDeck.shift();
+  const b = initBadnikState(state.badnikDeck.shift());
+  b.drawnTurn = Number.isFinite(p.turnsTaken) ? p.turnsTaken : 0;
   p.badniks.push(b);
   log(state, `${p.name} draws Badnik: ${b.name}`);
 }
@@ -2815,6 +3163,10 @@ function applyReward(state, reward) {
   const p = state.players[state.activePlayer];
   if (!reward) return;
   const effectiveReward = maybeApplyLightningShield(state, reward);
+  if (effectiveReward.type === "power_up" && hasBadnikRule(state, "no_power_ups")) {
+    log(state, `Power Up blocked by Badnik ability (no power ups).`);
+    return;
+  }
   if (effectiveReward.type === "rings") {
     p.heldRings += effectiveReward.amount;
     log(state, `Reward: +${effectiveReward.amount} Rings (Held=${p.heldRings})`);
@@ -3669,15 +4021,19 @@ function buildSpendTargets(state, die) {
 
   for (let i=0;i<p.badniks.length;i++) {
     const b = p.badniks[i];
-    const avoidOk = b.avoid && (b.avoid.color === die.color && b.avoid.value === die.value);
+    if (!isBadnikTargetEligible(state, p, b)) continue;
+    const avoidOk = b.avoid
+      && (b.avoid.value === die.value)
+      && (b.avoid.color ? b.avoid.color === die.color : true);
     const destroyOk = b.destroy && (die.color === DieColor.RED && b.destroy.value === die.value);
     if (avoidOk) {
+      const avoidColorLabel = b.avoid.color ? b.avoid.color[0].toUpperCase() : "ANY";
       targets.push({
         id: uuid(),
         type: "badnik",
         badnikIndex: i,
         mode: "avoid",
-        label: `Badnik: avoid ${b.name} (${b.avoid.color[0].toUpperCase()}${b.avoid.value})`
+        label: `Badnik: avoid ${b.name} (${avoidColorLabel}${b.avoid.value})`
       });
     }
     if (destroyOk) {
@@ -3842,6 +4198,7 @@ function confirmWallClimbSelection(state, saveNone = false) {
   state.phase = "SPENDING";
   makeVulnerable(p);
   log(state, `${p.name} Dice Pool built: ${p.dicePool.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")}`);
+  runBadnikAbilities(state, "DICE_ACTION", { state, p, rollAction: getRollActionCfg(p) });
 }
 
 /* =======================
@@ -3889,7 +4246,7 @@ function buildDicePool(state) {
         counts.set(d.value, (counts.get(d.value)||0)+1);
         if (counts.get(d.value) >= 2) { hasPair = true; break; }
       }
-      log(state, `${p.name} Spin Dash roll: ${batch.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")} → pool size ${p.dicePool.length}`);
+      log(state, `${p.name} Spin Dash roll: ${batch.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")} â†’ pool size ${p.dicePool.length}`);
       if (hasPair) { log(state, `Spin Dash condition met: at least one matching pair exists in Dice Pool.`); break; }
     }
   }
@@ -3905,12 +4262,12 @@ function buildDicePool(state) {
       }
       if (pairs.length > 0) {
         p.dicePool.push(...pairs);
-        log(state, `${p.name} Fly (x${rep}): rolled ${batch.map(d=>`Y${d.value}`).join(" ")} → saved pairs ${pairs.map(d=>`Y${d.value}`).join(" ")}.`);
+        log(state, `${p.name} Fly (x${rep}): rolled ${batch.map(d=>`Y${d.value}`).join(" ")} â†’ saved pairs ${pairs.map(d=>`Y${d.value}`).join(" ")}.`);
       } else {
         // save any 1 die (choose highest to be practical)
         batch.sort((a,b)=>b.value-a.value);
         p.dicePool.push(batch[0]);
-        log(state, `${p.name} Fly (x${rep}): rolled ${batch.map(d=>`Y${d.value}`).join(" ")} → no pairs; saved one die Y${batch[0].value}.`);
+        log(state, `${p.name} Fly (x${rep}): rolled ${batch.map(d=>`Y${d.value}`).join(" ")} â†’ no pairs; saved one die Y${batch[0].value}.`);
       }
     }
   }
@@ -3936,6 +4293,7 @@ else {
   if (!state.ui) state.ui = { spend: null, discard: null, starPost: null };
   state.ui.rollAnim = true;
   log(state, `${p.name} Dice Pool built: ${p.dicePool.map(d=>`${d.color[0].toUpperCase()}${d.value}`).join(" ")}`);
+  runBadnikAbilities(state, "DICE_ACTION", { state, p, rollAction: ra });
   return state;
 }
 
@@ -3953,7 +4311,7 @@ function boostAfterRollAction(state) {
   clearDiscardUi(state);
   clearStarPostUi(state);
   state.phase = "REROLL";
-  return rerollStep(state);
+  return rerollStep(state, { fromBoost: true });
 }
 
 /* =======================
@@ -3967,7 +4325,7 @@ function spendSelectedDie(state) {
     return log(state, "Resolve the pending reward before spending.");
   }
 
-  if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice left → End Turn`); }
+  if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice left â†’ End Turn`); }
 
   const die = p.dicePool.find(d => d.id === p.selectedDieId) || p.dicePool[0];
 
@@ -4187,7 +4545,14 @@ function spendDieOnTarget(state, die, target, spendMeta) {
       log(state, "Spend failed: badnik target no longer exists.");
       return state;
     }
-    const avoidOk = b.avoid && (b.avoid.color === effectiveDie.color && b.avoid.value === effectiveDie.value);
+    initBadnikState(b);
+    if (!isBadnikTargetEligible(state, p, b)) {
+      log(state, "Spend failed: badnik target not legal for current dice pool.");
+      return state;
+    }
+    const avoidOk = b.avoid
+      && (b.avoid.value === effectiveDie.value)
+      && (b.avoid.color ? b.avoid.color === effectiveDie.color : true);
     const destroyOk = b.destroy && (effectiveDie.color === DieColor.RED && b.destroy.value === effectiveDie.value);
     if (target.mode === "avoid" && !avoidOk) {
       log(state, "Spend failed: avoid target no longer legal.");
@@ -4198,14 +4563,27 @@ function spendDieOnTarget(state, die, target, spendMeta) {
       return state;
     }
     spendTarget = { type:"badnik", name: b.name, mode: target.mode };
-    if (target.mode === "destroy") {
-      p.animalTokens += 1;
-      log(state, `${p.name} DESTROYS Badnik "${b.name}" with ${spendLabel} -> gained 1 Animal Token (total ${p.animalTokens}).`);
+    const hitsRequired = getBadnikHitsRequired(b);
+    const hitsTaken = Number.isFinite(b.hitsTaken) ? b.hitsTaken : 0;
+    const nextHits = hitsTaken + 1;
+    const isFinalHit = nextHits >= hitsRequired;
+    if (!isFinalHit) {
+      b.hitsTaken = nextHits;
+      b.flipped = true;
+      b.flipAnim = true;
+      log(state, `${p.name} hits Badnik "${b.name}" with ${spendLabel} (${nextHits}/${hitsRequired}).`);
     } else {
-      log(state, `${p.name} AVOIDS Badnik "${b.name}" with ${spendLabel}.`);
+      b.hitsTaken = nextHits;
+      b.flipped = false;
+      if (target.mode === "destroy") {
+        p.animalTokens += 1;
+        log(state, `${p.name} DESTROYS Badnik "${b.name}" with ${spendLabel} -> gained 1 Animal Token (total ${p.animalTokens}).`);
+      } else {
+        log(state, `${p.name} AVOIDS Badnik "${b.name}" with ${spendLabel}.`);
+      }
+      triggerBadnikAbility(state, p, b, "DEFEAT", { mode: target.mode, spentDie: die, effectiveDie });
+      discardBadnikFromPlayer(state, p, b);
     }
-    p.badniks.splice(target.badnikIndex, 1);
-    state.badnikDiscard.push(b);
   } else {
     return state;
   }
@@ -4231,6 +4609,14 @@ function spendDieOnTarget(state, die, target, spendMeta) {
       }
     }
   }
+
+  const badnikSpendResult = runBadnikAbilities(state, "SPEND", {
+    state,
+    p,
+    spentDie: effectiveDie,
+    spendTarget
+  });
+  if (badnikSpendResult?.halt) return state;
 
   if (ra.name === "Propeller Tail" && !p.hasRerolledThisTurn && p.spentSinceLastReroll >= 2 && !p.propellerTailBonusGivenSinceReroll) {
     const bonusDie = makeDie(DieColor.YELLOW, rollD6());
@@ -4286,7 +4672,7 @@ function spendDieOnTarget(state, die, target, spendMeta) {
 /* =======================
    Reroll step
    ======================= */
-function rerollStep(state) {
+function rerollStep(state, options = {}) {
   const p = getActivePlayer(state);
   const canRerollNow = state.phase === "REROLL"
     || (state.phase === "SPENDING" && p.spentSinceLastReroll > 0)
@@ -4295,10 +4681,15 @@ function rerollStep(state) {
   clearSpendUi(state);
   clearDiscardUi(state);
   clearStarPostUi(state);
-  if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice to reroll → End Turn`); }
+  if (!p.dicePool.length) { state.phase = "END_TURN"; return log(state, `No dice to reroll â†’ End Turn`); }
 
   const ra = getRollActionCfg(p);
   p.hasRerolledThisTurn = true;
+
+  if (!options.fromBoost) {
+    const badnikResult = runBadnikAbilities(state, "REROLL", { state, p, rollAction: ra });
+    if (badnikResult?.halt) return state;
+  }
 
   // Apply REROLL effects at the beginning of the reroll step
   if (typeof ra.onRerollStepStart === "function") {
@@ -4326,7 +4717,7 @@ function rerollStep(state) {
       }
     }
     if (hits.length) {
-      log(state, `🟥 Badnik attack hits: ${hits.map(h=>`${h.b.name}(${h.atk.color ? h.atk.color[0].toUpperCase() : "ANY"}${h.atk.value})`).join(", ")}`);
+      log(state, `Badnik attack hits: ${hits.map(h=>`${h.b.name}(${h.atk.color ? h.atk.color[0].toUpperCase() : "ANY"}${h.atk.value})`).join(", ")}`);
       takeDamage(state, "Badnik attack");
       if (state.pendingDamage || state.phase !== "REROLL") return state;
     } else {
@@ -4350,8 +4741,8 @@ function boostInReroll(state) {
   if (state.phase !== "REROLL") return log(state, `Boost-in-reroll only usable in REROLL phase.`);
   if (p.boost <= 0) return log(state, `${p.name} has no Boost tokens.`);
   p.boost -= 1;
-  log(state, `${p.name} spends 1 Boost → immediately reroll Dice Pool again.`);
-  return rerollStep(state);
+  log(state, `${p.name} spends 1 Boost â†’ immediately reroll Dice Pool again.`);
+  return rerollStep(state, { fromBoost: true });
 }
 
 /* =======================
@@ -4364,7 +4755,11 @@ function endTurn(state) {
   clearDiscardUi(state);
   clearStarPostUi(state);
 
-  // If dice remain and player ends normally → discard + take time
+  const phaseBefore = state.phase;
+  const badnikEndResult = runBadnikAbilities(state, "END_TURN", { state, p });
+  if (badnikEndResult?.halt || state.pendingDamage || state.phase !== phaseBefore) return state;
+
+  // If dice remain and player ends normally â†’ discard + take time
   if (p.dicePool.length) {
     p.dicePool = [];
     p.selectedDieId = null;
@@ -4391,16 +4786,17 @@ function endTurn(state) {
   const over = isGameOver(state);
   if (over) {
     state.phase = "GAME_OVER";
-    log(state, `🛑 GAME OVER: ${over}`);
+    log(state, `GAME OVER: ${over}`);
     return state;
   }
 
   state.activePlayer = (state.activePlayer + 1) % state.players.length;
   const np = getActivePlayer(state);
+  np.turnsTaken = (np.turnsTaken || 0) + 1;
   np.oncePerTurn = {};
   np.rollActionSelectedThisTurn = false;
   state.phase = "ROLL_ACTION";
-  log(state, `➡️ Turn passes to ${np.name} (${np.character}).`);
+  log(state, `âž¡ï¸ Turn passes to ${np.name} (${np.character}).`);
   resetBuddyFlightForTurn(state);
   return state;
 }
@@ -4465,6 +4861,48 @@ function getZoneInitials(zoneId) {
   return zoneId.replace(/[^a-z]/gi, "").slice(0, 3).toUpperCase() || "ZONE";
 }
 
+function normalizeBadnikTypeId(value) {
+  if (!value) return "";
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function getBadnikTypeDef(b) {
+  const typeId = normalizeBadnikTypeId(b?.type || b?.name);
+  return BADNIK_TYPE_MAP[typeId] || null;
+}
+
+function normalizeBadnikRule(rule) {
+  if (!rule) return "";
+  return rule
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function hasBadnikRule(state, ruleKey) {
+  const target = normalizeBadnikRule(ruleKey);
+  if (!target) return false;
+  const p = getActivePlayer(state);
+  for (const b of p.badniks || []) {
+    const ability = b?.ability || {};
+    const directRule = normalizeBadnikRule(ability.rule);
+    if (directRule && directRule === target) return true;
+    const rules = Array.isArray(ability.rules) ? ability.rules : [];
+    for (const entry of rules) {
+      const key = normalizeBadnikRule(entry?.rule || entry?.key || entry?.name || entry);
+      if (key && key === target) return true;
+    }
+  }
+  return false;
+}
+
 function getBadnikPanelColor(zoneId) {
   const zoneConfig = getZoneConfig(zoneId);
   return zoneConfig?.zoneGenerator?.badnikPanelColor || "#3a2315";
@@ -4488,6 +4926,7 @@ function buildBadnikConnectorHtml(direction = "horizontal", count = 4) {
 }
 
 function getBadnikPenaltyText(b) {
+  if (b?.text) return b.text;
   if (!b?.ability?.type) return "Penalty: TBD";
   return `Penalty: ${b.ability.type.replace(/_/g, " ").toUpperCase()}`;
 }
@@ -4496,27 +4935,36 @@ function buildBadnikCardHtml(b, zoneId, index) {
   const attackList = (b.attacks || []).map(a => formatDieChip(a.value ?? null, a.color ?? null));
   const attackTop = attackList[0] || "";
   const attackRest = attackList.slice(1).join("");
+  const hasAttacks = attackList.length > 0;
   const avoidChip = b.avoid ? formatDieChip(b.avoid.value ?? null, b.avoid.color ?? null) : "";
   const destroyChip = b.destroy ? formatDieChip(b.destroy.value ?? null, b.destroy.color ?? "red") : "";
-  const artSrc = b.image || "img/badnik.png";
+  const typeDef = getBadnikTypeDef(b);
+  const displayName = b.name || typeDef?.name || "BADNIK";
+  const artSrc = b.image || typeDef?.image || "img/badnik.png";
   const penalty = getBadnikPenaltyText(b);
   const zone = getZoneInitials(zoneId);
   const panelColor = getBadnikPanelColor(zoneId);
+  const hitsRequired = getBadnikHitsRequired(b);
+  const hitsTaken = Number.isFinite(b.hitsTaken) ? b.hitsTaken : 0;
+  const flippedClass = b.flipped ? " flipped" : "";
+  const flipAnimClass = b.flipAnim ? " flip-anim" : "";
+  if (b.flipAnim) b.flipAnim = false;
   return `
-    <div class="badnik-card" data-badnik-index="${index}" style="--badnik-art: url('${artSrc}'); --badnik-panel-base: ${panelColor};">
+    <div class="badnik-card${flippedClass}${flipAnimClass}" data-badnik-index="${index}" data-badnik-hits="${hitsTaken}" data-badnik-hits-required="${hitsRequired}" style="--badnik-art: url('${artSrc}'); --badnik-panel-base: ${panelColor};">
       <div class="badnik-attack-col">
       <div class="badnik-attack-dice">
         <div class="badnik-attack-top">${attackTop}</div>
         ${attackRest ? `<div class="badnik-attack-overlap">${attackRest}</div>` : ""}
       </div>
-      ${buildBadnikConnectorHtml("vertical", 7)}
+      ${hasAttacks ? buildBadnikConnectorHtml("vertical", 7) : ""}
+      ${hasAttacks ? `
       <div class="badnik-sonic">
         <img src="img/sonic_damage.png" alt="Sonic damage">
-      </div>
+      </div>` : ""}
     </div>
       <div class="badnik-hatch"></div>
       <div class="badnik-main">
-        <div class="badnik-name">${escapeHtml(b.name || "BADNIK")}</div>
+        <div class="badnik-name">${escapeHtml(displayName)}</div>
         <div class="badnik-right">
           ${destroyChip ? `
             <div class="badnik-right-row" data-badnik-mode="destroy">
@@ -5186,7 +5634,7 @@ function render() {
         <div class="pill tiny">
           <b>Buddy Flight</b>
           <div class="die yellow">${buildDieFaceHtml(buddyFlightValue)}</div>
-          <span class="muted">Adjust ${buddyInfo.buddyFlightBaseValue} → ${buddyInfo.buddyFlightAdjustedValue} (${buddyDeltaLabel})</span>
+          <span class="muted">Adjust ${buddyInfo.buddyFlightBaseValue} â†’ ${buddyInfo.buddyFlightAdjustedValue} (${buddyDeltaLabel})</span>
         </div>
         <div class="row target-actions">
           <button id="buddyFlightDown">-1</button>
@@ -5512,21 +5960,21 @@ function render() {
           const tileEl = document.createElement("div");
           const classes = ["bonus-tile"];
           let label = "Blue Sphere";
-          let icon = "🔵";
+          let icon = "\u{1F535}";
           if (tile.revealed) {
             classes.push("revealed");
             if (tile.type === "red") {
               classes.push("red");
               label = "Red Sphere";
-              icon = "🔴";
+              icon = "\u{1F534}";
             } else if (tile.type === "bumper") {
               classes.push("bumper");
               label = "Bumper Sphere";
-              icon = "⚪";
+              icon = "\u{26AA}";
             } else if (tile.type === "chaos") {
               classes.push("chaos");
               label = "Chaos Emerald";
-              icon = "💎";
+              icon = "\u{1F48E}";
             }
           }
           if (stage.awaitingExit) classes.push("disabled");
@@ -5784,4 +6232,10 @@ startNewGame();
 </script>
 </body>
 </html>
+
+
+
+
+
+
 
