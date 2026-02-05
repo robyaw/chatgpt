@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/badnik.schema.json",
+  "title": "Badnik Deck",
+  "type": "array",
+  "items": { "$ref": "#/$defs/badnik" },
+  "$defs": {
+    "dieColor": {
+      "type": "string",
+      "enum": ["red", "blue", "yellow", "black"]
+    },
+    "dieRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": { "$ref": "#/$defs/dieColor" },
+        "value": { "type": "integer", "minimum": 1, "maximum": 6 }
+      }
+    },
+    "attackDieRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": { "type": "string", "enum": ["blue", "yellow"] },
+        "value": { "type": "integer", "minimum": 1, "maximum": 6 }
+      }
+    },
+    "avoidDieRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": { "type": "string", "enum": ["blue", "yellow"] },
+        "value": { "type": "integer", "minimum": 1, "maximum": 6 }
+      }
+    },
+    "destroyDieRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": { "type": "string", "enum": ["red"], "default": "red" },
+        "value": { "type": "integer", "minimum": 1, "maximum": 6 }
+      }
+    },
+    "ability": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["defeat", "spend", "reroll", "dice_action", "end_turn", "passive"]
+        },
+        "timing": { "type": "string" },
+        "effect": { "type": "string" },
+        "action": { "type": "string" },
+        "result": { "type": "string" },
+        "damage": { "type": "boolean" },
+        "discardOnTrigger": { "type": "boolean" },
+        "discardSelf": { "type": "boolean" },
+        "rule": { "type": "string" },
+        "rules": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true }
+        },
+        "message": { "type": "string" }
+      }
+    },
+    "badnikTypeId": {
+      "type": "string",
+      "enum": [
+        "moto_bug",
+        "newtron",
+        "buzz_bomber",
+        "chopper",
+        "fireworm",
+        "iwamodoki",
+        "rexon",
+        "toxomister",
+        "catakiller_jr",
+        "grabber",
+        "spiny",
+        "sweep",
+        "horatu",
+        "kabasira",
+        "dango",
+        "kanabun"
+      ]
+    },
+    "targeting": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "diceCountParity": { "type": "string", "enum": ["even", "odd"] },
+        "requiresFirstSpend": { "type": "boolean" },
+        "requiresFirstDie": { "type": "boolean" },
+        "firstDieOnly": { "type": "boolean" },
+        "firstSpendOnly": { "type": "boolean" }
+      }
+    },
+    "badnik": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "attacks"],
+      "properties": {
+        "type": { "$ref": "#/$defs/badnikTypeId" },
+        "attacks": {
+          "type": "array",
+          "minItems": 0,
+          "items": { "$ref": "#/$defs/attackDieRequirement" }
+        },
+        "avoid": { "$ref": "#/$defs/avoidDieRequirement" },
+        "destroy": { "$ref": "#/$defs/destroyDieRequirement" },
+        "ability": { "$ref": "#/$defs/ability" },
+        "targeting": { "$ref": "#/$defs/targeting" },
+        "targetConstraints": { "$ref": "#/$defs/targeting" },
+        "constraints": { "$ref": "#/$defs/targeting" },
+        "hitsRequired": { "type": "integer", "minimum": 1, "default": 1 },
+        "text": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1489,65 +1489,64 @@ const BADNIK_TYPE_MAP = Object.fromEntries(BADNIK_TYPES.map(t => [t.id, t]));
 // Zone-specific Badnik decks (swap per zone via badnikDeckId).
 const BADNIK_DECKS = {
   default: [
-    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
+    { type:"moto_bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
   ],
   green_hill: [
-    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { type:"moto_bug", name:"Moto Bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"newtron", name:"Newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"buzz_bomber", name:"Buzz Bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"chopper", name:"Chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
+    { type:"moto_bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"moto_bug", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"newtron", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"buzz_bomber", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"chopper", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
   ],
   stardust_speedway: [
-    { type:"horatu", name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"kabasira", name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"dango", name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"kanabun", name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { type:"horatu", name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"kabasira", name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"dango", name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"kanabun", name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { type:"horatu", name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"kabasira", name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"dango", name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"kanabun", name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
-    { type:"horatu", name:"Horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
-    { type:"kabasira", name:"Kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
-    { type:"dango", name:"Dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
-    { type:"kanabun", name:"Kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
+    { type:"horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } },
+    { type:"horatu", attacks:[{color:"blue", value:5},{color:"blue", value:1}], avoid:{color:"yellow", value:6}, destroy:{color:"red", value:6}, ability:{ type:"spend" } },
+    { type:"kabasira", attacks:[{color:"yellow", value:2}], avoid:{color:"yellow", value:3}, destroy:{color:"red", value:3}, ability:{ type:"reroll" } },
+    { type:"dango", attacks:[{color:"blue", value:5},{color:"yellow", value:5}], avoid:{color:"blue", value:2}, destroy:{color:"red", value:2}, ability:{ type:"defeat" } },
+    { type:"kanabun", attacks:[{value:3}], avoid:{color:"blue", value:5}, destroy:{color:"red", value:5}, ability:{ type:"defeat" } }
   ]
 };
 
 const LAVA_REEF_FIREWORMS = [
   {
     type:"fireworm",
-    name:"Fireworm",
     attacks:[{color:"yellow", value:5},{color:"yellow", value:2}],
     avoid:{color:"yellow", value:4},
     destroy:{color:"red", value:4},
@@ -1556,7 +1555,6 @@ const LAVA_REEF_FIREWORMS = [
   },
   {
     type:"fireworm",
-    name:"Fireworm",
     attacks:[{color:"yellow", value:5},{color:"yellow", value:2}],
     avoid:{color:"yellow", value:6},
     destroy:{color:"red", value:6},
@@ -1565,7 +1563,6 @@ const LAVA_REEF_FIREWORMS = [
   },
   {
     type:"fireworm",
-    name:"Fireworm",
     attacks:[{color:"yellow", value:6},{color:"yellow", value:1}],
     avoid:{color:"yellow", value:5},
     destroy:{color:"red", value:5},
@@ -1574,7 +1571,6 @@ const LAVA_REEF_FIREWORMS = [
   },
   {
     type:"fireworm",
-    name:"Fireworm",
     attacks:[{color:"yellow", value:6},{color:"yellow", value:3}],
     avoid:{color:"yellow", value:2},
     destroy:{color:"red", value:2},
@@ -1583,7 +1579,6 @@ const LAVA_REEF_FIREWORMS = [
   },
   {
     type:"fireworm",
-    name:"Fireworm",
     attacks:[{color:"yellow", value:4},{color:"yellow", value:1}],
     avoid:{color:"yellow", value:1},
     destroy:{color:"red", value:1},
@@ -1595,7 +1590,6 @@ const LAVA_REEF_FIREWORMS = [
 const LAVA_REEF_REXONS = [
   {
     type:"rexon",
-    name:"Rexon",
     attacks:[{value:5}],
     avoid:{color:"yellow", value:2},
     destroy:{color:"red", value:2},
@@ -1604,7 +1598,6 @@ const LAVA_REEF_REXONS = [
   },
   {
     type:"rexon",
-    name:"Rexon",
     attacks:[{value:4}],
     avoid:{color:"yellow", value:5},
     destroy:{color:"red", value:5},
@@ -1613,7 +1606,6 @@ const LAVA_REEF_REXONS = [
   },
   {
     type:"rexon",
-    name:"Rexon",
     attacks:[{value:2}],
     avoid:{color:"yellow", value:6},
     destroy:{color:"red", value:6},
@@ -1622,7 +1614,6 @@ const LAVA_REEF_REXONS = [
   },
   {
     type:"rexon",
-    name:"Rexon",
     attacks:[{value:3}],
     avoid:{color:"yellow", value:1},
     destroy:{color:"red", value:1},
@@ -1631,7 +1622,6 @@ const LAVA_REEF_REXONS = [
   },
   {
     type:"rexon",
-    name:"Rexon",
     attacks:[{value:1}],
     avoid:{color:"yellow", value:3},
     destroy:{color:"red", value:3},
@@ -1643,7 +1633,6 @@ const LAVA_REEF_REXONS = [
 const LAVA_REEF_TOXOMISTERS = [
   {
     type:"toxomister",
-    name:"Toxomister",
     attacks:[{color:"blue", value:6}],
     avoid:{color:"blue", value:2},
     destroy:{color:"red", value:2},
@@ -1652,7 +1641,6 @@ const LAVA_REEF_TOXOMISTERS = [
   },
   {
     type:"toxomister",
-    name:"Toxomister",
     attacks:[{color:"blue", value:1}],
     avoid:{color:"blue", value:3},
     destroy:{color:"red", value:3},
@@ -1661,7 +1649,6 @@ const LAVA_REEF_TOXOMISTERS = [
   },
   {
     type:"toxomister",
-    name:"Toxomister",
     attacks:[{color:"blue", value:2}],
     avoid:{color:"blue", value:5},
     destroy:{color:"red", value:5},
@@ -1670,7 +1657,6 @@ const LAVA_REEF_TOXOMISTERS = [
   },
   {
     type:"toxomister",
-    name:"Toxomister",
     attacks:[{color:"blue", value:4}],
     avoid:{color:"blue", value:1},
     destroy:{color:"red", value:1},
@@ -1679,7 +1665,6 @@ const LAVA_REEF_TOXOMISTERS = [
   },
   {
     type:"toxomister",
-    name:"Toxomister",
     attacks:[{color:"blue", value:5}],
     avoid:{color:"blue", value:6},
     destroy:{color:"red", value:6},
@@ -1691,7 +1676,6 @@ const LAVA_REEF_TOXOMISTERS = [
 const LAVA_REEF_IWAMODOKIS = [
   {
     type:"iwamodoki",
-    name:"Iwamodoki",
     attacks:[],
     avoid:{value:1},
     ability:{ type:"end_turn", effect:"damage", discardOnTrigger:true },
@@ -1699,7 +1683,6 @@ const LAVA_REEF_IWAMODOKIS = [
   },
   {
     type:"iwamodoki",
-    name:"Iwamodoki",
     attacks:[],
     avoid:{value:2},
     ability:{ type:"end_turn", effect:"damage", discardOnTrigger:true },
@@ -1707,7 +1690,6 @@ const LAVA_REEF_IWAMODOKIS = [
   },
   {
     type:"iwamodoki",
-    name:"Iwamodoki",
     attacks:[],
     avoid:{value:4},
     ability:{ type:"end_turn", effect:"damage", discardOnTrigger:true },
@@ -1715,7 +1697,6 @@ const LAVA_REEF_IWAMODOKIS = [
   },
   {
     type:"iwamodoki",
-    name:"Iwamodoki",
     attacks:[],
     avoid:{value:5},
     ability:{ type:"end_turn", effect:"damage", discardOnTrigger:true },
@@ -1723,7 +1704,6 @@ const LAVA_REEF_IWAMODOKIS = [
   },
   {
     type:"iwamodoki",
-    name:"Iwamodoki",
     attacks:[],
     avoid:{value:6},
     ability:{ type:"end_turn", effect:"damage", discardOnTrigger:true },
@@ -4118,6 +4098,7 @@ function buildSpendTargets(state, die) {
   for (let i=0;i<p.badniks.length;i++) {
     const b = p.badniks[i];
     if (!isBadnikTargetEligible(state, p, b)) continue;
+    const badnikName = getBadnikTypeDef(b)?.name || "Badnik";
     const avoidOk = b.avoid
       && (b.avoid.value === die.value)
       && (b.avoid.color ? b.avoid.color === die.color : true);
@@ -4129,7 +4110,7 @@ function buildSpendTargets(state, die) {
         type: "badnik",
         badnikIndex: i,
         mode: "avoid",
-        label: `Badnik: avoid ${b.name} (${avoidColorLabel}${b.avoid.value})`
+        label: `Badnik: avoid ${badnikName} (${avoidColorLabel}${b.avoid.value})`
       });
     }
     if (destroyOk) {
@@ -4138,7 +4119,7 @@ function buildSpendTargets(state, die) {
         type: "badnik",
         badnikIndex: i,
         mode: "destroy",
-        label: `Badnik: destroy ${b.name} (R${b.destroy.value})`
+        label: `Badnik: destroy ${badnikName} (R${b.destroy.value})`
       });
     }
   }
@@ -5069,8 +5050,8 @@ function buildBadnikCardHtml(b, zoneId, index) {
   const avoidChip = b.avoid ? formatDieChip(b.avoid.value ?? null, b.avoid.color ?? null) : "";
   const destroyChip = b.destroy ? formatDieChip(b.destroy.value ?? null, b.destroy.color ?? "red") : "";
   const typeDef = getBadnikTypeDef(b);
-  const displayName = b.name || typeDef?.name || "BADNIK";
-  const artSrc = b.image || typeDef?.image || "img/badnik.png";
+  const displayName = typeDef?.name || "BADNIK";
+  const artSrc = typeDef?.image || "img/badnik.png";
   const abilityText = formatBadnikAbilityText(b);
   const zone = getZoneInitials(zoneId);
   const panelColor = getBadnikPanelColor(zoneId);
