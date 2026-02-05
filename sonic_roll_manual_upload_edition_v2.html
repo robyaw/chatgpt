@@ -689,7 +689,13 @@
       gap:10px;
     }
     .badnik-attack-col {
-      background:#a5adb6;
+      background-color:#a5adb6;
+      background-image:
+        url("img/badnik_card_checkerboard.png"),
+        linear-gradient(180deg, #8f99a6 0%, #a5adb6 100%);
+      background-repeat: repeat, no-repeat;
+      background-size: auto, cover;
+      background-position: center, center;
       display:flex;
       flex-direction:column;
       align-items:center;
@@ -867,25 +873,45 @@
       display:block;
       border-radius:50%;
     }
-    .badnik-penalty {
+    .badnik-ability {
       position:absolute;
       left:8px;
       right:8px;
       top:80%;
       transform:translateY(-50%);
       background:#0a0a0a;
-      border:1px solid #ffffff;
+      border:2px solid #ffffff;
       color:#ffffff;
-      padding:6px 8px;
+      padding:12px 8px;
+      min-height:36px;
       font-size:10px;
       letter-spacing:.04em;
-      text-transform:uppercase;
+      text-transform:none;
       z-index:2;
+      line-height:1.25;
+      display:flex;
+      align-items:center;
+    }
+    .badnik-ability .ability-text {
+      display:inline;
+    }
+    .badnik-ability .inline-icon {
+      height:12px;
+      width:auto;
+      margin:0 2px;
+      vertical-align:-2px;
+      image-rendering: pixelated;
+    }
+    .badnik-ability .ability-prefix {
+      font-weight:700;
+      font-style:italic;
+      text-transform:uppercase;
+      margin-right:4px;
     }
     .badnik-zone {
       position:absolute;
       right:6px;
-      bottom:4px;
+      bottom:1px;
       font-size:12px;
       font-weight:700;
       color:#ffffff;
@@ -1574,7 +1600,7 @@ const LAVA_REEF_REXONS = [
     avoid:{color:"yellow", value:2},
     destroy:{color:"red", value:2},
     ability:{ type:"defeat", effect:"hazard_if_no_yellow", amount:2 },
-    text:"Roll two hazard dice if no yellow dice are in your Dice Pool."
+    text:"{two_hazard_dice} if no {yellow_die} are in your Dice Pool."
   },
   {
     type:"rexon",
@@ -1583,7 +1609,7 @@ const LAVA_REEF_REXONS = [
     avoid:{color:"yellow", value:5},
     destroy:{color:"red", value:5},
     ability:{ type:"defeat", effect:"hazard_if_no_yellow", amount:2 },
-    text:"Roll two hazard dice if no yellow dice are in your Dice Pool."
+    text:"{two_hazard_dice} if no {yellow_die} are in your Dice Pool."
   },
   {
     type:"rexon",
@@ -1592,7 +1618,7 @@ const LAVA_REEF_REXONS = [
     avoid:{color:"yellow", value:6},
     destroy:{color:"red", value:6},
     ability:{ type:"defeat", effect:"hazard_if_no_yellow", amount:2 },
-    text:"Roll two hazard dice if no yellow dice are in your Dice Pool."
+    text:"{two_hazard_dice} if no {yellow_die} are in your Dice Pool."
   },
   {
     type:"rexon",
@@ -1601,7 +1627,7 @@ const LAVA_REEF_REXONS = [
     avoid:{color:"yellow", value:1},
     destroy:{color:"red", value:1},
     ability:{ type:"defeat", effect:"hazard_if_no_yellow", amount:2 },
-    text:"Roll two hazard dice if no yellow dice are in your Dice Pool."
+    text:"{two_hazard_dice} if no {yellow_die} are in your Dice Pool."
   },
   {
     type:"rexon",
@@ -1610,7 +1636,7 @@ const LAVA_REEF_REXONS = [
     avoid:{color:"yellow", value:3},
     destroy:{color:"red", value:3},
     ability:{ type:"defeat", effect:"hazard_if_no_yellow", amount:2 },
-    text:"Roll two hazard dice if no yellow dice are in your Dice Pool."
+    text:"{two_hazard_dice} if no {yellow_die} are in your Dice Pool."
   }
 ];
 
@@ -1622,7 +1648,7 @@ const LAVA_REEF_TOXOMISTERS = [
     avoid:{color:"blue", value:2},
     destroy:{color:"red", value:2},
     ability:{ type:"reroll", effect:"discard_ring" },
-    text:"Discard a ring."
+    text:"Discard a {ring}."
   },
   {
     type:"toxomister",
@@ -1631,7 +1657,7 @@ const LAVA_REEF_TOXOMISTERS = [
     avoid:{color:"blue", value:3},
     destroy:{color:"red", value:3},
     ability:{ type:"reroll", effect:"discard_ring" },
-    text:"Discard a ring."
+    text:"Discard a {ring}."
   },
   {
     type:"toxomister",
@@ -1640,7 +1666,7 @@ const LAVA_REEF_TOXOMISTERS = [
     avoid:{color:"blue", value:5},
     destroy:{color:"red", value:5},
     ability:{ type:"reroll", effect:"discard_ring" },
-    text:"Discard a ring."
+    text:"Discard a {ring}."
   },
   {
     type:"toxomister",
@@ -1649,7 +1675,7 @@ const LAVA_REEF_TOXOMISTERS = [
     avoid:{color:"blue", value:1},
     destroy:{color:"red", value:1},
     ability:{ type:"reroll", effect:"discard_ring" },
-    text:"Discard a ring."
+    text:"Discard a {ring}."
   },
   {
     type:"toxomister",
@@ -1658,7 +1684,7 @@ const LAVA_REEF_TOXOMISTERS = [
     avoid:{color:"blue", value:6},
     destroy:{color:"red", value:6},
     ability:{ type:"reroll", effect:"discard_ring" },
-    text:"Discard a ring."
+    text:"Discard a {ring}."
   }
 ];
 
@@ -4925,10 +4951,44 @@ function buildBadnikConnectorHtml(direction = "horizontal", count = 4) {
   `;
 }
 
-function getBadnikPenaltyText(b) {
+function getBadnikAbilityText(b) {
   if (b?.text) return b.text;
-  if (!b?.ability?.type) return "Penalty: TBD";
-  return `Penalty: ${b.ability.type.replace(/_/g, " ").toUpperCase()}`;
+  if (!b?.ability?.type) return "Badnik ability: TBD";
+  return `Badnik ability: ${b.ability.type.replace(/_/g, " ").toUpperCase()}`;
+}
+
+const BADNIK_INLINE_ICON_MAP = {
+  ring: { src: "img/ring.png", alt: "Ring" },
+  yellow_die: { src: "img/dice_yellow.png", alt: "Yellow die" },
+  blue_die: { src: "img/dice_blue.png", alt: "Blue die" },
+  red_die: { src: "img/dice_red.png", alt: "Red die" },
+  two_hazard_dice: { src: "img/hazard_2.png", alt: "Two hazard dice" },
+  hazard_die: { src: "img/dice_black.png", alt: "Hazard die" },
+  lose_die: { src: "img/lose_die.png", alt: "Lose die" },
+  boost: { src: "img/boost.png", alt: "Boost" }
+};
+
+function formatBadnikInlineText(text) {
+  if (!text) return "";
+  return text.split(/(\{[a-z0-9_]+\})/gi).map(part => {
+    const match = part.match(/^\{([a-z0-9_]+)\}$/i);
+    if (!match) return escapeHtml(part);
+    const key = match[1].toLowerCase();
+    const icon = BADNIK_INLINE_ICON_MAP[key];
+    if (!icon) return escapeHtml(part);
+    return `<img class="inline-icon" src="${icon.src}" alt="${escapeHtml(icon.alt || key)}">`;
+  }).join("");
+}
+
+function formatBadnikAbilityText(b) {
+  const baseText = getBadnikAbilityText(b);
+  const abilityType = normalizeBadnikTiming(b?.ability?.type || "");
+  const desc = formatBadnikInlineText(baseText || "");
+  if (!abilityType || abilityType === "PASSIVE") {
+    return desc;
+  }
+  const label = abilityType.replace(/_/g, " ");
+  return `<span class="ability-text"><span class="ability-prefix">${escapeHtml(label)}:</span> ${desc}</span>`;
 }
 
 function buildBadnikCardHtml(b, zoneId, index) {
@@ -4941,7 +5001,7 @@ function buildBadnikCardHtml(b, zoneId, index) {
   const typeDef = getBadnikTypeDef(b);
   const displayName = b.name || typeDef?.name || "BADNIK";
   const artSrc = b.image || typeDef?.image || "img/badnik.png";
-  const penalty = getBadnikPenaltyText(b);
+  const abilityText = formatBadnikAbilityText(b);
   const zone = getZoneInitials(zoneId);
   const panelColor = getBadnikPanelColor(zoneId);
   const hitsRequired = getBadnikHitsRequired(b);
@@ -4982,7 +5042,7 @@ function buildBadnikCardHtml(b, zoneId, index) {
             </div>
           ` : ""}
         </div>
-        <div class="badnik-penalty">${escapeHtml(penalty)}</div>
+        <div class="badnik-ability">${abilityText}</div>
         <div class="badnik-zone">${escapeHtml(zone)}</div>
       </div>
     </div>
