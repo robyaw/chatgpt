@@ -692,7 +692,7 @@
       background-color:#a5adb6;
       background-image:
         url("img/badnik_card_checkerboard.png"),
-        linear-gradient(180deg, #8f99a6 0%, #a5adb6 100%);
+        linear-gradient(180deg, #d6dde6 0%, #b2bcc8 48%, #8a95a3 100%);
       background-repeat: repeat, no-repeat;
       background-size: auto, cover;
       background-position: center, center;
@@ -757,10 +757,10 @@
       flex-direction:column;
     }
     .badnik-chevron {
-      width:10px;
-      height:8px;
+      width:12px;
+      height:10px;
       background:#d85a2a;
-      clip-path: polygon(0 0, 70% 0, 100% 50%, 70% 100%, 0 100%, 30% 50%);
+      clip-path: polygon(0 0, 75% 0, 100% 50%, 75% 100%, 0 100%, 25% 50%);
     }
     .badnik-connector.vertical .badnik-chevron {
       transform: rotate(90deg);
@@ -785,7 +785,7 @@
       display:block;
     }
     .badnik-hatch {
-      background: repeating-linear-gradient(135deg, #f0c84a 0 16.2px, #111 16.2px 32.4px);
+      background: repeating-linear-gradient(135deg, #f2a83a 0 16.2px, #111 16.2px 32.4px);
       border-left:3px solid #000;
       border-right:3px solid #000;
     }
@@ -813,18 +813,18 @@
       position:absolute;
       top:8px;
       left:0;
-      background:#d02424;
+      background:#c91818;
       color:#fff;
-      padding:4px 16px 4px 8px;
+      padding:4px 26px 4px 16px;
       font-weight:400;
       font-style:italic;
       text-transform:uppercase;
       letter-spacing:.08em;
-      font-size:13px;
+      font-size:14px;
       z-index:2;
       border-radius:0;
       line-height:1;
-      clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%);
+      clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
     }
     .badnik-right {
       position:absolute;
@@ -842,7 +842,7 @@
       gap:6px;
       position:relative;
       --badnik-connector-width: 85px;
-      --badnik-animal-size: 34px;
+      --badnik-animal-size: 46px;
     }
     .badnik-right-row .req-chip-stack {
       margin-right:-14px;
@@ -857,7 +857,7 @@
       height:var(--badnik-animal-size);
       border-radius:50%;
       background:#fff;
-      border:2px solid #d8b24c;
+      border:3px solid #d8b24c;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -875,8 +875,8 @@
     }
     .badnik-ability {
       position:absolute;
-      left:8px;
-      right:8px;
+      left:12px;
+      right:12px;
       top:80%;
       transform:translateY(-50%);
       background:#0a0a0a;
