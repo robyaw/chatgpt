@@ -3763,6 +3763,82 @@ function renderZoneCardConnectors(cardEl, cardData) {
   const challengeMap = getCardChallengeMap(cardData);
   const trackEl = cardEl.querySelector(".track-list");
   if (!trackEl) return;
+  const drawPathSegment = (svg, defs, options) => {
+    const {
+      x1,
+      y1,
+      x2,
+      y2,
+      spanSpaces,
+      isActivePath,
+      chevronColors,
+      baseChevronCount,
+      gradientIndexRef,
+      chevronExtend = 0
+    } = options;
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    if (isActivePath) {
+      line.classList.add("active");
+    }
+    line.setAttribute("x1", `${x1}`);
+    line.setAttribute("y1", `${y1}`);
+    line.setAttribute("x2", `${x2}`);
+    line.setAttribute("y2", `${y2}`);
+    svg.appendChild(line);
+
+    if (chevronColors?.start && chevronColors?.end) {
+      const count = spanSpaces >= 2 ? (spanSpaces * baseChevronCount + 1) : baseChevronCount;
+      if (count > 0) {
+        const gradId = `chevron-grad-${gradientIndexRef()}`;
+        const grad = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+        grad.setAttribute("id", gradId);
+        grad.setAttribute("gradientUnits", "userSpaceOnUse");
+        grad.setAttribute("x1", `${x1}`);
+        grad.setAttribute("y1", `${y1}`);
+        grad.setAttribute("x2", `${x2}`);
+        grad.setAttribute("y2", `${y2}`);
+        const stopA = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stopA.setAttribute("offset", "0%");
+        stopA.setAttribute("stop-color", chevronColors.start);
+        const stopB = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stopB.setAttribute("offset", "100%");
+        stopB.setAttribute("stop-color", chevronColors.end);
+        grad.appendChild(stopA);
+        grad.appendChild(stopB);
+        defs.appendChild(grad);
+
+        const segDx = x2 - x1;
+        const segDy = y2 - y1;
+        const segLen = Math.hypot(segDx, segDy) || 1;
+        const chevronHeight = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-height")) || 10;
+        const chevronWidth = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-width")) || 12;
+        const gap = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-gap")) || 4;
+        const angleFactor = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-angle-factor")) || 0.85;
+        const clusterLen = count * chevronWidth + (count - 1) * gap;
+        const startOffset = (segLen - clusterLen) / 2;
+        const angle = Math.atan2(segDy, segDx) * 180 / Math.PI;
+        const halfH = chevronHeight / 2;
+        const halfW = chevronWidth / 2;
+        const delta = Math.max(chevronWidth * 0.1, Math.min(halfW * 0.98, halfW * angleFactor));
+        const back = -halfW;
+        const tip = halfW;
+        const mid = tip - delta;
+        const notch = back + delta;
+        const pathD = `M ${back} ${-halfH} L ${mid} ${-halfH} L ${tip} 0 L ${mid} ${halfH} L ${back} ${halfH} L ${notch} 0 Z`;
+
+        for (let i = 0; i < count; i++) {
+          const offset = startOffset + i * (chevronWidth + gap) + chevronWidth / 2 + chevronExtend;
+          const cx = x1 + (segDx / segLen) * offset;
+          const cy = y1 + (segDy / segLen) * offset;
+          const chevron = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          chevron.setAttribute("d", pathD);
+          chevron.setAttribute("fill", isActivePath ? "#f7f7f7" : `url(#${gradId})`);
+          chevron.setAttribute("transform", `translate(${cx} ${cy}) rotate(${angle})`);
+          svg.appendChild(chevron);
+        }
+      }
+    }
+  };
   const chevronColors = cardEl._chevronColors || null;
   const labelNodes = cardEl.querySelectorAll("[data-challenge-id]");
   const clearedIds = new Set();
@@ -3840,71 +3916,53 @@ function renderZoneCardConnectors(cardEl, cardData) {
       const y1 = fromCenter.y + uy * fromOffset - originTop;
       const x2 = toCenter.x - ux * toOffset - originLeft;
       const y2 = toCenter.y - uy * toOffset - originTop;
-
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
       const isActivePath = clearedIds.has(id) && (clearedIds.has(nextId) || availableIds.has(nextId));
-      if (isActivePath) {
-        line.classList.add("active");
-      }
-      line.setAttribute("x1", `${x1}`);
-      line.setAttribute("y1", `${y1}`);
-      line.setAttribute("x2", `${x2}`);
-      line.setAttribute("y2", `${y2}`);
-      svg.appendChild(line);
-
-      if (chevronColors?.start && chevronColors?.end) {
-        const count = spanSpaces >= 2 ? (spanSpaces * baseChevronCount + 1) : baseChevronCount;
-        if (count > 0) {
-          const gradId = `chevron-grad-${gradientIndex++}`;
-          const grad = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
-          grad.setAttribute("id", gradId);
-          grad.setAttribute("gradientUnits", "userSpaceOnUse");
-          grad.setAttribute("x1", `${x1}`);
-          grad.setAttribute("y1", `${y1}`);
-          grad.setAttribute("x2", `${x2}`);
-          grad.setAttribute("y2", `${y2}`);
-          const stopA = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-          stopA.setAttribute("offset", "0%");
-          stopA.setAttribute("stop-color", chevronColors.start);
-          const stopB = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-          stopB.setAttribute("offset", "100%");
-          stopB.setAttribute("stop-color", chevronColors.end);
-          grad.appendChild(stopA);
-          grad.appendChild(stopB);
-          defs.appendChild(grad);
-
-          const segDx = x2 - x1;
-          const segDy = y2 - y1;
-          const segLen = Math.hypot(segDx, segDy) || 1;
-          const chevronHeight = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-height")) || 10;
-          const chevronWidth = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-width")) || 12;
-          const gap = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-gap")) || 4;
-          const angleFactor = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-angle-factor")) || 0.85;
-          const clusterLen = count * chevronWidth + (count - 1) * gap;
-          const startOffset = (segLen - clusterLen) / 2;
-          const angle = Math.atan2(segDy, segDx) * 180 / Math.PI;
-          const halfH = chevronHeight / 2;
-          const halfW = chevronWidth / 2;
-          const delta = Math.max(chevronWidth * 0.1, Math.min(halfW * 0.98, halfW * angleFactor));
-          const back = -halfW;
-          const tip = halfW;
-          const mid = tip - delta;
-          const notch = back + delta;
-          const pathD = `M ${back} ${-halfH} L ${mid} ${-halfH} L ${tip} 0 L ${mid} ${halfH} L ${back} ${halfH} L ${notch} 0 Z`;
-
-          for (let i = 0; i < count; i++) {
-            const offset = startOffset + i * (chevronWidth + gap) + chevronWidth / 2;
-            const cx = x1 + (segDx / segLen) * offset;
-            const cy = y1 + (segDy / segLen) * offset;
-            const chevron = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            chevron.setAttribute("d", pathD);
-            chevron.setAttribute("fill", isActivePath ? "#f7f7f7" : `url(#${gradId})`);
-            chevron.setAttribute("transform", `translate(${cx} ${cy}) rotate(${angle})`);
-            svg.appendChild(chevron);
-          }
-        }
-      }
+      drawPathSegment(svg, defs, {
+        x1,
+        y1,
+        x2,
+        y2,
+        spanSpaces,
+        isActivePath,
+        chevronColors,
+        baseChevronCount,
+        gradientIndexRef: () => gradientIndex++,
+        chevronExtend: 0
+      });
     }
+  }
+
+  const chevronWidthForEdge = parseFloat(getComputedStyle(svg).getPropertyValue("--chevron-width")) || 12;
+  for (const [id, entry] of challengeMap.entries()) {
+    const fromEl = elById.get(id);
+    if (!fromEl) continue;
+    const nextIds = getChallengeNextIds(cardData, entry);
+    if (Array.isArray(nextIds) && nextIds.length) continue;
+    const fromRect = fromEl.getBoundingClientRect();
+    const fromCenter = {
+      x: (fromRect.left + fromRect.right) / 2,
+      y: (fromRect.top + fromRect.bottom) / 2
+    };
+    const fromSize = Math.min(fromRect.width, fromRect.height);
+    const fromOffset = Math.max(0, fromSize / 2 - connectorInset);
+    const x1 = fromCenter.x + fromOffset - originLeft;
+    const y1 = fromCenter.y - originTop;
+    const x2 = width + chevronWidthForEdge;
+    const y2 = y1;
+    const spanSpaces = Math.max(1, cardData.spaces.length - entry.spaceIndex);
+    const isActivePath = clearedIds.has(id) || availableIds.has(id);
+    drawPathSegment(svg, defs, {
+      x1,
+      y1,
+      x2,
+      y2,
+      spanSpaces,
+      isActivePath,
+      chevronColors,
+      baseChevronCount,
+      gradientIndexRef: () => gradientIndex++,
+      chevronExtend: chevronWidthForEdge
+    });
   }
 }
 
