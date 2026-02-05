@@ -1074,7 +1074,7 @@
 
       <div class="hr"></div>
 
-      <h2>Badniks (Simplified)</h2>
+      <h2>Badniks</h2>
       <div id="badnikView"></div>
 
     </div>
@@ -1893,6 +1893,10 @@ const CONFIG = {
     splitChance: 0.3,
     splitStreakChance: 0.6,
     spaceBackground: "#0f1733",
+    spaceBackgroundImages: [
+      "img/zone_bg/green_hill_01.png",
+      "img/zone_bg/green_hill_02.png"
+    ],
     bumper: {
       maxGroups: 1,
       groupChance: 0.55,
@@ -2477,6 +2481,10 @@ function generateZoneCard(genCfg) {
   const totalSpaces = minChallenges + Math.floor(rng()() * (maxChallenges - minChallenges + 1));
   const splitChance = genCfg.splitChance ?? 0.3;
   const splitStreakChance = genCfg.splitStreakChance ?? splitChance;
+  const spaceBackgroundImages = Array.isArray(genCfg.spaceBackgroundImages)
+    ? genCfg.spaceBackgroundImages.filter(Boolean)
+    : [];
+  const defaultSpaceBackgroundImage = genCfg.spaceBackgroundImage || null;
 
   const spaces = [];
   let hasSplit = false;
@@ -2502,7 +2510,10 @@ function generateZoneCard(genCfg) {
       return { id: uuid(), n, color, cleared:false, reward, lane, next: [] };
     });
     prevSpaceRewardTypes = spaceRewardTypes;
-    spaces.push({ id: uuid(), challenges });
+    const backgroundImage = spaceBackgroundImages.length
+      ? spaceBackgroundImages[Math.floor(rng()() * spaceBackgroundImages.length)]
+      : defaultSpaceBackgroundImage;
+    spaces.push({ id: uuid(), challenges, backgroundImage });
   }
 
   function applyBumperGroupsToList(list, allowColor = true) {
@@ -3678,7 +3689,7 @@ function renderActBoard(viewEl, { routes, cardGradient, chevronGradient, idPrefi
   `;
 }
 
-function buildCardTrackHtml(cardData) {
+function buildCardTrackHtml(cardData, defaultSpaceBgImage = null) {
   if (!cardData) return { html: `<div class="tiny muted">No active card.</div>`, availableIds: new Set() };
   const spaceCount = cardData?.spaces?.length ?? 0;
   const evenLayout = spaceCount === 5 || spaceCount === 6 || spaceCount === 7;
@@ -3709,7 +3720,8 @@ function buildCardTrackHtml(cardData) {
   };
   const html = `<div class="${trackClass}">
       ${cardData.spaces.map(space => {
-        const bgImage = space?.backgroundImage ? ` style="--space-bg-image: url('${space.backgroundImage}');"` : "";
+        const bgImageUrl = space?.backgroundImage || defaultSpaceBgImage;
+        const bgImage = bgImageUrl ? ` style="--space-bg-image: url('${bgImageUrl}');"` : "";
         const challenges = space.challenges || [];
         if (challenges.length === 1) {
           const ch = challenges[0];
@@ -5794,6 +5806,11 @@ function render() {
   const zoneSpaceBg = zoneConfig?.zoneGenerator?.spaceBackground
     || CONFIG.zoneGenerator?.spaceBackground
     || "#0f1733";
+  const zoneSpaceBgImage = zoneConfig?.zoneGenerator?.spaceBackgroundImage
+    || zoneConfig?.zoneGenerator?.spaceBackgroundImages?.[0]
+    || CONFIG.zoneGenerator?.spaceBackgroundImage
+    || CONFIG.zoneGenerator?.spaceBackgroundImages?.[0]
+    || null;
   const chevronGradient = getChevronGradient(zoneConfig);
   const actBoardView = document.getElementById("actBoardView");
   if (actBoardView) {
@@ -5816,7 +5833,7 @@ function render() {
     const gradient = buildGradientCss(s.actBoard?.cardGradient);
     if (zoneSpaceBg) card.style.setProperty("--zone-space-bg", zoneSpaceBg);
     if (gradient) card.style.setProperty("--zone-card-gradient", gradient);
-    const { html: trackHtml, availableIds } = buildCardTrackHtml(cardData);
+    const { html: trackHtml, availableIds } = buildCardTrackHtml(cardData, zoneSpaceBgImage);
     const zoneName = zoneConfig?.name || "Zone";
     card.innerHTML = `
       <div class="zone-card-inner">
@@ -5863,7 +5880,7 @@ function render() {
       card.style.setProperty("--zone-space-bg", SECRET_PASSAGE_STYLE.spaceBackground);
     }
     if (gradient) card.style.setProperty("--zone-card-gradient", gradient);
-    const { html: trackHtml, availableIds } = buildCardTrackHtml(cardData);
+      const { html: trackHtml, availableIds } = buildCardTrackHtml(cardData, null);
     const zoneName = SECRET_PASSAGE_TEMPLATE.name || "Secret Passage";
     card.innerHTML = `
       <div class="zone-card-inner">
