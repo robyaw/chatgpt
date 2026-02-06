@@ -2903,11 +2903,12 @@ function applyBadnikAbilityEffect(state, p, b, ability, context = {}) {
   let effect = normalizeBadnikTiming(ability.effect || ability.action || ability.result);
   if (!effect && ability.damage) effect = "DAMAGE";
   if (!effect) return { halt: false };
+  const badnikName = getBadnikDisplayName(b);
   if (effect === "DAMAGE") {
-    log(state, `Badnik ability (${b.name}): damage.`);
-    takeDamage(state, `Badnik ability (${b.name})`);
+    log(state, `Badnik ability (${badnikName}): damage.`);
+    takeDamage(state, `Badnik ability (${badnikName})`);
     if (ability.discardOnTrigger || ability.discardSelf) {
-      discardBadnikFromPlayer(state, p, b, `${p.name} discards Badnik "${b.name}" after its ability triggers.`);
+      discardBadnikFromPlayer(state, p, b, `${p.name} discards Badnik "${badnikName}" after its ability triggers.`);
     }
     return { halt: true };
   }
@@ -2919,7 +2920,7 @@ function applyBadnikAbilityEffect(state, p, b, ability, context = {}) {
     const hasYellow = remaining.some(d => d.color === DieColor.YELLOW);
     if (!hasYellow) {
       const count = Number.isFinite(ability.amount) ? ability.amount : 2;
-      log(state, `Badnik ability (${b.name}): no yellow dice -> roll ${count} hazard dice.`);
+      log(state, `Badnik ability (${badnikName}): no yellow dice -> roll ${count} hazard dice.`);
       hazardRoll(state, count);
       if (state.pendingDamage) return { halt: true };
     }
@@ -2929,14 +2930,14 @@ function applyBadnikAbilityEffect(state, p, b, ability, context = {}) {
     const before = p.heldRings || 0;
     if (before > 0) {
       p.heldRings = Math.max(0, before - 1);
-      log(state, `Badnik ability (${b.name}): discard 1 held ring (${before} -> ${p.heldRings}).`);
+      log(state, `Badnik ability (${badnikName}): discard 1 held ring (${before} -> ${p.heldRings}).`);
     } else {
-      log(state, `Badnik ability (${b.name}): discard 1 held ring (none to lose).`);
+      log(state, `Badnik ability (${badnikName}): discard 1 held ring (none to lose).`);
     }
     return { halt: false };
   }
   if (effect === "LOG") {
-    const msg = ability.message || `Badnik ability triggered: ${b.name}.`;
+    const msg = ability.message || `Badnik ability triggered: ${badnikName}.`;
     log(state, msg);
   }
   return { halt: false };
@@ -2976,7 +2977,7 @@ function drawBadnik(state, targetPlayer) {
   const b = initBadnikState(state.badnikDeck.shift());
   b.drawnTurn = Number.isFinite(p.turnsTaken) ? p.turnsTaken : 0;
   p.badniks.push(b);
-  log(state, `${p.name} draws Badnik: ${b.name}`);
+  log(state, `${p.name} draws Badnik: ${getBadnikDisplayName(b)}`);
 }
 
 function getEligibleBadnikTargets(state) {
@@ -4639,7 +4640,8 @@ function spendDieOnTarget(state, die, target, spendMeta) {
       log(state, "Spend failed: destroy target no longer legal.");
       return state;
     }
-    spendTarget = { type:"badnik", name: b.name, mode: target.mode };
+    const badnikName = getBadnikDisplayName(b);
+    spendTarget = { type:"badnik", name: badnikName, mode: target.mode };
     const hitsRequired = getBadnikHitsRequired(b);
     const hitsTaken = Number.isFinite(b.hitsTaken) ? b.hitsTaken : 0;
     const nextHits = hitsTaken + 1;
@@ -4648,15 +4650,15 @@ function spendDieOnTarget(state, die, target, spendMeta) {
       b.hitsTaken = nextHits;
       b.flipped = true;
       b.flipAnim = true;
-      log(state, `${p.name} hits Badnik "${b.name}" with ${spendLabel} (${nextHits}/${hitsRequired}).`);
+      log(state, `${p.name} hits Badnik "${badnikName}" with ${spendLabel} (${nextHits}/${hitsRequired}).`);
     } else {
       b.hitsTaken = nextHits;
       b.flipped = false;
       if (target.mode === "destroy") {
         p.animalTokens += 1;
-        log(state, `${p.name} DESTROYS Badnik "${b.name}" with ${spendLabel} -> gained 1 Animal Token (total ${p.animalTokens}).`);
+        log(state, `${p.name} DESTROYS Badnik "${badnikName}" with ${spendLabel} -> gained 1 Animal Token (total ${p.animalTokens}).`);
       } else {
-        log(state, `${p.name} AVOIDS Badnik "${b.name}" with ${spendLabel}.`);
+      log(state, `${p.name} AVOIDS Badnik "${badnikName}" with ${spendLabel}.`);
       }
       triggerBadnikAbility(state, p, b, "DEFEAT", { mode: target.mode, spentDie: die, effectiveDie });
       discardBadnikFromPlayer(state, p, b);
@@ -4794,7 +4796,7 @@ function rerollStep(state, options = {}) {
       }
     }
     if (hits.length) {
-      log(state, `Badnik attack hits: ${hits.map(h=>`${h.b.name}(${h.atk.color ? h.atk.color[0].toUpperCase() : "ANY"}${h.atk.value})`).join(", ")}`);
+      log(state, `Badnik attack hits: ${hits.map(h=>`${getBadnikDisplayName(h.b)}(${h.atk.color ? h.atk.color[0].toUpperCase() : "ANY"}${h.atk.value})`).join(", ")}`);
       takeDamage(state, "Badnik attack");
       if (state.pendingDamage || state.phase !== "REROLL") return state;
     } else {
@@ -4951,6 +4953,10 @@ function normalizeBadnikTypeId(value) {
 function getBadnikTypeDef(b) {
   const typeId = normalizeBadnikTypeId(b?.type || b?.name);
   return BADNIK_TYPE_MAP[typeId] || null;
+}
+
+function getBadnikDisplayName(b) {
+  return getBadnikTypeDef(b)?.name || "Badnik";
 }
 
 function normalizeBadnikRule(rule) {
@@ -6014,7 +6020,8 @@ function render() {
     badnikDiscardEl.innerHTML = discards.length
       ? discards.map(b => {
           const labels = getBadnikDisplayLabels(b);
-          return `<div class="pill tiny"><b>${escapeHtml(b.name)}</b>
+          const badnikName = getBadnikDisplayName(b);
+          return `<div class="pill tiny"><b>${escapeHtml(badnikName)}</b>
             <span class="muted">attacks:</span> ${labels.attacksLabel}
             <span class="muted">avoid:</span> ${labels.avoidLabel}
             <span class="muted">defeat:</span> ${labels.destroyLabel}</div>`;
