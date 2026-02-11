@@ -292,6 +292,25 @@
     .bonus-stage-modal .modal h2 {
       color:#1a1a1a;
     }
+    .bonus-stage-title {
+      text-align:center;
+      color:#fff;
+      margin:0 0 8px;
+    }
+    .bonus-stage-title-shape {
+      display:inline-block;
+      background:#c01818;
+      padding:6px 24px;
+      transform:skewX(-26deg);
+      box-shadow: 4px 4px 0 #1aa7ff;
+    }
+    .bonus-stage-title-text {
+      display:block;
+      transform:skewX(26deg);
+      color:#fff;
+      letter-spacing:.08em;
+      font-size:18px;
+    }
     .bonus-stage-modal .modal .tiny,
     .bonus-stage-modal .modal .muted {
       color:#2a1a0a;
@@ -315,13 +334,14 @@
       gap:16px;
       justify-content:center;
       margin-top:20px;
+      perspective:900px;
     }
     .bonus-tile {
       width:120px;
       height:120px;
       border-radius:12px;
-      border:1px solid #2d3b73;
-      background:linear-gradient(to bottom, #fdb418, #fee306);
+      border:none;
+      background:transparent;
       color:#1a1a1a;
       font-size:11px;
       font-weight:600;
@@ -334,17 +354,77 @@
       user-select:none;
       padding:6px;
       box-sizing:border-box;
+      box-shadow: none;
+      transform-style:preserve-3d;
+      backface-visibility:hidden;
+      transform-origin:center;
+    }
+    .bonus-tile-inner {
+      position:absolute;
+      inset:0;
+      transform-style:preserve-3d;
+      transform: rotateY(180deg);
+      transition: transform 0.45s ease;
       box-shadow: 0 2px 4px rgba(0,0,0,.8);
     }
-    .bonus-tile.revealed { cursor:default; }
-    .bonus-tile.revealed { background:linear-gradient(to bottom, #fff3b0, #ffd6a5); }
-    .bonus-tile.red { border-color:#8a2a2a; }
-    .bonus-tile.bumper { border-color:#8b5b2a; }
-    .bonus-tile.chaos {
+    .bonus-tile.revealed .bonus-tile-inner { transform: rotateY(0deg); }
+    .bonus-tile.flip-anim .bonus-tile-inner {
+      animation: bonus-flip 0.45s ease;
+    }
+    .bonus-tile-inner::before,
+    .bonus-tile-inner::after {
+      content:"";
+      position:absolute;
+      top:0;
+      bottom:0;
+      width:var(--bonus-thickness, 3px);
+      background:linear-gradient(180deg, #d0b062, #b28b3e);
+      transform-origin:center;
+      z-index:1;
+    }
+    .bonus-tile-inner::before {
+      left:0;
+      transform: rotateY(90deg) translateZ(calc(var(--bonus-thickness, 3px) / 2));
+    }
+    .bonus-tile-inner::after {
+      right:0;
+      transform: rotateY(-90deg) translateZ(calc(var(--bonus-thickness, 3px) / 2));
+    }
+    .bonus-face {
+      position:absolute;
+      inset:0;
+      border-radius:12px;
+      border:1px solid #2d3b73;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:6px;
+      box-sizing:border-box;
+      backface-visibility:hidden;
+      overflow:hidden;
+    }
+    .bonus-face .bonus-icon { pointer-events:none; }
+    .bonus-front {
+      background:linear-gradient(to bottom, #fff3b0, #ffd6a5);
+      transform: translateZ(calc(var(--bonus-thickness, 3px) / 2));
+    }
+    .bonus-front.red { border-color:#8a2a2a; }
+    .bonus-front.bumper { border-color:#8b5b2a; }
+    .bonus-front.chaos {
       background:linear-gradient(to bottom, #fff, #ddd);
       border-color:#b8c6ff;
     }
-    .bonus-tile.disabled { opacity:.6; cursor:not-allowed; }
+    .bonus-back {
+      background:linear-gradient(to bottom, #fdb418, #fee306);
+      transform: rotateY(180deg) translateZ(calc(var(--bonus-thickness, 3px) / 2));
+    }
+    @keyframes bonus-flip {
+      0% { transform: rotateY(180deg); }
+      100% { transform: rotateY(0deg); }
+    }
+    .bonus-tile.revealed { cursor:default; }
+    .bonus-tile.disabled { cursor:not-allowed; }
     .bonus-reward {
       position:absolute;
       top:4px;
@@ -369,53 +449,58 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:20px;
+      gap:12px;
       width:100%;
       box-sizing:border-box;
-      padding:8px 14px;
-      border-radius:14px;
-      background:linear-gradient(135deg, #0a47c8, #3ddcff, #ffd756);
-      color:#ffffff;
-      font-weight:900;
-      font-size:13px;
-      letter-spacing:.12em;
-      text-transform:uppercase;
-      border:1px solid #e8f3ff;
-      box-shadow: 0 4px 12px rgba(0,0,0,.35);
-      position:relative;
-      text-shadow:
-        -1px -1px 0 rgba(0,0,0,.7),
-        1px -1px 0 rgba(0,0,0,.7),
-        -1px 1px 0 rgba(0,0,0,.7),
-        1px 1px 0 rgba(0,0,0,.7);
+      padding:6px 8px;
+      background:transparent;
+      border:none;
+      box-shadow:none;
     }
-    .zone-level-name::after {
-      content:"";
-      position:absolute;
-      inset:0;
-      border-radius:16px;
-      background:linear-gradient(120deg, rgba(255,255,255,.6), rgba(255,255,255,0));
-      z-index:-1;
-      filter:blur(6px);
+    .zone-level-name::after { content:none; }
+    .zone-title-group {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+    }
+    .zone-title-chip {
+      display:inline-block;
+      transform:skewX(-26deg);
+      padding:6px 18px;
+    }
+    .zone-title-chip.zone-title-main { background:#c01818; }
+    .zone-title-chip.zone-title-act { background:#ffd756; }
+    .zone-title-text {
+      display:block;
+      transform:skewX(26deg);
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .zone-title-main .zone-title-text {
+      color:#fff;
+      font-size:16px;
+    }
+    .zone-title-act .zone-title-text {
+      color:#1a1a1a;
+      font-size:12px;
     }
     .zone-card {
       background:transparent;
       position:relative;
-      overflow:hidden;
+      overflow:visible;
       z-index:0;
       perspective:1200px;
       padding:0;
-    }
-    .zone-level-name .zone-title {
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
     }
     .zone-level-name .zone-deck {
       font-size:11px;
       letter-spacing:.18em;
       text-transform:uppercase;
       opacity:.95;
+      white-space:nowrap;
     }
     #zoneView { justify-items:start; }
     .zone-card {
@@ -441,7 +526,7 @@
     .zone-card-face {
       backface-visibility:hidden;
       border-radius:14px;
-      overflow:hidden;
+      overflow:visible;
       box-sizing:border-box;
     }
     .zone-card-front {
@@ -457,21 +542,91 @@
       position:absolute;
       inset:0;
       transform: rotateY(180deg);
-      background:#f2d86a;
-      border:3px solid #ffffff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      background:linear-gradient(180deg, #f0a437 0%, #f2d85c 100%);
+      border:5px solid #ffffff;
+      display:block;
       text-align:center;
       padding:16px;
       color:#1b2a3d;
       text-transform:uppercase;
       font-weight:800;
       letter-spacing:.08em;
+      overflow:hidden;
+    }
+    .zone-back-logo {
+      position:absolute;
+      top:10px;
+      right:10px;
+      height:30px;
+      width:auto;
+      display:block;
+    }
+    .zone-back-title,
+    .zone-back-subtitle {
+      display:inline-block;
+      padding:6px 22px;
+      clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%);
+    }
+    .zone-back-title {
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%, -50%);
+      background:#1a4fc8;
+      padding:6px 34px 6px 40px;
+      position:absolute;
+    }
+    .zone-back-title-text {
+      display:block;
+      color:#fff;
+      font-weight:400;
+      font-style:italic;
+      letter-spacing:.08em;
+      text-transform:none;
+      font-size:26px;
+      text-transform:uppercase;
+      text-shadow:
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000,
+        0 1px 0 #000,
+        0 -1px 0 #000,
+        1px 0 0 #000,
+        -1px 0 0 #000;
+    }
+    .zone-back-subtitle {
+      position:absolute;
+      top:62%;
+      right:25%;
+      background:#000;
+      padding:6px 22px 6px 26px;
+    }
+    .zone-back-subtitle-text {
+      display:block;
+      color:#fff;
+      font-weight:400;
+      font-style:italic;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .zone-back-subtitle-text {
+      font-size:18px;
+    }
+    .zone-back-copyright {
+      position:absolute;
+      left:8px;
+      bottom:6px;
+      font-size:10px;
+      color:#000;
+      font-weight:400;
     }
     .secret-passage-back {
       background:#7a1b1b;
       color:#ffffff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
     .track-connectors {
       position:absolute;
@@ -1161,7 +1316,7 @@
 
   <div id="bonusStageModal" class="modal-overlay bonus-stage-modal">
     <div class="card modal">
-      <h2>Bonus Stage</h2>
+      <h2 class="bonus-stage-title"><span class="bonus-stage-title-shape"><span class="bonus-stage-title-text">Bonus Stage</span></span></h2>
       <div id="bonusStageStatus" class="tiny muted"></div>
       <div id="bonusStageGrid" class="bonus-stage-grid"></div>
       <div class="row modal-actions">
@@ -1887,10 +2042,11 @@ const CONFIG = {
   zones: {
     green_hill: {
       id: "green_hill",
-      name: "Green Hill Zone Act 1",
+      name: "Green Hill Zone",
+      actName: "Act 1",
       badnikDeckId: "green_hill",
       zoneGenerator: {
-        actBoardName: "Green Hill Zone Act 1",
+        actBoardName: "Act 1",
         actBoardRewards: {
           Top: { type:"big_ring" },
           Middle: { type:"star_post", amount:1 },
@@ -1907,10 +2063,11 @@ const CONFIG = {
     },
     stardust_speedway: {
       id: "stardust_speedway",
-      name: "Stardust Speedway Zone Act 1",
+      name: "Stardust Speedway Zone",
+      actName: "Act 1",
       badnikDeckId: "stardust_speedway",
       zoneGenerator: {
-        actBoardName: "Stardust Speedway Zone Act 1",
+        actBoardName: "Act 1",
         actBoardRewards: {
           Top: { type:"rings", amount:5 },
           Middle: { type:"star_post", amount:1 },
@@ -1932,10 +2089,11 @@ const CONFIG = {
     },
     lava_reef: {
       id: "lava_reef",
-      name: "Lava Reef Zone Act 1",
+      name: "Lava Reef Zone",
+      actName: "Act 1",
       badnikDeckId: "lava_reef",
       zoneGenerator: {
-        actBoardName: "Lava Reef Zone Act 1",
+        actBoardName: "Act 1",
         actBoardRewards: {
           Top: { type:"power_up" },
           Middle: { type:"hazard", amount:2 },
@@ -1956,10 +2114,11 @@ const CONFIG = {
     },
     chemical_plant: {
       id: "chemical_plant",
-      name: "Chemical Plant Zone Act 1",
+      name: "Chemical Plant Zone",
+      actName: "Act 1",
       badnikDeckId: "chemical_plant",
       zoneGenerator: {
-        actBoardName: "Chemical Plant Zone Act 1",
+        actBoardName: "Act 1",
         actBoardRewards: {
           Top: { type:"badnik", amount:1 },
           Middle: { type:"big_ring" },
@@ -2364,6 +2523,7 @@ function flipBonusStageTile(state, tileId) {
   const tile = stage.tiles.find(t => t.id === tileId);
   if (!tile || tile.revealed) return;
   tile.revealed = true;
+  tile.justRevealed = true;
 
   if (tile.type === "chaos") {
     drawChaosEmerald(state);
@@ -5836,18 +5996,25 @@ function render() {
   // Zone view
   const zv = document.getElementById("zoneView");
   zv.innerHTML = "";
+  const zoneConfig = getZoneConfig(s.zoneId);
   const zoneHeader = document.getElementById("zoneHeaderInfo");
   if (zoneHeader) {
     const deckRemaining = s.zone?.deck?.length ?? 0;
-    const actName = s.actBoard?.name || "Act 1";
-    zoneHeader.innerHTML = `
+    const zoneName = zoneConfig?.name || "Zone";
+    const actName = zoneConfig?.actName || s.actBoard?.name || "";
+      const actChip = actName
+        ? `<span class="zone-title-chip zone-title-act"><span class="zone-title-text">${escapeHtml(actName)}</span></span>`
+        : "";
+      zoneHeader.innerHTML = `
       <div class="zone-level-name">
-        <span class="zone-title">${escapeHtml(actName)}</span>
+        <div class="zone-title-group">
+          <span class="zone-title-chip zone-title-main"><span class="zone-title-text">${escapeHtml(zoneName)}</span></span>
+          ${actChip}
+        </div>
         <span class="zone-deck">Deck ${deckRemaining}</span>
       </div>
     `;
-  }
-  const zoneConfig = getZoneConfig(s.zoneId);
+    }
   const zoneSpaceBg = zoneConfig?.zoneGenerator?.spaceBackground
     || CONFIG.zoneGenerator?.spaceBackground
     || "#0f1733";
@@ -5880,13 +6047,17 @@ function render() {
     if (gradient) card.style.setProperty("--zone-card-gradient", gradient);
     const { html: trackHtml, availableIds } = buildCardTrackHtml(cardData, zoneSpaceBgImage);
     const zoneName = zoneConfig?.name || "Zone";
+    const zoneNameShort = zoneName.replace(/\bzone\b/i, "").replace(/\s+/g, " ").trim() || zoneName;
     card.innerHTML = `
       <div class="zone-card-inner">
         <div class="zone-card-face zone-card-front">
           ${trackHtml}
         </div>
         <div class="zone-card-face zone-card-back">
-          <div>${escapeHtml(zoneName)}</div>
+          <img class="zone-back-logo" src="img/Sonic_Roll_Logo.webp" alt="Sonic Roll">
+          <div class="zone-back-title"><span class="zone-back-title-text">${escapeHtml(zoneNameShort)}</span></div>
+          <div class="zone-back-subtitle"><span class="zone-back-subtitle-text">Zone</span></div>
+          <div class="zone-back-copyright">©SEGA</div>
         </div>
       </div>
     `;
@@ -6084,29 +6255,45 @@ function render() {
           const classes = ["bonus-tile"];
           let label = "Blue Sphere";
           let icon = "\u{1F535}";
+          let frontClass = "";
           if (tile.revealed) {
             classes.push("revealed");
+            if (tile.justRevealed) classes.push("flip-anim");
             if (tile.type === "red") {
-              classes.push("red");
+              frontClass = " red";
               label = "Red Sphere";
               icon = "\u{1F534}";
             } else if (tile.type === "bumper") {
-              classes.push("bumper");
+              frontClass = " bumper";
               label = "Bumper Sphere";
               icon = "\u{26AA}";
             } else if (tile.type === "chaos") {
-              classes.push("chaos");
+              frontClass = " chaos";
               label = "Chaos Emerald";
               icon = "\u{1F48E}";
             }
           }
           if (stage.awaitingExit) classes.push("disabled");
           tileEl.className = classes.join(" ");
+          if (tile.justRevealed) tile.justRevealed = false;
           tileEl.title = label;
-          const iconEl = document.createElement("div");
-          iconEl.className = "bonus-icon";
-          iconEl.textContent = icon;
-          tileEl.appendChild(iconEl);
+          const innerEl = document.createElement("div");
+          innerEl.className = "bonus-tile-inner";
+
+          const backEl = document.createElement("div");
+          backEl.className = "bonus-face bonus-back";
+          const backIcon = document.createElement("div");
+          backIcon.className = "bonus-icon";
+          backIcon.textContent = "\u{1F535}";
+          backEl.appendChild(backIcon);
+
+          const frontEl = document.createElement("div");
+          frontEl.className = `bonus-face bonus-front${frontClass}`;
+          const frontIcon = document.createElement("div");
+          frontIcon.className = "bonus-icon";
+          frontIcon.textContent = icon;
+          frontEl.appendChild(frontIcon);
+
           if (tile.revealed && tile.reward) {
             const badge = document.createElement("div");
             badge.className = "bonus-reward";
@@ -6128,8 +6315,12 @@ function render() {
             } else {
               badge.textContent = formatBonusStageRewardLabel(tile.reward);
             }
-            tileEl.appendChild(badge);
+            frontEl.appendChild(badge);
           }
+
+          innerEl.appendChild(backEl);
+          innerEl.appendChild(frontEl);
+          tileEl.appendChild(innerEl);
           tileEl.addEventListener("click", () => {
             flipBonusStageTile(STATE, tile.id);
             render();
