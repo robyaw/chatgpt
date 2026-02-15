@@ -28,6 +28,11 @@
     .character-heading-row { display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px; }
     .character-heading-score { text-align:left; display:inline-flex; align-items:center; gap:6px; }
     .character-heading-score img { height:14px; width:auto; image-rendering: pixelated; }
+    .character-heading-rings { text-align:left; display:inline-flex; align-items:center; gap:4px; margin-top:2px; }
+    .character-heading-rings img { height:14px; width:auto; image-rendering: pixelated; }
+    .character-heading-rings .ring-colon { margin:0 1px; }
+    .character-heading-rings .score-digit { margin-left:-5px; }
+    .character-heading-rings .rings-held-boost .score-digit { filter:saturate(3); }
     .score-digits { display:inline-flex; align-items:center; }
     .score-digit { height:14px; width:auto; image-rendering: pixelated; margin-left:-4px; }
     .score-digit:first-child { margin-left:0; }
@@ -5395,7 +5400,14 @@ function render() {
         </span>
         <span class="character-heading-name">${escapeHtml(label)}</span>
       </div>
-      <div class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Held ${p.heldRings} | Saved ${p.savedRings} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken}</div>
+      <div class="character-heading-rings">
+        <img src="img/hud_rings.png" alt="Rings">
+        ${p.hyperRing ? `<img src="img/hud_hyper_ring.png" alt="Hyper Ring">` : ""}
+        <span class="rings-held${p.hyperRing ? " rings-held-boost" : ""}">${formatPixelScore(p.heldRings)}</span>
+        <img src="img/colon.png" alt=":" class="ring-colon">
+        ${formatPixelScore(p.savedRings)}
+      </div>
+      <div class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken}</div>
     `;
   }
 
