@@ -32,7 +32,7 @@
     .character-heading-rings img { height:14px; width:auto; image-rendering: pixelated; }
     .character-heading-rings .ring-colon { margin:0 1px; }
     .character-heading-rings .score-digit { margin-left:-5px; }
-    .character-heading-rings .rings-held-boost .score-digit { filter:saturate(3); }
+    .character-heading-rings .rings-held-boost .score-digit { filter:saturate(8); }
     .score-digits { display:inline-flex; align-items:center; }
     .score-digit { height:14px; width:auto; image-rendering: pixelated; margin-left:-4px; }
     .score-digit:first-child { margin-left:0; }
@@ -46,6 +46,9 @@
     .buddy-flight-value { font-weight:700; }
     .muted { color:#b0b8e8; }
     .log { max-height: 300px; overflow:auto; font-size: 13px; line-height:1.35; }
+    .log-power-up-deck { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .log-power-up-label { color:#b0b8e8; }
+    .log-power-up-icon { height:16px; width:auto; image-rendering: pixelated; }
     .grid { display:grid; grid-template-columns: minmax(240px, 1fr); gap:10px; }
     .tiny { font-size: 12px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
@@ -1392,6 +1395,19 @@ function shuffle(arr) {
   return arr;
 }
 function log(state, msg) { state.log.push(msg); return state; }
+function renderLogEntry(entry) {
+  if (typeof entry === "string") return `<div>${escapeHtml(entry)}</div>`;
+  if (entry && entry.type === "powerUpDeck") {
+    const deck = Array.isArray(entry.deck) ? entry.deck : [];
+    if (!deck.length) return `<div>${escapeHtml("Power-Up Deck is empty.")}</div>`;
+    const icons = deck.map(id => {
+      const label = getPowerUpLabel(id);
+      return `<img class="log-power-up-icon" src="img/power_up_${id}.png" alt="${escapeHtml(label)}" title="${escapeHtml(label)}">`;
+    }).join("");
+    return `<div class="log-power-up-deck"><span class="log-power-up-label">Power-Up Deck order:</span>${icons}</div>`;
+  }
+  return `<div>${escapeHtml(String(entry ?? ""))}</div>`;
+}
 function makeVulnerable(p){ p.invulnerable = false; }
 function makeInvulnerable(p){ p.invulnerable = true; }
 
@@ -6184,7 +6200,7 @@ function render() {
 
   // Log
   const logEl = document.getElementById("log");
-  logEl.innerHTML = s.log.slice(-400).map(line => `<div>${escapeHtml(line)}</div>`).join("");
+  logEl.innerHTML = s.log.slice(-400).map(entry => renderLogEntry(entry)).join("");
   logEl.scrollTop = logEl.scrollHeight;
 
   // Discards
@@ -6510,8 +6526,7 @@ if (showPowerUpDeckBtn) {
     if (!deck.length) {
       log(STATE, "Power-Up Deck is empty.");
     } else {
-      const labels = deck.map(id => getPowerUpLabel(id)).join(", ");
-      log(STATE, `Power-Up Deck order: ${labels}`);
+      log(STATE, { type:"powerUpDeck", deck: [...deck] });
     }
     render();
   });
