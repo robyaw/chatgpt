@@ -28,11 +28,19 @@
     .character-heading-row { display:flex; align-items:center; justify-content:space-between; width:100%; gap:10px; }
     .character-heading-score { text-align:left; display:inline-flex; align-items:center; gap:6px; }
     .character-heading-score img { height:14px; width:auto; image-rendering: pixelated; }
+    .character-heading-right { position:relative; display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
     .character-heading-rings { text-align:left; display:inline-flex; align-items:center; gap:4px; margin-top:2px; }
     .character-heading-rings img { height:14px; width:auto; image-rendering: pixelated; }
     .character-heading-rings .ring-colon { margin:0 1px; }
     .character-heading-rings .score-digit { margin-left:-5px; }
     .character-heading-rings .rings-held-boost .score-digit { filter:saturate(8); }
+    .lives-hud { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; --lives-icon-base:14px; --lives-icon-scale:3; }
+    .character-heading-right .lives-hud { position:absolute; right:0; top:100%; margin-top:2px; }
+    .lives-hud img { height:14px; width:auto; image-rendering: pixelated; }
+    .lives-hud .lives-icon-wrap { display:inline-flex; align-items:center; justify-content:flex-start; width: calc(var(--lives-icon-base) * var(--lives-icon-scale)); height: calc(var(--lives-icon-base) * var(--lives-icon-scale)); }
+    .lives-hud .lives-icon { height: var(--lives-icon-base); width:auto; transform: scale(var(--lives-icon-scale)); transform-origin: left center; }
+    .lives-hud .lives-x { height:28px; }
+    .lives-hud .score-digit { height:28px; margin-left:-8px; }
     .score-digits { display:inline-flex; align-items:center; }
     .score-digit { height:14px; width:auto; image-rendering: pixelated; margin-left:-4px; }
     .score-digit:first-child { margin-left:0; }
@@ -5408,13 +5416,22 @@ function render() {
   if (characterHeading) {
     const label = `${p.name} - ${p.character}`;
     const score = computeScoreSummary(s)?.find(entry => entry.id === p.id)?.totalPoints ?? 0;
+    const oneUpId = (p.character || "").toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+    const oneUpSrc = oneUpId ? `img/1up_${oneUpId}.png` : "img/1up_sonic.png";
     characterHeading.innerHTML = `
       <div class="character-heading-row">
         <span class="character-heading-score">
           <img src="img/hud_score.png" alt="Score">
           ${formatPixelScore(score)}
         </span>
-        <span class="character-heading-name">${escapeHtml(label)}</span>
+        <span class="character-heading-right">
+          <span class="character-heading-name">${escapeHtml(label)}</span>
+            <span class="lives-hud">
+              <span class="lives-icon-wrap"><img class="lives-icon" src="${oneUpSrc}" alt="${escapeHtml(p.character)} 1UP"></span>
+              <img class="lives-x" src="img/x.png" alt="x">
+              ${formatPixelScore(p.lives)}
+            </span>
+        </span>
       </div>
       <div class="character-heading-rings">
         <img src="img/hud_rings.png" alt="Rings">
@@ -5423,7 +5440,7 @@ function render() {
         <img src="img/colon.png" alt=":" class="ring-colon">
         ${formatPixelScore(p.savedRings)}
       </div>
-      <div class="badge badge-tight">Lives ${p.lives} | Boost ${p.boost} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken}</div>
+      <div class="badge badge-tight">Boost ${p.boost} | Animals ${p.animalTokens} | Time Taken ${p.timeTokensTaken}</div>
     `;
   }
 
