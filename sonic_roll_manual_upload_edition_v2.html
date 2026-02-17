@@ -704,6 +704,237 @@
     }
     .act-board-mini .act-board-lanes { gap:0; height:100%; }
     .act-board-mini .act-lane { min-height:0; }
+    .act-board.boss-board {
+      padding:0;
+      background:transparent;
+      border:none;
+      box-shadow:none;
+    }
+    .boss-pattern-board {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .boss-pattern-route {
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .boss-pattern-label {
+      width:64px;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#b8c6ff;
+    }
+    .boss-pattern-cards {
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .boss-pattern-card {
+      background:#0f1733;
+      border:1px solid #2d3b73;
+      border-radius:10px;
+      padding:6px 8px;
+      min-width:84px;
+      min-height:54px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+    }
+    .boss-pattern-card.locked { opacity:.45; }
+    .boss-pattern-card.clickable { cursor:pointer; }
+    .boss-pattern-card.clickable:hover { filter:brightness(1.08); }
+    .boss-pattern-open {
+      padding:6px 10px;
+      border:1px dashed #2d3b73;
+      border-radius:10px;
+      font-size:11px;
+      color:#b0b8e8;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .boss-route-locked .boss-pattern-card { opacity:.35; cursor:not-allowed; }
+    .boss-board-surface {
+      position:relative;
+      border:1px solid #23305a;
+      border-radius:14px;
+      overflow:hidden;
+      background:#0f1733;
+      background-image: var(--boss-board-bg);
+      background-size: cover;
+      background-position: center;
+      min-height:320px;
+      display:flex;
+      flex-direction:column;
+    }
+    .boss-board-overlay {
+      position:relative;
+      z-index:2;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:100%;
+      background: linear-gradient(180deg, rgba(10,15,25,0.7), rgba(10,15,25,0.55));
+    }
+    .boss-board-title {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      font-size:14px;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      color:#ffe7a6;
+      font-weight:700;
+    }
+    .boss-effect-text {
+      font-size:12px;
+      color:#e8ecff;
+      background:rgba(15,23,51,0.85);
+      border:1px solid #2d3b73;
+      border-radius:10px;
+      padding:6px 8px;
+      max-width:85%;
+    }
+    .boss-route-list {
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      flex:1;
+    }
+    .boss-hit-row {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:6px 8px;
+      background:rgba(15,23,51,0.78);
+      border:1px solid #2d3b73;
+      border-radius:12px;
+    }
+    .boss-hit-label {
+      width:64px;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#b8c6ff;
+    }
+    .boss-hit-space {
+      position:relative;
+      min-width:120px;
+      min-height:56px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(10,15,32,0.9);
+      gap:6px;
+    }
+    .boss-hit-space.locked { opacity:.45; cursor:not-allowed; }
+    .boss-hit-space.clickable { cursor:pointer; }
+    .boss-hit-space.clickable:hover { filter:brightness(1.08); }
+    .boss-hit-chip {
+      font-weight:700;
+      color:#f7f9ff;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      padding:4px 8px;
+      border-radius:8px;
+      background:#1a2550;
+      border:1px solid #2d3b73;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .boss-hit-die {
+      width:32px;
+      height:32px;
+      border-radius:8px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      border:1px solid transparent;
+    }
+    .boss-board-footer {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .boss-level-chip {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid #2d3b73;
+      background:rgba(15,23,51,0.9);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#b8c6ff;
+    }
+    .boss-health {
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .boss-health-token {
+      width:34px;
+      height:34px;
+      border-radius:50%;
+      border:2px solid #f7f9ff;
+      background:rgba(255,255,255,0.1);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .boss-health-token.empty { opacity:.3; }
+    .boss-health-token img {
+      width:22px;
+      height:auto;
+      image-rendering: pixelated;
+    }
+    .boss-attack-card {
+      border:2px solid #e7c240;
+      background:#1b130d;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      aspect-ratio:auto;
+      padding:10px;
+      width:336px;
+      max-width:100%;
+    }
+    .boss-attack-card.suppressed { opacity:.65; cursor:not-allowed; }
+    .boss-attack-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      font-weight:700;
+      color:#ffe7a6;
+      text-transform:uppercase;
+      font-size:12px;
+      letter-spacing:.08em;
+    }
+    .boss-attack-body {
+      margin-top:6px;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      font-size:12px;
+    }
+    .boss-attack-suppressed {
+      margin-top:6px;
+      font-size:11px;
+      color:#ffe7a6;
+    }
     .act-board-lanes {
       display:flex;
       flex-direction:column;
@@ -1506,6 +1737,7 @@ function getActChevronGradient(zoneConfig) {
 
 
 function isGameOver(state) {
+  if (state.bossFight?.defeated) return "Boss defeated";
   if (state.timeTokens <= 0) return "Time ran out (0 Time Tokens)";
   for (const p of state.players) if (p.lives <= 0) return `${p.name} lost final Life`;
   return null;
@@ -2068,6 +2300,10 @@ const CONFIG = {
       colorChance: 0.2
     }
   },
+  bossPatternGenerator: {
+    deckSize: 24,
+    colorChance: 0.35
+  },
   zones: {
     green_hill: {
       id: "green_hill",
@@ -2088,6 +2324,33 @@ const CONFIG = {
         actChevronGradient: { top: "#1c2d66", bottom: "#78b5ff" },
         spaceBackground: "#1f4ea8",
         badnikPanelColor: "#2c5fb3"
+      },
+      boss: {
+        id: "egg_robo",
+        name: "Egg Robo",
+        level: 2,
+        health: 2,
+        boardImage: "img/boss_board_green_hill_zone.png",
+        hitSpaces: {
+          Top: { value: 6 },
+          Middle: { value: 4 },
+          Bottom: { value: 2 }
+        },
+        onHitEffect: {
+          type: "badnik_all",
+          amount: 1,
+          text: "When the boss is hit, all players draw a Badnik."
+        },
+        attackCards: [
+          {
+            id: "egg_robo_attack",
+            name: "Egg Robo Attack",
+            sides: [
+              { name: "Side 1", attacks: [], ability: null, text: "Boss Attack (side 1) placeholder." },
+              { name: "Side 2", attacks: [], ability: null, text: "Boss Attack (side 2) placeholder." }
+            ]
+          }
+        ]
       }
     },
     stardust_speedway: {
@@ -2781,6 +3044,257 @@ function generateActBoard(genCfg) {
   };
 }
 
+function isBossFightActive(state) {
+  return !!state?.bossFight?.active;
+}
+
+function generateBossPatternCard(cfg = {}) {
+  const colorChance = Number.isFinite(cfg.colorChance) ? cfg.colorChance : 0.35;
+  const colorRoll = rng()();
+  const color = colorRoll < colorChance
+    ? (rng()() < 0.34 ? DieColor.BLUE : rng()() < 0.67 ? DieColor.YELLOW : DieColor.RED)
+    : null;
+  const n = rollD6();
+  const challenge = {
+    id: uuid(),
+    n,
+    color,
+    cleared: false,
+    reward: null,
+    lane: "shared",
+    next: []
+  };
+  return {
+    id: uuid(),
+    spaces: [{ id: uuid(), challenges: [challenge] }],
+    bumperLocks: {},
+    lastClearedChallengeId: null,
+    isBossPattern: true
+  };
+}
+
+function buildBossPatternDeck() {
+  const cfg = CONFIG.bossPatternGenerator || {};
+  const size = Number.isFinite(cfg.deckSize) ? cfg.deckSize : 24;
+  const deck = [];
+  for (let i = 0; i < size; i++) deck.push(generateBossPatternCard(cfg));
+  return shuffle(deck);
+}
+
+function drawBossPatternCard(state) {
+  const boss = state?.bossFight;
+  if (!boss) return null;
+  if (!boss.patternDeck?.length) {
+    if (boss.patternDiscard?.length) {
+      boss.patternDeck = shuffle(boss.patternDiscard);
+      boss.patternDiscard = [];
+      state.bossPatternDeck = boss.patternDeck;
+      state.bossPatternDiscard = boss.patternDiscard;
+      log(state, "Boss Pattern deck reshuffled from discard.");
+    } else {
+      log(state, "Boss Pattern deck empty: no cards available.");
+      return null;
+    }
+  }
+  return boss.patternDeck.shift() || null;
+}
+
+function getBossHitRequirement(boss, routeName) {
+  return boss?.hitSpaces?.[routeName] || null;
+}
+
+function isDieLegalForBossHit(req, die) {
+  if (!req || !die) return false;
+  if (Number.isFinite(req.value) && die.value !== req.value) return false;
+  if (req.color && req.color !== die.color) return false;
+  return true;
+}
+
+function createBossAttackInstances(bossCfg) {
+  const cards = Array.isArray(bossCfg?.attackCards) ? bossCfg.attackCards : [];
+  return cards.map((card, idx) => {
+    const rawSides = Array.isArray(card?.sides) ? card.sides : [];
+    const sideA = rawSides[0] || {};
+    const sideB = rawSides[1] || sideA || {};
+    const inst = {
+      id: card?.id || `boss_attack_${idx}`,
+      name: card?.name || "Boss Attack",
+      sides: [sideA, sideB],
+      faceIndex: 0,
+      isBossAttack: true,
+      attacks: clone(sideA.attacks || []),
+      ability: clone(sideA.ability || null),
+      text: sideA.text || ""
+    };
+    return inst;
+  });
+}
+
+function getBossAttackSide(b) {
+  if (!b?.isBossAttack) return null;
+  const sides = Array.isArray(b.sides) ? b.sides : [];
+  return sides[b.faceIndex === 1 ? 1 : 0] || sides[0] || null;
+}
+
+function syncBossAttackSide(b) {
+  const side = getBossAttackSide(b);
+  if (!side) return;
+  b.attacks = clone(side.attacks || []);
+  b.ability = clone(side.ability || null);
+  b.text = side.text || b.text || "";
+  if (side.name) b.name = side.name;
+}
+
+function flipBossAttackCard(b) {
+  if (!b?.isBossAttack) return;
+  b.faceIndex = b.faceIndex === 1 ? 0 : 1;
+  syncBossAttackSide(b);
+}
+
+function attachBossAttackCardsToPlayer(state, p, cards) {
+  if (!cards?.length) return;
+  for (const card of cards) {
+    if (!p.badniks.includes(card)) p.badniks.push(card);
+    card.suppressedThisTurn = false;
+    card.drawnTurn = p.turnsTaken;
+  }
+  log(state, `Boss Attack card(s) move to ${p.name}.`);
+}
+
+function beginBossFight(state) {
+  if (state?.bossFight?.active) return state;
+  const zoneConfig = getZoneConfig(state.zoneId);
+  const bossCfg = zoneConfig?.boss;
+  if (!bossCfg) {
+    log(state, "Boss Fight setup missing for this Zone.");
+    return state;
+  }
+  const bossLevel = Number.isFinite(bossCfg.level) ? bossCfg.level : 1;
+  const bossHealth = Number.isFinite(bossCfg.health) ? bossCfg.health : bossLevel;
+  const patternDeck = Array.isArray(state.bossPatternDeck) ? state.bossPatternDeck : buildBossPatternDeck();
+  const patternDiscard = Array.isArray(state.bossPatternDiscard) ? state.bossPatternDiscard : [];
+  state.bossPatternDeck = patternDeck;
+  state.bossPatternDiscard = patternDiscard;
+  const routes = (state.zone?.routes || []).map(r => ({
+    id: r.id,
+    name: r.name,
+    cards: []
+  }));
+  state.bossFight = {
+    active: true,
+    id: bossCfg.id || zoneConfig.id || "boss",
+    name: bossCfg.name || "Boss",
+    level: bossLevel,
+    health: bossHealth,
+    maxHealth: bossHealth,
+    routes,
+    hitSpaces: bossCfg.hitSpaces || {},
+    onHitEffect: bossCfg.onHitEffect || null,
+    boardImage: bossCfg.boardImage || null,
+    patternDeck,
+    patternDiscard,
+    routeLocks: {},
+    hitDiceByRoute: {},
+    hitThisTurn: false,
+    defeated: false,
+    attackCards: createBossAttackInstances(bossCfg)
+  };
+  for (const route of state.bossFight.routes) {
+    while (route.cards.length < bossLevel) {
+      const card = drawBossPatternCard(state);
+      if (!card) break;
+      route.cards.push(card);
+    }
+  }
+  const p = getActivePlayer(state);
+  attachBossAttackCardsToPlayer(state, p, state.bossFight.attackCards);
+  log(state, "Boss Fight begins!");
+  return state;
+}
+
+function refillBossPatternRoutes(state) {
+  const boss = state?.bossFight;
+  if (!boss) return;
+  for (const route of boss.routes) {
+    while (route.cards.length < boss.level) {
+      const card = drawBossPatternCard(state);
+      if (!card) break;
+      route.cards.push(card);
+    }
+  }
+  log(state, "Boss Pattern Cards refilled on all routes.");
+}
+
+function clearBossRouteLocks(state) {
+  if (!state?.bossFight) return;
+  state.bossFight.routeLocks = {};
+  state.bossFight.hitDiceByRoute = {};
+}
+
+function applyBossOnHitEffect(state, effect, hitter) {
+  if (!effect) return;
+  if (effect.type === "badnik_all") {
+    const amount = Math.max(1, Number(effect.amount) || 1);
+    for (let i = 0; i < amount; i++) {
+      for (const pl of state.players) drawBadnik(state, pl);
+    }
+    log(state, effect.text || "Boss effect: all players draw a Badnik.");
+    return;
+  }
+  if (effect.type === "badnik_current") {
+    const amount = Math.max(1, Number(effect.amount) || 1);
+    for (let i = 0; i < amount; i++) drawBadnik(state, hitter);
+    log(state, effect.text || `${hitter.name} draws a Badnik.`);
+    return;
+  }
+  if (effect.type === "log") {
+    log(state, effect.text || "Boss effect triggered.");
+  }
+}
+
+function handleBossHit(state, route, die) {
+  const boss = state?.bossFight;
+  const p = getActivePlayer(state);
+  if (!boss || boss.defeated) return;
+  boss.hitThisTurn = true;
+  boss.routeLocks[route.id] = true;
+  boss.hitDiceByRoute[route.id] = { color: die.color, value: die.value };
+  if (boss.health > 0) {
+    boss.health -= 1;
+    p.animalTokens += 1;
+    log(state, `${p.name} hits the Boss on ${route.name} (Health ${boss.health}/${boss.maxHealth}). +1 Animal Token (total ${p.animalTokens}).`);
+    applyBossOnHitEffect(state, boss.onHitEffect, p);
+  }
+  if (boss.health <= 0) {
+    boss.defeated = true;
+    state.phase = "GAME_OVER";
+    log(state, "Boss defeated! Players win.");
+  }
+}
+
+function completeBossPatternCard(state, route, card) {
+  const boss = state?.bossFight;
+  if (!boss || !route || !card) return;
+  const idx = route.cards.indexOf(card);
+  if (idx !== -1) route.cards.splice(idx, 1);
+  if (!boss.patternDiscard) boss.patternDiscard = [];
+  boss.patternDiscard.push(card);
+  const p = getActivePlayer(state);
+  log(state, `${p.name} discards a Boss Pattern Card on ${route.name}.`);
+  if (route.cards.length === 0) {
+    log(state, `Boss is open on ${route.name} Route!`);
+  }
+}
+
+function passBossAttackCards(state, fromPlayer, toPlayer) {
+  const boss = state?.bossFight;
+  if (!boss || !boss.active) return;
+  const moving = fromPlayer.badniks.filter(b => b?.isBossAttack);
+  if (!moving.length) return;
+  fromPlayer.badniks = fromPlayer.badniks.filter(b => !b?.isBossAttack);
+  attachBossAttackCardsToPlayer(state, toPlayer, moving);
+}
+
 function buildSecretPassageCard() {
   const card = clone(SECRET_PASSAGE_TEMPLATE);
   card.lastClearedChallengeId = null;
@@ -2877,6 +3391,8 @@ function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
   const powerUpDeck = buildPowerUpDeck();
   const chaosEmeraldDeck = buildChaosEmeraldDeck();
   const bonusStage = initBonusStageState();
+  const bossPatternDeck = buildBossPatternDeck();
+  const bossPatternDiscard = [];
   const buddyFlight = finalChars.includes("Tails") ? { value: 0 } : null;
   const secretPassage = finalChars.includes("Knuckles")
     ? { card: buildSecretPassageCard(), completed: false }
@@ -2896,6 +3412,9 @@ function newGame({ playerCount, seedStr, characterSelections, zoneId }) {
     chaosEmeraldDeck,
     zone,
     actBoard,
+    bossPatternDeck,
+    bossPatternDiscard,
+    bossFight: null,
     ui: { spend: null, discard: null, starPost: null },
     pendingPowerUp: null,
     pendingPowerUpQueue: [],
@@ -3060,11 +3579,20 @@ function initBadnikState(b) {
   return b;
 }
 
+function isBossAttackCard(b) {
+  return !!b?.isBossAttack;
+}
+
+function getRegularBadnikCount(p) {
+  return (p?.badniks || []).filter(b => !isBossAttackCard(b)).length;
+}
+
 function getBadnikTargetConstraints(b) {
   return b?.targeting || b?.targetConstraints || b?.constraints || b?.ability?.targeting || null;
 }
 
 function isBadnikTargetEligible(state, p, b) {
+  if (isBossAttackCard(b) && b.suppressedThisTurn) return false;
   const constraints = getBadnikTargetConstraints(b);
   if (!constraints) return true;
   const parity = constraints.diceCountParity || constraints.diceParity || null;
@@ -3079,6 +3607,10 @@ function isBadnikTargetEligible(state, p, b) {
 }
 
 function discardBadnikFromPlayer(state, p, b, reason) {
+  if (isBossAttackCard(b)) {
+    log(state, "Boss Attack cards cannot be discarded.");
+    return false;
+  }
   const idx = p.badniks.indexOf(b);
   if (idx === -1) return false;
   p.badniks.splice(idx, 1);
@@ -3148,6 +3680,7 @@ function runBadnikAbilities(state, timing, context = {}) {
   const normalizedTiming = normalizeBadnikTiming(timing);
   const phaseBefore = state.phase;
   for (const b of [...p.badniks]) {
+    if (isBossAttackCard(b) && b.suppressedThisTurn) continue;
     const result = triggerBadnikAbility(state, p, b, normalizedTiming, context);
     if (result?.halt) return { halt: true };
     if (state.pendingDamage || state.phase !== phaseBefore) return { halt: true };
@@ -3157,7 +3690,7 @@ function runBadnikAbilities(state, timing, context = {}) {
 
 function drawBadnik(state, targetPlayer) {
   const p = targetPlayer;
-  if (p.badniks.length >= 3) { log(state, `${p.name} cannot draw more Badniks (already 3).`); return; }
+  if (getRegularBadnikCount(p) >= 3) { log(state, `${p.name} cannot draw more Badniks (already 3).`); return; }
   if (!state.badnikDeck.length) {
     state.badnikDeck = shuffle(state.badnikDiscard);
     state.badnikDiscard = [];
@@ -3170,7 +3703,7 @@ function drawBadnik(state, targetPlayer) {
 }
 
 function getEligibleBadnikTargets(state) {
-  return state.players.filter(pl => pl.badniks.length < 3);
+  return state.players.filter(pl => getRegularBadnikCount(pl) < 3);
 }
 
 function queueBadnikRewardChoice(state, count = 1) {
@@ -3198,7 +3731,7 @@ function resolveBadnikRewardChoice(state, targetPlayerId) {
   if (!pending) return;
   const target = state.players.find(pl => pl.id === targetPlayerId);
   if (!target) return;
-  if (target.badniks.length >= 3) {
+  if (getRegularBadnikCount(target) >= 3) {
     log(state, `${target.name} cannot draw more Badniks (already 3).`);
     return;
   }
@@ -3444,7 +3977,8 @@ function completeZoneCard(state, route) {
   } else {
     route.activeCard = null;
     state.zone.bossFightReady = true;
-    log(state, "Zone Card Deck empty -> Boss Fight should begin (not implemented).");
+    log(state, "Zone Card Deck empty -> Boss Fight begins.");
+    beginBossFight(state);
   }
 }
 
@@ -3859,6 +4393,110 @@ function renderActBoard(viewEl, { routes, cardGradient, chevronGradient, idPrefi
   `;
 }
 
+function renderBossPatternBoard(viewEl, boss) {
+  if (!viewEl || !boss) return;
+  const routesHtml = boss.routes.map(route => {
+    const locked = boss.routeLocks?.[route.id];
+    const cards = route.cards || [];
+    const cardsHtml = cards.length
+      ? cards.map((card, idx) => {
+          const ch = card?.spaces?.[0]?.challenges?.[0];
+          const req = ch ? formatChallengeChip(ch, card) : "NONE";
+          const classes = ["boss-pattern-card"];
+          if (locked || idx !== 0) classes.push("locked");
+          if (!locked && idx === 0) classes.push("clickable");
+          const challengeId = ch?.id || "";
+          return `<div class="${classes.join(" ")}" data-route-id="${route.id}" data-card-id="${card.id}" data-challenge-id="${challengeId}">${req}</div>`;
+        }).join("")
+      : `<div class="boss-pattern-open">OPEN</div>`;
+    return `
+      <div class="boss-pattern-route ${locked ? "boss-route-locked" : ""}">
+        <div class="boss-pattern-label">${escapeHtml(route.name)}</div>
+        <div class="boss-pattern-cards">${cardsHtml}</div>
+      </div>
+    `;
+  }).join("");
+  viewEl.innerHTML = `<div class="boss-pattern-board">${routesHtml}</div>`;
+
+  const cards = viewEl.querySelectorAll(".boss-pattern-card.clickable");
+  cards.forEach(cardEl => {
+    cardEl.addEventListener("click", () => {
+      const routeId = cardEl.getAttribute("data-route-id");
+      const cardId = cardEl.getAttribute("data-card-id");
+      const challengeId = cardEl.getAttribute("data-challenge-id");
+      if (!routeId || !cardId || !challengeId) return;
+      preselectSpendTarget(STATE, { type:"boss_pattern", routeId, cardId, challengeId });
+      render();
+    });
+  });
+}
+
+function renderBossBoard(viewEl, boss) {
+  if (!viewEl || !boss) return;
+  const effectText = boss.onHitEffect?.text
+    ? `<div class="boss-effect-text">${escapeHtml(boss.onHitEffect.text)}</div>`
+    : "";
+  const routesHtml = boss.routes.map(route => {
+    const hitReq = getBossHitRequirement(boss, route.name);
+    const open = (route.cards || []).length === 0;
+    const locked = boss.routeLocks?.[route.id];
+    const hitDie = boss.hitDiceByRoute?.[route.id] || null;
+    const spaceClasses = ["boss-hit-space"];
+    if (open && !locked) spaceClasses.push("clickable");
+    if (!open || locked) spaceClasses.push("locked");
+    const chip = hitReq ? formatDieChip(hitReq.value ?? null, hitReq.color ?? null) : `<span class="boss-hit-chip">HIT</span>`;
+    const dieHtml = hitDie
+      ? `<div class="die ${hitDie.color} boss-hit-die">${buildDieFaceHtml(hitDie.value)}</div>`
+      : "";
+    return `
+      <div class="boss-hit-row">
+        <div class="boss-hit-label">${escapeHtml(route.name)}</div>
+        <div class="${spaceClasses.join(" ")}" data-boss-hit="1" data-route-id="${route.id}">
+          ${chip}
+          ${dieHtml}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const healthTokens = [];
+  const maxHealth = Math.max(0, Number(boss.maxHealth) || 0);
+  const remaining = Math.max(0, Number(boss.health) || 0);
+  for (let i = 0; i < maxHealth; i++) {
+    const empty = i >= remaining;
+    healthTokens.push(`<span class="boss-health-token${empty ? " empty" : ""}"><img src="img/animal_flicky.png" alt="Animal token"></span>`);
+  }
+
+  const bg = boss.boardImage ? `url('${boss.boardImage}')` : "none";
+  viewEl.innerHTML = `
+    <div class="boss-board-surface" style="--boss-board-bg: ${bg}">
+      <div class="boss-board-overlay">
+        <div class="boss-board-title">
+          <span>${escapeHtml(boss.name || "Boss")}</span>
+          <span>Boss Fight</span>
+        </div>
+        ${effectText}
+        <div class="boss-route-list">${routesHtml}</div>
+        <div class="boss-board-footer">
+          <div class="boss-level-chip">Boss Level ${boss.level}</div>
+          <div class="boss-health">${healthTokens.join("")}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const hitSpaces = viewEl.querySelectorAll("[data-boss-hit]");
+  hitSpaces.forEach(space => {
+    if (!space.classList.contains("clickable")) return;
+    space.addEventListener("click", () => {
+      const routeId = space.getAttribute("data-route-id");
+      if (!routeId) return;
+      preselectSpendTarget(STATE, { type:"boss_hit", routeId });
+      render();
+    });
+  });
+}
+
 function buildCardTrackHtml(cardData, defaultSpaceBgImage = null) {
   if (!cardData) return { html: `<div class="tiny muted">No active card.</div>`, availableIds: new Set() };
   const spaceCount = cardData?.spaces?.length ?? 0;
@@ -4249,45 +4887,91 @@ function refreshSpendTargets(state, die) {
 function buildSpendTargets(state, die) {
   const p = getActivePlayer(state);
   const targets = [];
+  const inBossFight = isBossFightActive(state);
 
-  for (const route of state.zone.routes) {
-    const card = route.activeCard;
-    const available = getCardAvailableChallenges(card);
-    for (const ch of available) {
-      if (!isDieLegalForChallenge(ch, card, die)) continue;
-      const rewardLabel = formatRewardLabel(ch.reward);
-      const reqLabel = formatChallengeRequirement(ch, card);
-      const label = `Zone: ${route.name} ${reqLabel} (reward: ${rewardLabel})`;
-      targets.push({
-        id: uuid(),
-        type: "zone",
-        routeId: route.id,
-        challengeId: ch.id,
-        label
-      });
+  if (inBossFight) {
+    const boss = state.bossFight;
+    for (const route of boss.routes) {
+      if (boss.routeLocks?.[route.id]) continue;
+      const card = route.cards[0] || null;
+      if (card) {
+        const available = getCardAvailableChallenges(card);
+        for (const ch of available) {
+          if (!isDieLegalForChallenge(ch, card, die)) continue;
+          const reqLabel = formatChallengeRequirement(ch, card);
+          const label = `Boss Pattern: ${route.name} ${reqLabel}`;
+          targets.push({
+            id: uuid(),
+            type: "boss_pattern",
+            routeId: route.id,
+            cardId: card.id,
+            challengeId: ch.id,
+            label
+          });
+        }
+      } else {
+        const hitReq = getBossHitRequirement(boss, route.name);
+        if (hitReq && isDieLegalForBossHit(hitReq, die)) {
+          const reqLabel = `${hitReq.color ? hitReq.color.toUpperCase() + "-" : "ANY-"}${hitReq.value ?? "?"}`;
+          const label = `Boss Hit: ${route.name} ${reqLabel}`;
+          targets.push({
+            id: uuid(),
+            type: "boss_hit",
+            routeId: route.id,
+            label
+          });
+        }
+      }
     }
-  }
+  } else {
+    for (const route of state.zone.routes) {
+      const card = route.activeCard;
+      const available = getCardAvailableChallenges(card);
+      for (const ch of available) {
+        if (!isDieLegalForChallenge(ch, card, die)) continue;
+        const rewardLabel = formatRewardLabel(ch.reward);
+        const reqLabel = formatChallengeRequirement(ch, card);
+        const label = `Zone: ${route.name} ${reqLabel} (reward: ${rewardLabel})`;
+        targets.push({
+          id: uuid(),
+          type: "zone",
+          routeId: route.id,
+          challengeId: ch.id,
+          label
+        });
+      }
+    }
 
-  if (p.character === "Knuckles" && state.secretPassage?.card) {
-    const card = state.secretPassage.card;
-    const available = getCardAvailableChallenges(card);
-    for (const ch of available) {
-      if (!isDieLegalForChallenge(ch, card, die)) continue;
-      const rewardLabel = formatRewardLabel(ch.reward);
-      const reqLabel = formatChallengeRequirement(ch, card);
-      const label = `Secret Passage: ${reqLabel} (reward: ${rewardLabel})`;
-      targets.push({
-        id: uuid(),
-        type: "secret_passage",
-        challengeId: ch.id,
-        label
-      });
+    if (p.character === "Knuckles" && state.secretPassage?.card) {
+      const card = state.secretPassage.card;
+      const available = getCardAvailableChallenges(card);
+      for (const ch of available) {
+        if (!isDieLegalForChallenge(ch, card, die)) continue;
+        const rewardLabel = formatRewardLabel(ch.reward);
+        const reqLabel = formatChallengeRequirement(ch, card);
+        const label = `Secret Passage: ${reqLabel} (reward: ${rewardLabel})`;
+        targets.push({
+          id: uuid(),
+          type: "secret_passage",
+          challengeId: ch.id,
+          label
+        });
+      }
     }
   }
 
   for (let i=0;i<p.badniks.length;i++) {
     const b = p.badniks[i];
     if (!isBadnikTargetEligible(state, p, b)) continue;
+    if (isBossAttackCard(b)) {
+      targets.push({
+        id: uuid(),
+        type: "boss_attack",
+        badnikIndex: i,
+        label: `Boss Attack: clear ${getBadnikDisplayName(b)}`
+      });
+      continue;
+    }
     const badnikName = getBadnikTypeDef(b)?.name || "Badnik";
     const avoidOk = b.avoid
       && (b.avoid.value === die.value)
@@ -4374,10 +5058,27 @@ function preselectSpendTarget(state, targetInfo) {
       t.routeId === targetInfo.routeId &&
       t.challengeId === targetInfo.challengeId
     );
+  } else if (targetInfo.type === "boss_pattern") {
+    match = spendUi.targets.find(t =>
+      t.type === "boss_pattern" &&
+      t.routeId === targetInfo.routeId &&
+      t.cardId === targetInfo.cardId &&
+      t.challengeId === targetInfo.challengeId
+    );
+  } else if (targetInfo.type === "boss_hit") {
+    match = spendUi.targets.find(t =>
+      t.type === "boss_hit" &&
+      t.routeId === targetInfo.routeId
+    );
   } else if (targetInfo.type === "secret_passage") {
     match = spendUi.targets.find(t =>
       t.type === "secret_passage" &&
       t.challengeId === targetInfo.challengeId
+    );
+  } else if (targetInfo.type === "boss_attack") {
+    match = spendUi.targets.find(t =>
+      t.type === "boss_attack" &&
+      t.badnikIndex === targetInfo.badnikIndex
     );
   } else if (targetInfo.type === "badnik") {
     const candidates = spendUi.targets.filter(t =>
@@ -4758,6 +5459,7 @@ function spendDieOnTarget(state, die, target, spendMeta) {
   let challengeReward = null;
   let completedRoute = null;
   let completedSecretPassage = false;
+  let completedBossPattern = null;
   let spendLabel = `${die.color.toUpperCase()}-${die.value}`;
   if (useAmyRaise) {
     spendLabel += ` (Piko Piko Hammer -> ${buddyFlightBaseValue})`;
@@ -4767,7 +5469,75 @@ function spendDieOnTarget(state, die, target, spendMeta) {
     spendLabel += ` (Buddy Flight ${deltaLabel} -> ${buddyFlightAdjustedValue})`;
   }
 
-  if (target.type === "zone") {
+  if (target.type === "boss_pattern") {
+    const boss = state.bossFight;
+    if (!boss || !boss.active) {
+      log(state, "Spend failed: Boss Fight not active.");
+      return state;
+    }
+    const route = boss.routes.find(r => r.id === target.routeId);
+    if (!route || boss.routeLocks?.[route.id]) {
+      log(state, "Spend failed: boss route not available.");
+      return state;
+    }
+    const cardIndex = route.cards.findIndex(c => c.id === target.cardId);
+    if (cardIndex !== 0) {
+      log(state, "Spend failed: Boss Pattern must be leftmost on the route.");
+      return state;
+    }
+    const card = route.cards[cardIndex];
+    const challengeMap = getCardChallengeMap(card);
+    const entry = challengeMap.get(target.challengeId);
+    const ch = entry?.challenge;
+    const availableIds = new Set(getCardAvailableChallengeIds(card));
+    const legal = ch && isDieLegalForChallenge(ch, card, effectiveDie);
+    if (!card || !ch || !availableIds.has(ch.id) || !legal) {
+      log(state, "Spend failed: Boss Pattern target no longer legal.");
+      return state;
+    }
+    ch.cleared = true;
+    if (card) card.lastClearedChallengeId = ch.id;
+    applyBumperLock(ch, card, effectiveDie);
+    spendTarget = { type:"zone", route: route.name, challengeId: ch.id, bossPattern:true };
+    const reqLabel = formatChallengeRequirement(ch, card);
+    log(state, `${p.name} spends ${spendLabel} to clear Boss Pattern (${route.name} ${reqLabel}).`);
+    completedBossPattern = { route, card };
+  } else if (target.type === "boss_hit") {
+    const boss = state.bossFight;
+    if (!boss || !boss.active) {
+      log(state, "Spend failed: Boss Fight not active.");
+      return state;
+    }
+    const route = boss.routes.find(r => r.id === target.routeId);
+    if (!route || route.cards.length > 0 || boss.routeLocks?.[route.id]) {
+      log(state, "Spend failed: Boss Hit not available on that route.");
+      return state;
+    }
+    const hitReq = getBossHitRequirement(boss, route.name);
+    if (!isDieLegalForBossHit(hitReq, effectiveDie)) {
+      log(state, "Spend failed: Boss Hit requirement not met.");
+      return state;
+    }
+    const reqLabel = `${hitReq?.color ? hitReq.color.toUpperCase() + "-" : "ANY-"}${hitReq?.value ?? "?"}`;
+    spendTarget = { type:"boss_hit", route: route.name };
+    log(state, `${p.name} spends ${spendLabel} to HIT the Boss on ${route.name} (${reqLabel}).`);
+    handleBossHit(state, route, effectiveDie);
+  } else if (target.type === "boss_attack") {
+    const b = p.badniks[target.badnikIndex];
+    if (!b || !isBossAttackCard(b)) {
+      log(state, "Spend failed: Boss Attack target no longer exists.");
+      return state;
+    }
+    if (b.suppressedThisTurn) {
+      log(state, "Spend failed: Boss Attack already cleared this turn.");
+      return state;
+    }
+    b.suppressedThisTurn = true;
+    flipBossAttackCard(b);
+    const sideLabel = b.faceIndex === 1 ? "Side 2" : "Side 1";
+    spendTarget = { type:"badnik", name: getBadnikDisplayName(b), mode:"clear", bossAttack:true };
+    log(state, `${p.name} spends ${spendLabel} to clear Boss Attack (${getBadnikDisplayName(b)}) -> flip to ${sideLabel}, ignored this turn.`);
+  } else if (target.type === "zone") {
     const route = state.zone.routes.find(r => r.id === target.routeId);
     const card = route?.activeCard;
     const challengeMap = getCardChallengeMap(card);
@@ -4922,6 +5692,9 @@ function spendDieOnTarget(state, die, target, spendMeta) {
 
   if (challengeReward) applyReward(state, challengeReward);
   if (completedRoute && isCardComplete(completedRoute.activeCard)) completeZoneCard(state, completedRoute);
+  if (completedBossPattern && isCardComplete(completedBossPattern.card)) {
+    completeBossPatternCard(state, completedBossPattern.route, completedBossPattern.card);
+  }
   if (completedSecretPassage && state.secretPassage?.card && isCardComplete(state.secretPassage.card)) {
     completeSecretPassage(state);
   }
@@ -4977,6 +5750,7 @@ function rerollStep(state, options = {}) {
   if (p.badniks.length) {
     const hits = [];
     for (const b of p.badniks) {
+      if (isBossAttackCard(b) && b.suppressedThisTurn) continue;
       for (const atk of (b.attacks||[])) {
         const hit = atk.color
           ? p.dicePool.some(d => d.color === atk.color && d.value === atk.value)
@@ -5051,6 +5825,15 @@ function endTurn(state) {
   p.blueShieldLostThisTurn = false;
   state.pendingDamage = null;
 
+  if (state.bossFight?.active && !state.bossFight.defeated) {
+    if (state.bossFight.hitThisTurn) refillBossPatternRoutes(state);
+    state.bossFight.hitThisTurn = false;
+    clearBossRouteLocks(state);
+    for (const b of p.badniks) {
+      if (isBossAttackCard(b)) b.suppressedThisTurn = false;
+    }
+  }
+
   const over = isGameOver(state);
   if (over) {
     state.phase = "GAME_OVER";
@@ -5065,6 +5848,9 @@ function endTurn(state) {
   np.rollActionSelectedThisTurn = false;
   state.phase = "ROLL_ACTION";
   log(state, `âž¡ï¸ Turn passes to ${np.name} (${np.character}).`);
+  if (state.bossFight?.active && !state.bossFight.defeated) {
+    passBossAttackCards(state, p, np);
+  }
   resetBuddyFlightForTurn(state);
   return state;
 }
@@ -5145,6 +5931,7 @@ function getBadnikTypeDef(b) {
 }
 
 function getBadnikDisplayName(b) {
+  if (isBossAttackCard(b)) return b?.name || "Boss Attack";
   return getBadnikTypeDef(b)?.name || "Badnik";
 }
 
@@ -5163,6 +5950,7 @@ function hasBadnikRule(state, ruleKey) {
   if (!target) return false;
   const p = getActivePlayer(state);
   for (const b of p.badniks || []) {
+    if (isBossAttackCard(b) && b.suppressedThisTurn) continue;
     const ability = b?.ability || {};
     const directRule = normalizeBadnikRule(ability.rule);
     if (directRule && directRule === target) return true;
@@ -5237,7 +6025,30 @@ function formatBadnikAbilityText(b) {
   return `<span class="ability-text"><span class="ability-prefix">${escapeHtml(label)}:</span> ${desc}</span>`;
 }
 
+function buildBossAttackCardHtml(b, index) {
+  const attacksLabel = (b.attacks || [])
+    .map(a => `${a?.color ? a.color[0].toUpperCase() : "ANY"}${a?.value ?? ""}`)
+    .join(", ") || "none";
+  const abilityText = formatBadnikAbilityText(b);
+  const sideLabel = b.faceIndex === 1 ? "Side 2" : "Side 1";
+  const suppressedClass = b.suppressedThisTurn ? " suppressed" : "";
+  return `
+    <div class="badnik-card boss-attack-card${suppressedClass}" data-badnik-index="${index}">
+      <div class="boss-attack-header">
+        <span>${escapeHtml(b.name || "Boss Attack")}</span>
+        <span>${sideLabel}</span>
+      </div>
+      <div class="boss-attack-body">
+        <div><b>Attacks</b>: ${escapeHtml(attacksLabel)}</div>
+        <div><b>Ability</b>: ${abilityText || "none"}</div>
+      </div>
+      ${b.suppressedThisTurn ? `<div class="boss-attack-suppressed">Cleared this turn: attacks and ability ignored.</div>` : ""}
+    </div>
+  `;
+}
+
 function buildBadnikCardHtml(b, zoneId, index) {
+  if (isBossAttackCard(b)) return buildBossAttackCardHtml(b, index);
   const attackList = (b.attacks || []).map(a => formatDieChip(a.value ?? null, a.color ?? null));
   const attackTop = attackList[0] || "";
   const attackRest = attackList.slice(1).join("");
@@ -5931,7 +6742,10 @@ function render() {
   const spendPanel = document.getElementById("spendTargetPanel");
   const spendUi = s.ui?.spend;
   if (!spendUi || !spendUi.open) {
-    spendPanel.textContent = `Select a die and click "Spend Selected Die" to choose a target. Tip: click a Zone/Badnik card to preselect.`;
+    const tip = s.bossFight?.active
+      ? "Tip: click a Boss Pattern/Hit space or Badnik card to preselect."
+      : "Tip: click a Zone/Badnik card to preselect.";
+    spendPanel.textContent = `Select a die and click "Spend Selected Die" to choose a target. ${tip}`;
   } else {
     const die = p.dicePool.find(d => d.id === spendUi.dieId);
     const dieLabel = die ? `${die.color.toUpperCase()}-${die.value}` : "Unknown";
@@ -6042,23 +6856,37 @@ function render() {
   const zv = document.getElementById("zoneView");
   zv.innerHTML = "";
   const zoneConfig = getZoneConfig(s.zoneId);
+  const inBossFight = isBossFightActive(s);
   const zoneHeader = document.getElementById("zoneHeaderInfo");
   if (zoneHeader) {
     const deckRemaining = s.zone?.deck?.length ?? 0;
     const zoneName = zoneConfig?.name || "Zone";
     const actName = zoneConfig?.actName || s.actBoard?.name || "";
-      const actChip = actName
-        ? `<span class="zone-title-chip zone-title-act"><span class="zone-title-text">${escapeHtml(actName)}</span></span>`
-        : "";
-      zoneHeader.innerHTML = `
-      <div class="zone-level-name">
-        <div class="zone-title-group">
-          <span class="zone-title-chip zone-title-main"><span class="zone-title-text">${escapeHtml(zoneName)}</span></span>
-          ${actChip}
+      if (inBossFight && s.bossFight) {
+        const bossName = s.bossFight.name || "Boss";
+        zoneHeader.innerHTML = `
+          <div class="zone-level-name">
+            <div class="zone-title-group">
+              <span class="zone-title-chip zone-title-main"><span class="zone-title-text">${escapeHtml(zoneName)}</span></span>
+              <span class="zone-title-chip zone-title-act"><span class="zone-title-text">Boss Fight</span></span>
+            </div>
+            <span class="zone-deck">${escapeHtml(bossName)} | Level ${s.bossFight.level}</span>
+          </div>
+        `;
+      } else {
+        const actChip = actName
+          ? `<span class="zone-title-chip zone-title-act"><span class="zone-title-text">${escapeHtml(actName)}</span></span>`
+          : "";
+        zoneHeader.innerHTML = `
+        <div class="zone-level-name">
+          <div class="zone-title-group">
+            <span class="zone-title-chip zone-title-main"><span class="zone-title-text">${escapeHtml(zoneName)}</span></span>
+            ${actChip}
+          </div>
+          <span class="zone-deck">Deck ${deckRemaining}</span>
         </div>
-        <span class="zone-deck">Deck ${deckRemaining}</span>
-      </div>
-    `;
+      `;
+      }
     }
   const zoneSpaceBg = zoneConfig?.zoneGenerator?.spaceBackground
     || CONFIG.zoneGenerator?.spaceBackground
@@ -6071,58 +6899,68 @@ function render() {
   const chevronGradient = getChevronGradient(zoneConfig);
   const actBoardView = document.getElementById("actBoardView");
   if (actBoardView) {
-    const actChevron = getActChevronGradient(zoneConfig);
-    const routes = ["Top","Middle","Bottom"].map(name => ({
-      name,
-      reward: getActBoardReward(s, name)
-    }));
-    renderActBoard(actBoardView, {
-      routes,
-      cardGradient: s.actBoard?.cardGradient,
-      chevronGradient: actChevron,
-      idPrefix: "act"
-    });
-  }
-  for (const route of s.zone.routes) {
-    const cardData = route.activeCard;
-    const card = document.createElement("div");
-    card.className = "card zone-card secret-passage";
-    const gradient = buildGradientCss(s.actBoard?.cardGradient);
-    if (zoneSpaceBg) card.style.setProperty("--zone-space-bg", zoneSpaceBg);
-    if (gradient) card.style.setProperty("--zone-card-gradient", gradient);
-    const { html: trackHtml, availableIds } = buildCardTrackHtml(cardData, zoneSpaceBgImage);
-    const zoneName = zoneConfig?.name || "Zone";
-    const zoneNameShort = zoneName.replace(/\bzone\b/i, "").replace(/\s+/g, " ").trim() || zoneName;
-    card.innerHTML = `
-      <div class="zone-card-inner">
-        <div class="zone-card-face zone-card-front">
-          ${trackHtml}
-        </div>
-        <div class="zone-card-face zone-card-back">
-          <img class="zone-back-logo" src="img/Sonic_Roll_Logo.webp" alt="Sonic Roll">
-          <div class="zone-back-title"><span class="zone-back-title-text">${escapeHtml(zoneNameShort)}</span></div>
-          <div class="zone-back-subtitle"><span class="zone-back-subtitle-text">Zone</span></div>
-          <div class="zone-back-copyright">©SEGA</div>
-        </div>
-      </div>
-    `;
-    if (cardData && !cardData.revealed) {
-      card.classList.add("flip-in");
-      cardData.revealed = true;
-    }
-    if (cardData) {
-      card.title = "Click a challenge to preselect spend target";
-      card.addEventListener("click", (event) => {
-        const target = event.target.closest("[data-challenge-id]");
-        if (!target) return;
-        const challengeId = target.getAttribute("data-challenge-id");
-        if (!availableIds.has(challengeId)) return;
-        preselectSpendTarget(STATE, { type:"zone", routeId: route.id, challengeId });
-        render();
+    actBoardView.classList.toggle("boss-board", inBossFight);
+    if (inBossFight && s.bossFight) {
+      actBoardView.style.background = "";
+      renderBossBoard(actBoardView, s.bossFight);
+    } else {
+      const actChevron = getActChevronGradient(zoneConfig);
+      const routes = ["Top","Middle","Bottom"].map(name => ({
+        name,
+        reward: getActBoardReward(s, name)
+      }));
+      renderActBoard(actBoardView, {
+        routes,
+        cardGradient: s.actBoard?.cardGradient,
+        chevronGradient: actChevron,
+        idPrefix: "act"
       });
     }
-    zv.appendChild(card);
-    scheduleZoneCardConnectors(card, cardData, chevronGradient);
+  }
+  if (inBossFight && s.bossFight) {
+    renderBossPatternBoard(zv, s.bossFight);
+  } else {
+    for (const route of s.zone.routes) {
+      const cardData = route.activeCard;
+      const card = document.createElement("div");
+      card.className = "card zone-card secret-passage";
+      const gradient = buildGradientCss(s.actBoard?.cardGradient);
+      if (zoneSpaceBg) card.style.setProperty("--zone-space-bg", zoneSpaceBg);
+      if (gradient) card.style.setProperty("--zone-card-gradient", gradient);
+      const { html: trackHtml, availableIds } = buildCardTrackHtml(cardData, zoneSpaceBgImage);
+      const zoneName = zoneConfig?.name || "Zone";
+      const zoneNameShort = zoneName.replace(/\bzone\b/i, "").replace(/\s+/g, " ").trim() || zoneName;
+      card.innerHTML = `
+        <div class="zone-card-inner">
+          <div class="zone-card-face zone-card-front">
+            ${trackHtml}
+          </div>
+          <div class="zone-card-face zone-card-back">
+            <img class="zone-back-logo" src="img/Sonic_Roll_Logo.webp" alt="Sonic Roll">
+            <div class="zone-back-title"><span class="zone-back-title-text">${escapeHtml(zoneNameShort)}</span></div>
+            <div class="zone-back-subtitle"><span class="zone-back-subtitle-text">Zone</span></div>
+            <div class="zone-back-copyright">©SEGA</div>
+          </div>
+        </div>
+      `;
+      if (cardData && !cardData.revealed) {
+        card.classList.add("flip-in");
+        cardData.revealed = true;
+      }
+      if (cardData) {
+        card.title = "Click a challenge to preselect spend target";
+        card.addEventListener("click", (event) => {
+          const target = event.target.closest("[data-challenge-id]");
+          if (!target) return;
+          const challengeId = target.getAttribute("data-challenge-id");
+          if (!availableIds.has(challengeId)) return;
+          preselectSpendTarget(STATE, { type:"zone", routeId: route.id, challengeId });
+          render();
+        });
+      }
+      zv.appendChild(card);
+      scheduleZoneCardConnectors(card, cardData, chevronGradient);
+    }
   }
 
   const secretRow = document.getElementById("secretPassageRow");
@@ -6131,7 +6969,10 @@ function render() {
   if (secretRow && secretView) {
     secretView.innerHTML = "";
   }
-  if (p.character === "Knuckles" && s.secretPassage?.card && secretRow && secretView) {
+  if (inBossFight) {
+    if (secretRow) secretRow.style.display = "none";
+    if (secretActBoardView) secretActBoardView.innerHTML = "";
+  } else if (p.character === "Knuckles" && s.secretPassage?.card && secretRow && secretView) {
     secretRow.style.display = "";
     const cardData = s.secretPassage.card;
     const card = document.createElement("div");
@@ -6199,19 +7040,24 @@ function render() {
       const idx = Number(card.getAttribute("data-badnik-index"));
       if (!Number.isFinite(idx)) return;
       card.title = "Click to preselect spend target";
+      const isBossAttack = card.classList.contains("boss-attack-card");
+      const isSuppressed = isBossAttack && card.classList.contains("suppressed");
       card.addEventListener("click", () => {
-        preselectSpendTarget(STATE, { type:"badnik", badnikIndex: idx });
+        if (isSuppressed) return;
+        preselectSpendTarget(STATE, { type: isBossAttack ? "boss_attack" : "badnik", badnikIndex: idx });
         render();
       });
-      const modes = card.querySelectorAll("[data-badnik-mode]");
-      modes.forEach(el => {
-        const mode = el.getAttribute("data-badnik-mode");
-        el.addEventListener("click", (event) => {
-          event.stopPropagation();
-          preselectSpendTarget(STATE, { type:"badnik", badnikIndex: idx, mode });
-          render();
+      if (!isBossAttack) {
+        const modes = card.querySelectorAll("[data-badnik-mode]");
+        modes.forEach(el => {
+          const mode = el.getAttribute("data-badnik-mode");
+          el.addEventListener("click", (event) => {
+            event.stopPropagation();
+            preselectSpendTarget(STATE, { type:"badnik", badnikIndex: idx, mode });
+            render();
+          });
         });
-      });
+      }
     });
   }
 
