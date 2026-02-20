@@ -1502,6 +1502,7 @@
     <div class="card" style="flex:0 0 380px; min-width:360px;">
       <h2>Debug</h2>
       <button id="btnForceBonusStage">Force Bonus Stage</button>
+      <button id="btnForceBossBattle">Force Boss Battle</button>
       <button id="btnShowPowerUpDeck">Show Power-Up Deck Order</button>
       <button id="btnShowZoneJson">Show Zone Card JSON</button>
 
@@ -6586,6 +6587,7 @@ function render() {
   dis("btnUseBoostToken", !canUseBoost || actionBlocked);
   dis("btnEndTurn", !(s.phase==="SPENDING" || s.phase==="REROLL" || s.phase==="END_TURN") || actionBlocked);
   dis("btnForceBonusStage", bonusStageOpen);
+  dis("btnForceBossBattle", !!s.bossFight?.active || actionBlocked);
 
   // Roll action buttons
   const raWrap = document.getElementById("rollActionButtons");
@@ -7377,6 +7379,31 @@ if (forceBonusBtn) {
       return;
     }
     enterBonusStage(STATE, "Debug trigger");
+    render();
+  });
+}
+
+const forceBossBtn = document.getElementById("btnForceBossBattle");
+if (forceBossBtn) {
+  forceBossBtn.addEventListener("click", () => {
+    if (!STATE) return;
+    if (STATE.bossFight?.active) {
+      log(STATE, "Boss Fight already active.");
+      render();
+      return;
+    }
+    if (STATE.pendingPowerUp || STATE.pendingDamage || STATE.pendingBadnikReward || STATE.pendingWallClimb || STATE.pendingAvoid || STATE.bonusStage?.open) {
+      log(STATE, "Resolve the pending step before forcing the Boss Fight.");
+      render();
+      return;
+    }
+    STATE.zone.deck = [];
+    for (const route of STATE.zone.routes || []) {
+      route.activeCard = null;
+    }
+    STATE.zone.bossFightReady = true;
+    log(STATE, "Debug: Zone deck cleared -> Boss Fight begins.");
+    beginBossFight(STATE);
     render();
   });
 }
