@@ -347,7 +347,7 @@
     .bonus-stage-grid {
       display:grid;
       grid-template-columns: repeat(4, 120px);
-      gap:16px;
+      gap:12px;
       justify-content:center;
       margin-top:20px;
       perspective:900px;
@@ -465,7 +465,7 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:12px;
+      gap:16px;
       width:100%;
       box-sizing:border-box;
       padding:6px 8px;
@@ -518,7 +518,7 @@
       opacity:.95;
       white-space:nowrap;
     }
-    #zoneView { justify-items:start; }
+    #zoneView { justify-items:start; width:100%; }
     .zone-card {
       max-width:460px;
       width:100%;
@@ -709,16 +709,20 @@
       background:transparent;
       border:none;
       box-shadow:none;
+      min-height:620px;
     }
     .boss-pattern-board {
       display:flex;
       flex-direction:column;
-      gap:10px;
+      gap:12px;
+      width:100%;
     }
     .boss-pattern-route {
       display:flex;
-      gap:8px;
-      align-items:center;
+      gap:12px;
+      align-items:flex-start;
+      width:100%;
+      justify-content:flex-end;
     }
     .boss-pattern-label {
       width:64px;
@@ -726,38 +730,192 @@
       text-transform:uppercase;
       letter-spacing:.08em;
       color:#b8c6ff;
+      margin-top:6px;
+      display:none;
     }
     .boss-pattern-cards {
       display:flex;
-      gap:6px;
-      flex-wrap:wrap;
+      gap:10px;
+      flex-wrap:nowrap;
       align-items:center;
+      justify-content:flex-end;
+      flex:1;
+      position:relative;
+      overflow:visible;
     }
     .boss-pattern-card {
-      background:#0f1733;
-      border:1px solid #2d3b73;
-      border-radius:10px;
-      padding:6px 8px;
-      min-width:84px;
-      min-height:54px;
+      width:336px;
+      max-width:100%;
+      aspect-ratio: 7 / 5;
+      border:8px solid #101010;
+      border-radius:14px;
+      overflow:hidden;
+      background-color:#111;
+      background-image: var(--boss-pattern-bg, var(--boss-pattern-texture, url("img/zone_card_checkerboard.png")));
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+      box-shadow: 0 6px 12px rgba(0,0,0,.35);
+      padding:10px 0 10px 10px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      box-sizing:border-box;
+      position:relative;
+      justify-content:center;
+    }
+    .boss-pattern-card + .boss-pattern-card {
+      margin-left:-202px;
+    }
+    .boss-pattern-card.locked { opacity:.45; }
+    .boss-pattern-open {
+      width:336px;
+      max-width:100%;
+      aspect-ratio: 7 / 5;
       display:flex;
       align-items:center;
       justify-content:center;
-      position:relative;
-    }
-    .boss-pattern-card.locked { opacity:.45; }
-    .boss-pattern-card.clickable { cursor:pointer; }
-    .boss-pattern-card.clickable:hover { filter:brightness(1.08); }
-    .boss-pattern-open {
-      padding:6px 10px;
-      border:1px dashed #2d3b73;
-      border-radius:10px;
-      font-size:11px;
+      border:2px dashed #2d3b73;
+      border-radius:14px;
+      font-size:12px;
       color:#b0b8e8;
       text-transform:uppercase;
-      letter-spacing:.08em;
+      letter-spacing:.12em;
+      background:#0f1733;
     }
-    .boss-route-locked .boss-pattern-card { opacity:.35; cursor:not-allowed; }
+    .boss-route-locked .boss-pattern-card { opacity:.35; }
+    .boss-pattern-lane {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:4px 0 4px 8px;
+    }
+    .boss-pattern-lane.top { margin-bottom:10px; }
+    .boss-pattern-lane.bottom { margin-top:10px; }
+    .boss-pattern-challenge.clickable { cursor:pointer; }
+    .boss-pattern-challenge.clickable:hover { filter:brightness(1.08); }
+    .boss-pattern-challenge {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:42px;
+      flex:0 0 42px;
+      margin-right:22px;
+      position:relative;
+      z-index:2;
+    }
+    .boss-pattern-challenge.cleared {
+      opacity:.55;
+      filter: grayscale(0.35);
+    }
+    .boss-pattern-challenge.cleared .req-chip-border {
+      background:#c01818;
+    }
+    .boss-pattern-path-row {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      justify-content:flex-end;
+      position:relative;
+      min-height:48px;
+      --badnik-path-color: #101010;
+      width:50%;
+      margin-left:auto;
+    }
+    .boss-pattern-path-row.bumper-tight {
+      gap:0;
+      transform: translateX(var(--boss-pattern-bumper-offset, -10px));
+    }
+    .boss-pattern-path-row .req-chip-stack {
+      margin-right:-14px;
+      z-index:2;
+    }
+    .boss-pattern-path-row.bumper-tight .boss-pattern-challenge {
+      width:42px;
+      flex:0 0 42px;
+      margin-right:30px;
+    }
+    .boss-pattern-path-row.bumper-tight .boss-pattern-challenge.is-last {
+      margin-right:22px;
+    }
+    .boss-pattern-path-row.bumper-tight .req-chip-stack {
+      margin-right:-10px;
+    }
+    .boss-pattern-path-row .badnik-connector.horizontal {
+      height:16px;
+    }
+    .boss-pattern-connector {
+      position:relative;
+      overflow:visible;
+      flex:0 0 var(--boss-pattern-connector-small, 36px);
+      width:var(--boss-pattern-connector-small, 36px);
+      min-width:24px;
+    }
+    .boss-pattern-connector.main {
+      flex:1;
+      width:auto;
+      min-width:64px;
+    }
+    .boss-pattern-connector.bumper {
+      flex:0 0 4px;
+      width:4px;
+      min-width:4px;
+      padding:0;
+    }
+    .boss-pattern-path-row.bumper-tight .boss-pattern-connector.bumper {
+      flex:0 0 4px;
+      width:4px;
+      min-width:4px;
+      margin:0 -6px;
+      padding:0;
+    }
+    .boss-pattern-path-row.bumper-tight .boss-pattern-connector.bumper .badnik-chevrons {
+      gap:0;
+    }
+    .boss-pattern-connector .track-reward {
+      position:absolute;
+      left:8px;
+      top:50%;
+      transform: translateY(-50%);
+      margin:0;
+      pointer-events:none;
+      z-index:4;
+    }
+    .boss-pattern-reward-token {
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%, -50%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:46px;
+      height:46px;
+      border-radius:50%;
+      background:#fff;
+      border:3px solid #d8b24c;
+      box-sizing:border-box;
+      overflow:hidden;
+      z-index:3;
+      pointer-events:none;
+    }
+    .boss-pattern-reward-token img {
+      width:28px;
+      height:28px;
+      display:block;
+      object-fit:contain;
+      image-rendering: pixelated;
+    }
+    .boss-pattern-reward-token.empty { visibility:hidden; }
+    .boss-pattern-reward-token.claimed { opacity:.5; }
+    .boss-pattern-reward-text {
+      font-size:8px;
+      font-weight:700;
+      color:#111;
+      text-align:center;
+      line-height:1.1;
+      padding:0 4px;
+    }
     .boss-board-surface {
       position:relative;
       border:1px solid #23305a;
@@ -767,7 +925,7 @@
       background-image: var(--boss-board-bg);
       background-size: cover;
       background-position: center;
-      min-height:320px;
+      min-height:100%;
       display:flex;
       flex-direction:column;
     }
@@ -2303,8 +2461,254 @@ const CONFIG = {
   },
   bossPatternGenerator: {
     deckSize: 24,
-    colorChance: 0.35
+    colorChance: 0.35,
+    topRewardChance: 0.25,
+    bottomRewardChance: 0.6,
+    bumperChance: 0.2,
+    bottomColorChance: 0.1
   },
+  bossPatternDeck: [
+    {
+      background: "img/boss_pattern_bg/tails_tornado.png",
+      top: {
+        challenges: [{ value: 3, color: "red" }],
+        reward: { type: "boost" }
+      },
+      bottom: {
+        challenges: [{ value: 3 }]
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/tails_tornado.png",
+      top: {
+        challenges: [{ value: 4, color: "blue" }],
+        reward: { type: "rings", amount: 3 }
+      },
+      bottom: {
+        challenges: [{ value: 4 }]
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/tails_tornado.png",
+      top: {
+        challenges: [{ value: 6, color: "yellow" }],
+        reward: { type: "star_post" }
+      },
+      bottom: {
+        challenges: [{ value: 6 }]
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/tails_tornado.png",
+      top: {
+        challenges: [{ bumper: true }, { bumper: true }],
+        reward: { type: "power_up" }
+      },
+      bottom: {
+        challenges: [{ value: 5 }]
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/rockets.png",
+      top: {
+        challenges: [{ value: 1, color: "red" }]
+      },
+      bottom: {
+        challenges: [{ value: 1 }],
+        reward: { type: "lose_die" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/rockets.png",
+      top: {
+        challenges: [{ value: 2, color: "red" }]
+      },
+      bottom: {
+        challenges: [{ value: 2 }],
+        reward: { type: "lose_die" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/rockets.png",
+      top: {
+        challenges: [{ value: 4, color: "red" }]
+      },
+      bottom: {
+        challenges: [{ value: 4 }],
+        reward: { type: "lose_die" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/rockets.png",
+      top: {
+        challenges: [{ value: 5, color: "red" }]
+      },
+      bottom: {
+        challenges: [{ value: 5 }],
+        reward: { type: "lose_die" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/rockets.png",
+      top: {
+        challenges: [{ value: 6, color: "red" }]
+      },
+      bottom: {
+        challenges: [{ value: 6 }],
+        reward: { type: "lose_die" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/stardust.png",
+      top: {
+        challenges: [{ value: 1, color: "blue" }]
+      },
+      bottom: {
+        challenges: [{ value: 1 }],
+        reward: { type: "hazard", amount: 2 }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/stardust.png",
+      top: {
+        challenges: [{ value: 2, color: "blue" }]
+      },
+      bottom: {
+        challenges: [{ value: 2 }],
+        reward: { type: "hazard", amount: 2 }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/stardust.png",
+      top: {
+        challenges: [{ value: 3, color: "blue" }]
+      },
+      bottom: {
+        challenges: [{ value: 3 }],
+        reward: { type: "hazard", amount: 2 }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/stardust.png",
+      top: {
+        challenges: [{ value: 5, color: "blue" }]
+      },
+      bottom: {
+        challenges: [{ value: 5 }],
+        reward: { type: "hazard", amount: 2 }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/stardust.png",
+      top: {
+        challenges: [{ value: 6, color: "blue" }]
+      },
+      bottom: {
+        challenges: [{ value: 6 }],
+        reward: { type: "hazard", amount: 2 }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/studiopolis.png",
+      top: {
+        challenges: [{ value: 1, color: "yellow" }]
+      },
+      bottom: {
+        challenges: [{ value: 1 }],
+        reward: { type: "badnik" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/studiopolis.png",
+      top: {
+        challenges: [{ value: 2, color: "yellow" }]
+      },
+      bottom: {
+        challenges: [{ value: 2 }],
+        reward: { type: "badnik" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/studiopolis.png",
+      top: {
+        challenges: [{ value: 3, color: "yellow" }]
+      },
+      bottom: {
+        challenges: [{ value: 3 }],
+        reward: { type: "badnik" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/studiopolis.png",
+      top: {
+        challenges: [{ value: 4, color: "yellow" }]
+      },
+      bottom: {
+        challenges: [{ value: 4 }],
+        reward: { type: "badnik" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/studiopolis.png",
+      top: {
+        challenges: [{ value: 5, color: "yellow" }]
+      },
+      bottom: {
+        challenges: [{ value: 5 }],
+        reward: { type: "badnik" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/hydrocity.png",
+      top: {
+        challenges: [{ bumper: true }, { bumper: true }]
+      },
+      bottom: {
+        challenges: [{ value: 1 }],
+        reward: { type: "time" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/hydrocity.png",
+      top: {
+        challenges: [{ bumper: true }, { bumper: true }, { bumper: true }]
+      },
+      bottom: {
+        challenges: [{ value: 2 }],
+        reward: { type: "time" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/hydrocity.png",
+      top: {
+        challenges: [{ bumper: true }, { bumper: true }]
+      },
+      bottom: {
+        challenges: [{ value: 3 }],
+        reward: { type: "time" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/hydrocity.png",
+      top: {
+        challenges: [{ bumper: true }, { bumper: true }]
+      },
+      bottom: {
+        challenges: [{ value: 4 }],
+        reward: { type: "time" }
+      }
+    },
+    {
+      background: "img/boss_pattern_bg/hydrocity.png",
+      top: {
+        challenges: [{ bumper: true }, { bumper: true }]
+      },
+      bottom: {
+        challenges: [{ value: 6 }],
+        reward: { type: "time" }
+      }
+    }
+  ],
   zones: {
     green_hill: {
       id: "green_hill",
@@ -3049,33 +3453,304 @@ function isBossFightActive(state) {
   return !!state?.bossFight?.active;
 }
 
-function generateBossPatternCard(cfg = {}) {
-  const colorChance = Number.isFinite(cfg.colorChance) ? cfg.colorChance : 0.35;
-  const colorRoll = rng()();
-  const color = colorRoll < colorChance
-    ? (rng()() < 0.34 ? DieColor.BLUE : rng()() < 0.67 ? DieColor.YELLOW : DieColor.RED)
-    : null;
-  const n = rollD6();
-  const challenge = {
+function normalizeBossPatternReward(value) {
+  if (!value) return null;
+  const normalizeType = (rawType) => {
+    if (!rawType) return null;
+    const key = String(rawType).trim().toLowerCase().replace(/[\s\-]+/g, "_");
+    const aliases = {
+      starpost: "star_post",
+      star_post: "star_post",
+      powerup: "power_up",
+      power_up: "power_up",
+      lose_die: "lose_die",
+      lose_a_die: "lose_die",
+      lose_die_token: "lose_die",
+      lose_die_roll: "lose_die",
+      lose_die_reward: "lose_die",
+      badnik: "badnik",
+      hazard: "hazard",
+      hazard_die: "hazard",
+      time: "time",
+      time_token: "time",
+      big_ring: "big_ring",
+      add_dice: "add_dice",
+      boost: "boost",
+      rings: "rings"
+    };
+    return aliases[key] || key;
+  };
+  if (typeof value === "string") {
+    const type = normalizeType(value);
+    if (!type) return null;
+    const reward = { type };
+    if (reward.amount == null && ["boost", "rings", "hazard", "badnik"].includes(type)) {
+      reward.amount = 1;
+    }
+    return reward;
+  }
+  if (typeof value === "object") {
+    const reward = { ...value };
+    reward.type = normalizeType(reward.type || reward.kind || reward.name || reward.reward) || reward.type;
+    if (reward.type && reward.amount == null && ["boost", "rings", "hazard", "badnik"].includes(reward.type)) {
+      reward.amount = 1;
+    }
+    return reward;
+  }
+  return null;
+}
+
+function normalizeBossPatternLaneDefs(def) {
+  if (def == null) return [];
+  if (Array.isArray(def)) return def;
+  if (Array.isArray(def.challenges)) return def.challenges;
+  if (Array.isArray(def.steps)) return def.steps;
+  if (Array.isArray(def.path)) return def.path;
+  return [def];
+}
+
+function applyBossPatternBumperGrouping(defs) {
+  if (!Array.isArray(defs) || !defs.length) return [];
+  const out = defs.slice();
+  const autoIdx = [];
+  for (let i = 0; i < out.length; i++) {
+    const def = out[i];
+    if (!def || !def.bumper) continue;
+    const b = def.bumper;
+    const hasId = typeof b === "object" && !!b.id;
+    if (!hasId) autoIdx.push(i);
+  }
+  if (autoIdx.length) {
+    const groupId = uuid();
+    autoIdx.forEach((idx, seq) => {
+      const def = out[idx];
+      if (!def || !def.bumper || typeof def !== "object") return;
+      const bumperObj = typeof def.bumper === "object" ? { ...def.bumper } : {};
+      bumperObj.id = groupId;
+      bumperObj.index = seq;
+      bumperObj.length = autoIdx.length;
+      out[idx] = { ...def, bumper: bumperObj };
+    });
+  }
+  const groups = {};
+  for (let i = 0; i < out.length; i++) {
+    const def = out[i];
+    const b = def?.bumper;
+    if (b && typeof b === "object" && b.id) {
+      if (!groups[b.id]) groups[b.id] = [];
+      groups[b.id].push({ index: i, bumper: b });
+    }
+  }
+  for (const entries of Object.values(groups)) {
+    const len = entries.length;
+    entries.forEach((entry, seq) => {
+      const idx = entry.index;
+      const def = out[idx];
+      if (!def || !def.bumper || typeof def !== "object") return;
+      const bumperObj = { ...entry.bumper };
+      if (!Number.isFinite(bumperObj.index)) bumperObj.index = seq;
+      if (!Number.isFinite(bumperObj.length)) bumperObj.length = len;
+      out[idx] = { ...def, bumper: bumperObj };
+    });
+  }
+  return out;
+}
+
+function buildBossPatternLane(def, lane, index = 0, total = 1) {
+  if (def == null) return null;
+  if (typeof def === "number") def = { value: def };
+  const color = def.color || def.dieColor || null;
+  const value = Number.isFinite(def.value) ? def.value : (Number.isFinite(def.n) ? def.n : null);
+  const ch = {
     id: uuid(),
-    n,
+    n: value,
     color,
     cleared: false,
     reward: null,
-    lane: "shared",
+    lane,
     next: []
   };
+  if (def.bumper) {
+    const bumperDef = def.bumper;
+    const bumperId = (typeof bumperDef === "object" && bumperDef.id) ? bumperDef.id : uuid();
+    const bumperIndex = (typeof bumperDef === "object" && Number.isFinite(bumperDef.index)) ? bumperDef.index : 0;
+    const bumperLength = (typeof bumperDef === "object" && Number.isFinite(bumperDef.length)) ? bumperDef.length : 1;
+    ch.bumper = { id: bumperId, index: bumperIndex, length: bumperLength };
+    if (ch.n == null) ch.n = null;
+  }
+  if (ch.n == null && !ch.bumper) ch.n = rollD6();
+  return ch;
+}
+
+function buildBossPatternCardFromDef(def) {
+  const topDef = def?.top || def?.topRoute || def?.upper || def?.difficult;
+  const bottomDef = def?.bottom || def?.bottomRoute || def?.lower || def?.easy;
+  const topDefs = applyBossPatternBumperGrouping(normalizeBossPatternLaneDefs(topDef));
+  const bottomDefs = applyBossPatternBumperGrouping(normalizeBossPatternLaneDefs(bottomDef));
+  const topReward = normalizeBossPatternReward(topDef?.reward || topDef?.rewardType || topDef?.rewardKind);
+  const bottomReward = normalizeBossPatternReward(bottomDef?.reward || bottomDef?.rewardType || bottomDef?.rewardKind);
+  const topChallenges = topDefs.map((laneDef, idx) => buildBossPatternLane(laneDef, "top", idx, topDefs.length)).filter(Boolean);
+  const bottomChallenges = bottomDefs.map((laneDef, idx) => buildBossPatternLane(laneDef, "bottom", idx, bottomDefs.length)).filter(Boolean);
+  const maxLen = Math.max(topChallenges.length, bottomChallenges.length);
+  if (!maxLen) {
+    topChallenges.push(buildBossPatternLane({}, "top", 0, 1));
+    bottomChallenges.push(buildBossPatternLane({}, "bottom", 0, 1));
+  }
+  for (let i = 0; i < topChallenges.length; i++) {
+    topChallenges[i].next = topChallenges[i + 1] ? [topChallenges[i + 1].id] : [];
+  }
+  for (let i = 0; i < bottomChallenges.length; i++) {
+    bottomChallenges[i].next = bottomChallenges[i + 1] ? [bottomChallenges[i + 1].id] : [];
+  }
+  const spaces = [];
+  const maxSpaces = Math.max(topChallenges.length, bottomChallenges.length);
+  for (let i = 0; i < maxSpaces; i++) {
+    const challenges = [];
+    if (topChallenges[i]) challenges.push(topChallenges[i]);
+    if (bottomChallenges[i]) challenges.push(bottomChallenges[i]);
+    if (challenges.length) spaces.push({ id: uuid(), challenges });
+  }
   return {
     id: uuid(),
-    spaces: [{ id: uuid(), challenges: [challenge] }],
+    spaces,
     bumperLocks: {},
     lastClearedChallengeId: null,
-    isBossPattern: true
+    isBossPattern: true,
+    background: def?.background || null,
+    laneRewards: { top: topReward, bottom: bottomReward },
+    laneRewardsClaimed: { top: false, bottom: false }
+  };
+}
+
+function generateBossPatternCard(cfg = {}) {
+  const topColorChance = Number.isFinite(cfg.topColorChance) ? cfg.topColorChance
+    : (Number.isFinite(cfg.colorChance) ? cfg.colorChance : 0.35);
+  const bottomColorChance = Number.isFinite(cfg.bottomColorChance) ? cfg.bottomColorChance : 0.1;
+  const bumperChance = Number.isFinite(cfg.bumperChance) ? cfg.bumperChance : 0.2;
+  const topRewardChance = Number.isFinite(cfg.topRewardChance) ? cfg.topRewardChance : 0.25;
+  const bottomRewardChance = Number.isFinite(cfg.bottomRewardChance) ? cfg.bottomRewardChance : 0.6;
+
+  function rollColor(chance) {
+    const roll = rng()();
+    if (roll >= chance) return null;
+    const pick = rng()();
+    return pick < 0.34 ? DieColor.BLUE : pick < 0.67 ? DieColor.YELLOW : DieColor.RED;
+  }
+
+  function pickReward(list) {
+    if (!list.length) return null;
+    return list[Math.floor(rng()() * list.length)];
+  }
+
+  function rollPositiveReward() {
+    const list = [
+      { type: "boost", amount: 1 },
+      { type: "star_post", amount: 1 },
+      { type: "power_up" },
+      { type: "rings", amount: (rng()() < 0.5 ? 2 : 3) }
+    ];
+    return pickReward(list);
+  }
+
+  function rollNegativeReward() {
+    const list = [
+      { type: "hazard", amount: (rng()() < 0.7 ? 1 : 2) },
+      { type: "lose_die", amount: 1 },
+      { type: "badnik", amount: 1 }
+    ];
+    return pickReward(list);
+  }
+
+  function pickPatternBackground() {
+    const list = [
+      "img/boss_pattern_bg/hydrocity.png",
+      "img/boss_pattern_bg/rockets.png",
+      "img/boss_pattern_bg/stardust.png",
+      "img/boss_pattern_bg/studiopolis.png",
+      "img/boss_pattern_bg/tails_tornado.png"
+    ];
+    return list[Math.floor(rng()() * list.length)];
+  }
+
+  function resolveStepCount(value, fallbackMin, fallbackMax) {
+    let min = fallbackMin;
+    let max = fallbackMax;
+    if (Number.isFinite(value)) {
+      min = value;
+      max = value;
+    } else if (Array.isArray(value)) {
+      min = value[0];
+      max = value[1] ?? value[0];
+    } else if (value && typeof value === "object") {
+      if (Number.isFinite(value.min)) min = value.min;
+      if (Number.isFinite(value.max)) max = value.max;
+    }
+    min = Math.max(1, Math.floor(min));
+    max = Math.max(min, Math.floor(max));
+    return Math.floor(min + rng()() * (max - min + 1));
+  }
+
+  const stepsMin = Number.isFinite(cfg.stepsMin) ? cfg.stepsMin : 1;
+  const stepsMax = Number.isFinite(cfg.stepsMax) ? cfg.stepsMax : stepsMin;
+  const topMin = Number.isFinite(cfg.topStepsMin) ? cfg.topStepsMin : stepsMin;
+  const topMax = Number.isFinite(cfg.topStepsMax) ? cfg.topStepsMax : stepsMax;
+  const bottomMin = Number.isFinite(cfg.bottomStepsMin) ? cfg.bottomStepsMin : stepsMin;
+  const bottomMax = Number.isFinite(cfg.bottomStepsMax) ? cfg.bottomStepsMax : stepsMax;
+  const topSteps = resolveStepCount(cfg.topSteps ?? cfg.topStepsRange, topMin, topMax);
+  const bottomSteps = resolveStepCount(cfg.bottomSteps ?? cfg.bottomStepsRange, bottomMin, bottomMax);
+
+  const topIsBumper = rng()() < bumperChance;
+  const topReward = rng()() < topRewardChance ? rollPositiveReward() : null;
+  const topChallenges = [];
+  for (let i = 0; i < topSteps; i++) {
+    const isBumper = topIsBumper && i === 0;
+    const def = isBumper
+      ? { bumper: true }
+      : { value: rollD6(), color: rollColor(topColorChance) };
+    topChallenges.push(buildBossPatternLane(def, "top", i, topSteps));
+  }
+
+  const bottomReward = rng()() < bottomRewardChance ? rollNegativeReward() : null;
+  const bottomChallenges = [];
+  for (let i = 0; i < bottomSteps; i++) {
+    const def = { value: rollD6(), color: rollColor(bottomColorChance) };
+    bottomChallenges.push(buildBossPatternLane(def, "bottom", i, bottomSteps));
+  }
+
+  for (let i = 0; i < topChallenges.length; i++) {
+    topChallenges[i].next = topChallenges[i + 1] ? [topChallenges[i + 1].id] : [];
+  }
+  for (let i = 0; i < bottomChallenges.length; i++) {
+    bottomChallenges[i].next = bottomChallenges[i + 1] ? [bottomChallenges[i + 1].id] : [];
+  }
+
+  const spaces = [];
+  const maxSpaces = Math.max(topChallenges.length, bottomChallenges.length);
+  for (let i = 0; i < maxSpaces; i++) {
+    const challenges = [];
+    if (topChallenges[i]) challenges.push(topChallenges[i]);
+    if (bottomChallenges[i]) challenges.push(bottomChallenges[i]);
+    if (challenges.length) spaces.push({ id: uuid(), challenges });
+  }
+
+  return {
+    id: uuid(),
+    spaces,
+    bumperLocks: {},
+    lastClearedChallengeId: null,
+    isBossPattern: true,
+    background: pickPatternBackground(),
+    laneRewards: { top: topReward, bottom: bottomReward },
+    laneRewardsClaimed: { top: false, bottom: false }
   };
 }
 
 function buildBossPatternDeck() {
   const cfg = CONFIG.bossPatternGenerator || {};
+  const defined = Array.isArray(CONFIG.bossPatternDeck) ? CONFIG.bossPatternDeck : [];
+  if (defined.length) {
+    return shuffle(defined.map(def => buildBossPatternCardFromDef(def)));
+  }
   const size = Number.isFinite(cfg.deckSize) ? cfg.deckSize : 24;
   const deck = [];
   for (let i = 0; i < size; i++) deck.push(generateBossPatternCard(cfg));
@@ -3098,6 +3773,50 @@ function drawBossPatternCard(state) {
     }
   }
   return boss.patternDeck.shift() || null;
+}
+
+function getBossPatternLaneReward(card, lane) {
+  if (!card || !lane) return null;
+  return card.laneRewards?.[lane] || null;
+}
+
+function getBossPatternLaneChallenges(card, lane) {
+  if (!card || !lane) return [];
+  const spaces = card.spaces || [];
+  const list = [];
+  for (const space of spaces) {
+    const ch = (space.challenges || []).find(item => item.lane === lane);
+    if (ch) list.push(ch);
+  }
+  return list;
+}
+
+function getBossPatternAvailableChallenges(card) {
+  if (!card) return [];
+  const challenges = [];
+  const lanes = new Set();
+  for (const space of (card.spaces || [])) {
+    for (const ch of (space.challenges || [])) {
+      lanes.add(ch.lane || "top");
+    }
+  }
+  for (const lane of lanes) {
+    const laneChallenges = getBossPatternLaneChallenges(card, lane);
+    const next = laneChallenges.find(ch => !ch.cleared);
+    if (next) challenges.push(next);
+  }
+  return challenges;
+}
+
+function getBossPatternAvailableChallengeIds(card) {
+  return getBossPatternAvailableChallenges(card).map(ch => ch.id);
+}
+
+function isBossPatternLaneCleared(card, lane) {
+  if (!card || !lane) return false;
+  const laneChallenges = getBossPatternLaneChallenges(card, lane);
+  if (!laneChallenges.length) return false;
+  return laneChallenges.every(ch => ch.cleared);
 }
 
 function getBossHitRequirement(boss, routeName) {
@@ -4208,6 +4927,48 @@ function formatActRewardHtml(reward) {
   return `<div class="act-reward-circle"><span class="act-reward-text">${escapeHtml(formatRewardLabel(reward))}</span></div>`;
 }
 
+function formatBossPatternRewardToken(reward, claimed = false) {
+  const claimedClass = claimed ? " claimed" : "";
+  if (!reward) return `<div class="boss-pattern-reward-token empty"></div>`;
+  let content = "";
+  if (reward.type === "big_ring") {
+    content = `<img src="img/big_ring.png" alt="Big Ring">`;
+  } else if (reward.type === "rings") {
+    const amount = reward.amount ?? 1;
+    const ringSrc =
+      amount === 2 ? "img/ring_2.png" :
+      amount === 3 ? "img/ring_3.png" :
+      amount === 4 ? "img/ring_4.png" :
+      amount === 5 ? "img/ring_5.png" :
+      "img/ring.png";
+    content = `<img src="${ringSrc}" alt="Rings">`;
+  } else if (reward.type === "power_up") {
+    content = `<img src="img/power_up.png" alt="Power Up">`;
+  } else if (reward.type === "badnik") {
+    content = `<img src="img/badnik.png" alt="Badnik">`;
+  } else if (reward.type === "boost") {
+    content = `<img src="img/boost.png" alt="Boost">`;
+  } else if (reward.type === "time") {
+    content = `<img src="img/time.png" alt="Time">`;
+  } else if (reward.type === "star_post") {
+    content = `<img src="img/star_post.png" alt="Star Post">`;
+  } else if (reward.type === "hazard") {
+    const amount = reward.amount ?? 1;
+    const hazardSrc =
+      amount === 2 ? "img/hazard_2.png" :
+      amount === 3 ? "img/hazard_3.png" :
+      "img/dice_black.png";
+    content = `<img src="${hazardSrc}" alt="Hazard">`;
+  } else if (reward.type === "lose_die") {
+    content = `<img src="img/lose_die.png" alt="Lose Die">`;
+  } else if (reward.type === "add_dice") {
+    content = `<span class="boss-pattern-reward-text">ADD</span>`;
+  } else {
+    content = `<span class="boss-pattern-reward-text">${escapeHtml(formatRewardLabel(reward))}</span>`;
+  }
+  return `<div class="boss-pattern-reward-token${claimedClass}">${content}</div>`;
+}
+
 function getActBoardReward(state, routeName) {
   const route = state?.actBoard?.routes?.find(r => r.name === routeName);
   return route?.reward || null;
@@ -4401,13 +5162,64 @@ function renderBossPatternBoard(viewEl, boss) {
     const cards = route.cards || [];
     const cardsHtml = cards.length
       ? cards.map((card, idx) => {
-          const ch = card?.spaces?.[0]?.challenges?.[0];
-          const req = ch ? formatChallengeChip(ch, card) : "NONE";
+          const cardLocked = locked || idx !== 0;
           const classes = ["boss-pattern-card"];
-          if (locked || idx !== 0) classes.push("locked");
-          if (!locked && idx === 0) classes.push("clickable");
-          const challengeId = ch?.id || "";
-          return `<div class="${classes.join(" ")}" data-route-id="${route.id}" data-card-id="${card.id}" data-challenge-id="${challengeId}">${req}</div>`;
+          if (cardLocked) classes.push("locked");
+          const zIndex = cards.length - idx;
+          const topChallenges = getBossPatternLaneChallenges(card, "top");
+          const bottomChallenges = getBossPatternLaneChallenges(card, "bottom");
+          const availableIds = new Set(getBossPatternAvailableChallengeIds(card));
+          const topReward = getBossPatternLaneReward(card, "top");
+          const bottomReward = getBossPatternLaneReward(card, "bottom");
+          const topRewardClaimed = !!card.laneRewardsClaimed?.top;
+          const bottomRewardClaimed = !!card.laneRewardsClaimed?.bottom;
+          const topRewardHtml = topReward
+            ? `<div class="track-reward${topRewardClaimed ? " cleared" : ""}">${formatActRewardHtml(topReward)}</div>`
+            : "";
+          const bottomRewardHtml = bottomReward
+            ? `<div class="track-reward${bottomRewardClaimed ? " cleared" : ""}">${formatActRewardHtml(bottomReward)}</div>`
+            : "";
+          const topConnectorHtml = buildBossPatternConnectorHtml(9, topRewardHtml, "main");
+          const bottomConnectorHtml = buildBossPatternConnectorHtml(9, bottomRewardHtml, "main");
+          const smallConnectorHtml = buildBossPatternConnectorHtml(4, "", "small");
+          const bumperConnectorHtml = buildBossPatternConnectorHtml(1, "", "bumper");
+          const bgImage = card.background || null;
+          const buildLaneHtml = (laneChallenges, rewardConnectorHtml) => {
+            if (!laneChallenges.length) return "";
+            const bumperTight = laneChallenges.length > 1 && laneChallenges.every(ch => !!ch.bumper);
+            return laneChallenges.map((ch, index) => {
+              const isLast = index === laneChallenges.length - 1;
+              const clickable = (!cardLocked && !ch.cleared && availableIds.has(ch.id)) ? "clickable" : "";
+              const clearedClass = ch.cleared ? "cleared" : "";
+              const lastClass = isLast ? "is-last" : "";
+              const chip = formatChallengeChip(ch, card);
+              const connector = isLast
+                ? rewardConnectorHtml
+                : (bumperTight ? bumperConnectorHtml : smallConnectorHtml);
+              return `
+                <div class="boss-pattern-challenge ${clickable} ${clearedClass} ${lastClass}" data-route-id="${route.id}" data-card-id="${card.id}" data-challenge-id="${ch?.id || ""}">${chip}</div>
+                ${connector}
+              `;
+            }).join("");
+          };
+          const topBumperTight = topChallenges.length > 1 && topChallenges.every(ch => !!ch.bumper);
+          const bottomBumperTight = bottomChallenges.length > 1 && bottomChallenges.every(ch => !!ch.bumper);
+          const topLaneHtml = buildLaneHtml(topChallenges, topConnectorHtml);
+          const bottomLaneHtml = buildLaneHtml(bottomChallenges, bottomConnectorHtml);
+          return `
+            <div class="${classes.join(" ")}" style="z-index:${zIndex};${bgImage ? `--boss-pattern-bg:url('${bgImage}');` : ""}">
+              <div class="boss-pattern-lane top">
+                <div class="boss-pattern-path-row${topBumperTight ? " bumper-tight" : ""}">
+                  ${topLaneHtml}
+                </div>
+              </div>
+              <div class="boss-pattern-lane bottom">
+                <div class="boss-pattern-path-row${bottomBumperTight ? " bumper-tight" : ""}">
+                  ${bottomLaneHtml}
+                </div>
+              </div>
+            </div>
+          `;
         }).join("")
       : `<div class="boss-pattern-open">OPEN</div>`;
     return `
@@ -4419,12 +5231,12 @@ function renderBossPatternBoard(viewEl, boss) {
   }).join("");
   viewEl.innerHTML = `<div class="boss-pattern-board">${routesHtml}</div>`;
 
-  const cards = viewEl.querySelectorAll(".boss-pattern-card.clickable");
-  cards.forEach(cardEl => {
-    cardEl.addEventListener("click", () => {
-      const routeId = cardEl.getAttribute("data-route-id");
-      const cardId = cardEl.getAttribute("data-card-id");
-      const challengeId = cardEl.getAttribute("data-challenge-id");
+  const challenges = viewEl.querySelectorAll(".boss-pattern-challenge.clickable");
+  challenges.forEach(chEl => {
+    chEl.addEventListener("click", () => {
+      const routeId = chEl.getAttribute("data-route-id");
+      const cardId = chEl.getAttribute("data-card-id");
+      const challengeId = chEl.getAttribute("data-challenge-id");
       if (!routeId || !cardId || !challengeId) return;
       preselectSpendTarget(STATE, { type:"boss_pattern", routeId, cardId, challengeId });
       render();
@@ -4572,6 +5384,7 @@ function renderZoneCardConnectors(cardEl, cardData) {
   const challengeMap = getCardChallengeMap(cardData);
   const trackEl = cardEl.querySelector(".track-list");
   if (!trackEl) return;
+  const activeChevronColor = cardEl._chevronActiveColor || "#f7f7f7";
   const drawPathSegment = (svg, defs, options) => {
     const {
       x1,
@@ -4641,7 +5454,7 @@ function renderZoneCardConnectors(cardEl, cardData) {
           const cy = y1 + (segDy / segLen) * offset;
           const chevron = document.createElementNS("http://www.w3.org/2000/svg", "path");
           chevron.setAttribute("d", pathD);
-          chevron.setAttribute("fill", isActivePath ? "#f7f7f7" : `url(#${gradId})`);
+          chevron.setAttribute("fill", isActivePath ? activeChevronColor : `url(#${gradId})`);
           chevron.setAttribute("transform", `translate(${cx} ${cy}) rotate(${angle})`);
           svg.appendChild(chevron);
         }
@@ -4805,11 +5618,17 @@ function ensureZoneConnectorResizeHandler() {
 }
 
 function isChallengeAvailable(card, challengeId) {
+  if (card?.isBossPattern) {
+    return getBossPatternAvailableChallengeIds(card).includes(challengeId);
+  }
   return getCardAvailableChallengeIds(card).includes(challengeId);
 }
 
 function isCardComplete(card) {
   if (!card?.spaces?.length) return true;
+  if (card.isBossPattern) {
+    return card.spaces.every(space => (space.challenges || []).every(ch => ch.cleared));
+  }
   if (!card.lastClearedChallengeId) return false;
   return getCardAvailableChallengeIds(card).length === 0;
 }
@@ -4896,11 +5715,17 @@ function buildSpendTargets(state, die) {
       if (boss.routeLocks?.[route.id]) continue;
       const card = route.cards[0] || null;
       if (card) {
-        const available = getCardAvailableChallenges(card);
+        const available = card.isBossPattern
+          ? getBossPatternAvailableChallenges(card)
+          : getCardAvailableChallenges(card);
         for (const ch of available) {
           if (!isDieLegalForChallenge(ch, card, die)) continue;
           const reqLabel = formatChallengeRequirement(ch, card);
-          const label = `Boss Pattern: ${route.name} ${reqLabel}`;
+          const laneReward = getBossPatternLaneReward(card, ch.lane);
+          const rewardAvailable = laneReward && !card.laneRewardsClaimed?.[ch.lane];
+          const rewardLabel = rewardAvailable ? formatRewardLabel(laneReward) : "none";
+          const laneLabel = ch.lane ? ch.lane.toUpperCase() : "ROUTE";
+          const label = `Boss Pattern: ${route.name} ${laneLabel} ${reqLabel} (reward: ${rewardLabel})`;
           targets.push({
             id: uuid(),
             type: "boss_pattern",
@@ -5490,19 +6315,32 @@ function spendDieOnTarget(state, die, target, spendMeta) {
     const challengeMap = getCardChallengeMap(card);
     const entry = challengeMap.get(target.challengeId);
     const ch = entry?.challenge;
-    const availableIds = new Set(getCardAvailableChallengeIds(card));
+    const availableIds = new Set(getBossPatternAvailableChallengeIds(card));
     const legal = ch && isDieLegalForChallenge(ch, card, effectiveDie);
     if (!card || !ch || !availableIds.has(ch.id) || !legal) {
       log(state, "Spend failed: Boss Pattern target no longer legal.");
       return state;
     }
     ch.cleared = true;
-    if (card) card.lastClearedChallengeId = ch.id;
     applyBumperLock(ch, card, effectiveDie);
     spendTarget = { type:"zone", route: route.name, challengeId: ch.id, bossPattern:true };
     const reqLabel = formatChallengeRequirement(ch, card);
-    log(state, `${p.name} spends ${spendLabel} to clear Boss Pattern (${route.name} ${reqLabel}).`);
-    completedBossPattern = { route, card };
+    const laneLabel = ch.lane ? ch.lane.toUpperCase() : "ROUTE";
+    log(state, `${p.name} spends ${spendLabel} to clear Boss Pattern (${route.name} ${laneLabel} ${reqLabel}).`);
+    const laneKey = ch.lane || "top";
+    if (!card.laneRewardsClaimed) card.laneRewardsClaimed = { top: false, bottom: false };
+    const laneCleared = isBossPatternLaneCleared(card, laneKey);
+    if (laneCleared && !card.laneRewardsClaimed[laneKey]) {
+      const laneReward = getBossPatternLaneReward(card, laneKey);
+      if (laneReward) {
+        applyReward(state, laneReward);
+        log(state, `Boss Pattern reward (${route.name} ${laneLabel}): ${formatRewardLabel(laneReward)}.`);
+      }
+      card.laneRewardsClaimed[laneKey] = true;
+    }
+    if (laneCleared) {
+      completedBossPattern = { route, card, force: true };
+    }
   } else if (target.type === "boss_hit") {
     const boss = state.bossFight;
     if (!boss || !boss.active) {
@@ -5693,7 +6531,7 @@ function spendDieOnTarget(state, die, target, spendMeta) {
 
   if (challengeReward) applyReward(state, challengeReward);
   if (completedRoute && isCardComplete(completedRoute.activeCard)) completeZoneCard(state, completedRoute);
-  if (completedBossPattern && isCardComplete(completedBossPattern.card)) {
+  if (completedBossPattern && (completedBossPattern.force || isCardComplete(completedBossPattern.card))) {
     completeBossPatternCard(state, completedBossPattern.route, completedBossPattern.card);
   }
   if (completedSecretPassage && state.secretPassage?.card && isCardComplete(state.secretPassage.card)) {
@@ -5982,6 +6820,17 @@ function buildBadnikConnectorHtml(direction = "horizontal", count = 4) {
   return `
     <div class="badnik-connector ${direction}">
       <div class="badnik-chevrons">${chevrons}</div>
+    </div>
+  `;
+}
+
+function buildBossPatternConnectorHtml(count, rewardHtml, size = "main") {
+  const chevrons = Array.from({ length: count }, () => `<span class="badnik-chevron"></span>`).join("");
+  const sizeClass = size === "small" ? " small" : (size === "bumper" ? " bumper" : " main");
+  return `
+    <div class="badnik-connector horizontal boss-pattern-connector${sizeClass}">
+      <div class="badnik-chevrons">${chevrons}</div>
+      ${rewardHtml}
     </div>
   `;
 }
