@@ -290,6 +290,44 @@
     .modal { max-width:540px; width:calc(100% - 32px); }
     .modal-actions { justify-content:flex-end; }
     .zone-json-modal .modal { max-width:720px; }
+    .badnik-deck-modal .modal {
+      max-width:1200px;
+      max-height:calc(100vh - 80px);
+      overflow:hidden;
+    }
+    .badnik-deck-meta {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      margin:6px 0 10px;
+    }
+    .badnik-deck-grid {
+      display:flex;
+      flex-wrap:wrap;
+      gap:14px;
+      justify-content:center;
+      align-items:flex-start;
+      padding:4px 2px;
+      max-height:calc(100vh - 260px);
+      overflow:auto;
+    }
+    .badnik-deck-grid .badnik-card { cursor:default; }
+    .badnik-deck-card { position:relative; }
+    .badnik-deck-order {
+      position:absolute;
+      top:6px;
+      left:6px;
+      background:rgba(0,0,0,.7);
+      color:#fff;
+      font-size:10px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      padding:2px 6px;
+      border-radius:999px;
+      z-index:3;
+      pointer-events:none;
+    }
     .zone-json-text {
       width:100%;
       min-height:320px;
@@ -750,7 +788,7 @@
       border:8px solid #101010;
       border-radius:14px;
       overflow:hidden;
-      background-color:#111;
+      background-color:#3f3f3f;
       background-image: var(--boss-pattern-bg, var(--boss-pattern-texture, url("img/zone_card_checkerboard.png")));
       background-repeat: no-repeat;
       background-size: cover;
@@ -789,6 +827,7 @@
       align-items:center;
       gap:10px;
       padding:4px 0 4px 8px;
+      direction: rtl;
     }
     .boss-pattern-lane.top { margin-bottom:10px; }
     .boss-pattern-lane.bottom { margin-top:10px; }
@@ -800,7 +839,6 @@
       justify-content:center;
       width:42px;
       flex:0 0 42px;
-      margin-right:22px;
       position:relative;
       z-index:2;
     }
@@ -819,36 +857,18 @@
       position:relative;
       min-height:48px;
       --badnik-path-color: #101010;
-      width:50%;
       margin-left:auto;
     }
-    .boss-pattern-path-row.bumper-tight {
-      gap:0;
-      transform: translateX(var(--boss-pattern-bumper-offset, -10px));
-    }
     .boss-pattern-path-row .req-chip-stack {
-      margin-right:-14px;
       z-index:2;
-    }
-    .boss-pattern-path-row.bumper-tight .boss-pattern-challenge {
-      width:42px;
-      flex:0 0 42px;
-      margin-right:30px;
-    }
-    .boss-pattern-path-row.bumper-tight .boss-pattern-challenge.is-last {
-      margin-right:22px;
-    }
-    .boss-pattern-path-row.bumper-tight .req-chip-stack {
-      margin-right:-10px;
-    }
-    .boss-pattern-path-row .badnik-connector.horizontal {
-      height:16px;
     }
     .boss-pattern-connector {
       position:relative;
       overflow:visible;
-      flex:0 0 var(--boss-pattern-connector-small, 36px);
-      width:var(--boss-pattern-connector-small, 36px);
+      
+      --boss-pattern-connector-width: 88px;
+      flex:0 0 var(--boss-pattern-connector-width);
+      width:var(--boss-pattern-connector-width);
       min-width:24px;
     }
     .boss-pattern-connector.main {
@@ -858,23 +878,11 @@
     }
     .boss-pattern-connector.bumper {
       flex:0 0 4px;
-      width:4px;
-      min-width:4px;
+      margin-right: -14px;
       padding:0;
-    }
-    .boss-pattern-path-row.bumper-tight .boss-pattern-connector.bumper {
-      flex:0 0 4px;
-      width:4px;
-      min-width:4px;
-      margin:0 -6px;
-      padding:0;
-    }
-    .boss-pattern-path-row.bumper-tight .boss-pattern-connector.bumper .badnik-chevrons {
-      gap:0;
     }
     .boss-pattern-connector .track-reward {
       position:absolute;
-      left:8px;
       top:50%;
       transform: translateY(-50%);
       margin:0;
@@ -1289,12 +1297,11 @@
       gap:6px;
       z-index:2;
     }
-    .badnik-connector {
+    .badnik-connector, .boss-pattern-connector {
       background:var(--badnik-path-color, #101010);
       display:flex;
       align-items:center;
       justify-content:center;
-      border-radius:999px;
     }
     .badnik-connector.vertical {
       width:18px;
@@ -1306,8 +1313,11 @@
     }
     .badnik-connector.horizontal {
       height:16px;
-      width:var(--badnik-connector-width, 86px);
-      padding:0 6px;
+      width:var(--badnik-connector-width);
+    }
+    .boss-pattern-connector.horizontal {
+      height:16px;
+      width:var(--boss-pattern-connector-width);
     }
     .badnik-chevrons {
       display:flex;
@@ -1319,7 +1329,11 @@
     .badnik-chevron {
       width:12px;
       height:10px;
-      background:#d85a2a;
+      --badnik-chevron-base: #d85a2a;
+      --badnik-chevron-accent: #c32a00;
+      background:var(--badnik-chevron-base);
+      background-image:
+        linear-gradient(180deg, var(--badnik-chevron-base) 0 50%, var(--badnik-chevron-accent) 50% 100%);
       clip-path: polygon(0 0, 75% 0, 100% 50%, 75% 100%, 0 100%, 25% 50%);
     }
     .badnik-connector.vertical .badnik-chevron {
@@ -1401,10 +1415,11 @@
       align-items:center;
       gap:6px;
       position:relative;
-      --badnik-connector-width: 85px;
+      --badnik-connector-width: 95px;
       --badnik-animal-size: 46px;
     }
-    .badnik-right-row .req-chip-stack {
+    .badnik-right-row .req-chip-stack,
+    .boss-pattern-challenge .req-chip-stack {
       margin-right:-14px;
       z-index:2;
     }
@@ -1662,6 +1677,7 @@
       <button id="btnForceBonusStage">Force Bonus Stage</button>
       <button id="btnForceBossBattle">Force Boss Battle</button>
       <button id="btnShowPowerUpDeck">Show Power-Up Deck Order</button>
+      <button id="btnShowBadnikDeck">Show Badnik Deck Order</button>
       <button id="btnShowZoneJson">Show Zone Card JSON</button>
 
       <div class="hr"></div>
@@ -1738,6 +1754,17 @@
       <div class="row modal-actions">
         <button id="zoneJsonCopy">Copy JSON</button>
         <button id="zoneJsonClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="badnikDeckModal" class="modal-overlay badnik-deck-modal">
+    <div class="card modal">
+      <h2>Badnik Deck</h2>
+      <div id="badnikDeckMeta" class="badnik-deck-meta tiny muted"></div>
+      <div id="badnikDeckGrid" class="badnik-deck-grid"></div>
+      <div class="row modal-actions">
+        <button id="badnikDeckClose">Close</button>
       </div>
     </div>
   </div>
@@ -5197,24 +5224,22 @@ function renderBossPatternBoard(viewEl, boss) {
                 ? rewardConnectorHtml
                 : (bumperTight ? bumperConnectorHtml : smallConnectorHtml);
               return `
-                <div class="boss-pattern-challenge ${clickable} ${clearedClass} ${lastClass}" data-route-id="${route.id}" data-card-id="${card.id}" data-challenge-id="${ch?.id || ""}">${chip}</div>
                 ${connector}
+                <div class="boss-pattern-challenge ${clickable} ${clearedClass} ${lastClass}" data-route-id="${route.id}" data-card-id="${card.id}" data-challenge-id="${ch?.id || ""}">${chip}</div>
               `;
-            }).join("");
+            }).reverse().join("");
           };
-          const topBumperTight = topChallenges.length > 1 && topChallenges.every(ch => !!ch.bumper);
-          const bottomBumperTight = bottomChallenges.length > 1 && bottomChallenges.every(ch => !!ch.bumper);
           const topLaneHtml = buildLaneHtml(topChallenges, topConnectorHtml);
           const bottomLaneHtml = buildLaneHtml(bottomChallenges, bottomConnectorHtml);
           return `
             <div class="${classes.join(" ")}" style="z-index:${zIndex};${bgImage ? `--boss-pattern-bg:url('${bgImage}');` : ""}">
               <div class="boss-pattern-lane top">
-                <div class="boss-pattern-path-row${topBumperTight ? " bumper-tight" : ""}">
+                <div class="boss-pattern-path-row">
                   ${topLaneHtml}
                 </div>
               </div>
               <div class="boss-pattern-lane bottom">
-                <div class="boss-pattern-path-row${bottomBumperTight ? " bumper-tight" : ""}">
+                <div class="boss-pattern-path-row">
                   ${bottomLaneHtml}
                 </div>
               </div>
@@ -6828,7 +6853,7 @@ function buildBossPatternConnectorHtml(count, rewardHtml, size = "main") {
   const chevrons = Array.from({ length: count }, () => `<span class="badnik-chevron"></span>`).join("");
   const sizeClass = size === "small" ? " small" : (size === "bumper" ? " bumper" : " main");
   return `
-    <div class="badnik-connector horizontal boss-pattern-connector${sizeClass}">
+    <div class="horizontal boss-pattern-connector${sizeClass}">
       <div class="badnik-chevrons">${chevrons}</div>
       ${rewardHtml}
     </div>
@@ -8111,6 +8136,50 @@ function closeZoneJsonModal() {
   if (modal) modal.classList.remove("open");
 }
 
+function openBadnikDeckModal(state) {
+  if (!state) return;
+  const modal = document.getElementById("badnikDeckModal");
+  const grid = document.getElementById("badnikDeckGrid");
+  const meta = document.getElementById("badnikDeckMeta");
+  if (!modal || !grid) return;
+
+  const deck = Array.isArray(state.badnikDeck) ? state.badnikDeck : [];
+  const zoneConfig = getZoneConfig(state.zoneId);
+  const zoneName = zoneConfig?.name || zoneConfig?.id || "Zone";
+  if (meta) {
+    const discardCount = Array.isArray(state.badnikDiscard) ? state.badnikDiscard.length : 0;
+    meta.innerHTML = `
+      <span class="pill tiny">Zone: ${escapeHtml(zoneName)}</span>
+      <span class="pill tiny">Deck: ${deck.length}</span>
+      <span class="pill tiny">Discard: ${discardCount}</span>
+      <span class="pill tiny">Top is #1</span>
+    `;
+  }
+
+  if (!deck.length) {
+    grid.innerHTML = `<div class="tiny muted">Badnik Deck is empty.</div>`;
+  } else {
+    const cardsHtml = deck.map((b, i) => {
+      const cardState = initBadnikState(clone(b));
+      return `
+        <div class="badnik-deck-card">
+          <div class="badnik-deck-order">#${i + 1}</div>
+          ${buildBadnikCardHtml(cardState, zoneConfig?.id, i)}
+        </div>
+      `;
+    }).join("");
+    grid.innerHTML = cardsHtml;
+    grid.scrollTop = 0;
+  }
+
+  modal.classList.add("open");
+}
+
+function closeBadnikDeckModal() {
+  const modal = document.getElementById("badnikDeckModal");
+  if (modal) modal.classList.remove("open");
+}
+
 function generateSeed() {
   return Math.floor(Math.random() * 1000000000).toString();
 }
@@ -8124,6 +8193,17 @@ function getSeedFromQuery() {
   return value.toString();
 }
 
+function getForceBossFromQuery() {
+  const params = new URLSearchParams(window.location.search || "");
+  const raw = params.get("force-boss");
+  if (raw == null) return false;
+  if (raw.trim() === "") return true;
+  const normalized = raw.trim().toLowerCase();
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  if (["1", "true", "yes", "y", "on"].includes(normalized)) return true;
+  return Boolean(normalized);
+}
+
 function ensureSeedValue() {
   const seedInput = document.getElementById("seed");
   const querySeed = getSeedFromQuery();
@@ -8134,6 +8214,26 @@ function ensureSeedValue() {
   }
   if (!seedInput.value.trim()) seedInput.value = generateSeed();
   return seedInput.value;
+}
+
+function forceBossFight(state, reason = "Debug: Zone deck cleared -> Boss Fight begins.") {
+  if (!state) return false;
+  if (state.bossFight?.active) {
+    log(state, "Boss Fight already active.");
+    return false;
+  }
+  if (state.pendingPowerUp || state.pendingDamage || state.pendingBadnikReward || state.pendingWallClimb || state.pendingAvoid || state.bonusStage?.open) {
+    log(state, "Resolve the pending step before forcing the Boss Fight.");
+    return false;
+  }
+  state.zone.deck = [];
+  for (const route of state.zone.routes || []) {
+    route.activeCard = null;
+  }
+  state.zone.bossFightReady = true;
+  log(state, reason);
+  beginBossFight(state);
+  return true;
 }
 
 function startNewGame({ closeModal = false } = {}) {
@@ -8236,23 +8336,7 @@ const forceBossBtn = document.getElementById("btnForceBossBattle");
 if (forceBossBtn) {
   forceBossBtn.addEventListener("click", () => {
     if (!STATE) return;
-    if (STATE.bossFight?.active) {
-      log(STATE, "Boss Fight already active.");
-      render();
-      return;
-    }
-    if (STATE.pendingPowerUp || STATE.pendingDamage || STATE.pendingBadnikReward || STATE.pendingWallClimb || STATE.pendingAvoid || STATE.bonusStage?.open) {
-      log(STATE, "Resolve the pending step before forcing the Boss Fight.");
-      render();
-      return;
-    }
-    STATE.zone.deck = [];
-    for (const route of STATE.zone.routes || []) {
-      route.activeCard = null;
-    }
-    STATE.zone.bossFightReady = true;
-    log(STATE, "Debug: Zone deck cleared -> Boss Fight begins.");
-    beginBossFight(STATE);
+    forceBossFight(STATE, "Debug: Zone deck cleared -> Boss Fight begins.");
     render();
   });
 }
@@ -8271,6 +8355,14 @@ if (showPowerUpDeckBtn) {
   });
 }
 
+const showBadnikDeckBtn = document.getElementById("btnShowBadnikDeck");
+if (showBadnikDeckBtn) {
+  showBadnikDeckBtn.addEventListener("click", () => {
+    if (!STATE) return;
+    openBadnikDeckModal(STATE);
+  });
+}
+
 const showZoneJsonBtn = document.getElementById("btnShowZoneJson");
 if (showZoneJsonBtn) {
   showZoneJsonBtn.addEventListener("click", () => {
@@ -8282,6 +8374,11 @@ if (showZoneJsonBtn) {
 const zoneJsonCloseBtn = document.getElementById("zoneJsonClose");
 if (zoneJsonCloseBtn) {
   zoneJsonCloseBtn.addEventListener("click", () => closeZoneJsonModal());
+}
+
+const badnikDeckCloseBtn = document.getElementById("badnikDeckClose");
+if (badnikDeckCloseBtn) {
+  badnikDeckCloseBtn.addEventListener("click", () => closeBadnikDeckModal());
 }
 
 const zoneJsonCopyBtn = document.getElementById("zoneJsonCopy");
@@ -8309,6 +8406,11 @@ renderCharacterSelectors();
 renderZoneSelector();
 ensureSeedValue();
 startNewGame();
+if (getForceBossFromQuery()) {
+  if (forceBossFight(STATE, "Debug: force-boss query parameter.")) {
+    render();
+  }
+}
 </script>
 </body>
 </html>
