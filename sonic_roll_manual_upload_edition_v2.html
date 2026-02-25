@@ -269,11 +269,13 @@
     .player-setup { display:flex; flex-direction:column; gap:6px; }
     .player-setup-row { display:flex; align-items:center; gap:8px; }
     .player-setup-row select { min-width:150px; }
-    .portrait { width:28px; height:28px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; border:1px solid #2d3b73; background:#1a2550; color:#e8ecff; }
-    .portrait.sonic { background:#1a4fa3; }
-    .portrait.tails { background:#b56a1f; }
-    .portrait.knuckles { background:#a33131; }
-    .portrait.amy { background:#8e2f60; }
+    .portrait {
+      width:32px;
+      height:32px;
+      display:inline-block;
+      object-fit:contain;
+      image-rendering: pixelated;
+    }
     .header-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:6px 0 12px; }
     .header-bar h1 { margin:0; }
     .header-logo img { height:48px; width:auto; display:block; }
@@ -2030,19 +2032,17 @@ function getDefaultCharacterOrder() {
   return Object.keys(CONFIG.characters);
 }
 
-const CHARACTER_PORTRAITS = {
-  Sonic: { label: "S", className: "sonic" },
-  Tails: { label: "T", className: "tails" },
-  Knuckles: { label: "K", className: "knuckles" },
-  Amy: { label: "A", className: "amy" }
-};
+function getOneUpSrc(character) {
+  const id = (character || "").toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+  return `img/1up_${id || "sonic"}.png`;
+}
 
 function applyPortrait(el, character) {
   if (!el) return;
-  const def = CHARACTER_PORTRAITS[character] || { label: "?", className: "" };
-  el.textContent = def.label;
-  el.className = `portrait ${def.className}`;
+  el.src = getOneUpSrc(character);
+  el.alt = character ? `${character} 1UP` : "1UP";
   el.title = character || "Unknown";
+  el.className = "portrait";
 }
 
 function updatePortraitsFromSelectors() {
@@ -2104,7 +2104,7 @@ function renderCharacterSelectors() {
     row.className = "player-setup-row";
     row.innerHTML = `
       <span class="badge">P${i+1}</span>
-      <span id="playerPortrait-${i}" class="portrait"></span>
+      <img id="playerPortrait-${i}" class="portrait" alt="">
       <select id="playerCharSelect-${i}"></select>
     `;
     const sel = row.querySelector("select");
