@@ -754,6 +754,34 @@
       flex-direction:column;
       gap:12px;
       width:100%;
+      --boss-deal-stagger: 120ms;
+      --boss-deal-duration: 240ms;
+      --boss-flip-duration: 420ms;
+      --boss-flip-stagger: 520ms;
+      --boss-deal-total: 0ms;
+    }
+    .boss-pattern-board.dealing {
+      pointer-events:none;
+    }
+    .boss-pattern-board.dealing .boss-pattern-card {
+      opacity:0;
+      transform: translateY(18px) scale(0.96);
+      animation: bossPatternDealIn var(--boss-deal-duration) ease-out forwards;
+      animation-delay: calc(var(--boss-deal-index) * var(--boss-deal-stagger));
+      will-change: transform, opacity;
+    }
+    .boss-pattern-board.dealing .boss-pattern-card-inner {
+      transform: rotateY(180deg);
+      animation: bossPatternFlip var(--boss-flip-duration) ease-in-out forwards;
+      animation-delay: calc(var(--boss-deal-total) + (var(--boss-route-index) * var(--boss-flip-stagger)));
+    }
+    @keyframes bossPatternDealIn {
+      from { opacity:0; transform: translateY(22px) scale(0.94); }
+      to { opacity:1; transform: translateY(0) scale(1); }
+    }
+    @keyframes bossPatternFlip {
+      from { transform: rotateY(180deg); }
+      to { transform: rotateY(0deg); }
     }
     .boss-pattern-route {
       display:flex;
@@ -785,22 +813,51 @@
       width:336px;
       max-width:100%;
       aspect-ratio: 7 / 5;
+      box-shadow: 0 6px 12px rgba(0,0,0,.35);
+      box-sizing:border-box;
+      position:relative;
+      border-radius:14px;
+      perspective:1200px;
+    }
+    .boss-pattern-card-inner {
+      position:relative;
+      width:100%;
+      height:100%;
+      transform-style:preserve-3d;
+      transition: transform 0.45s ease;
+    }
+    .boss-pattern-card.flipped .boss-pattern-card-inner {
+      transform: rotateY(180deg);
+    }
+    .boss-pattern-card-face {
+      position:absolute;
+      inset:0;
       border:8px solid #101010;
       border-radius:14px;
       overflow:hidden;
+      backface-visibility:hidden;
+      box-sizing:border-box;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      padding:10px 0 10px 10px;
+      justify-content:center;
+    }
+    .boss-pattern-card-front {
       background-color:#3f3f3f;
       background-image: var(--boss-pattern-bg, var(--boss-pattern-texture, url("img/zone_card_checkerboard.png")));
       background-repeat: no-repeat;
       background-size: cover;
       background-position: center;
-      box-shadow: 0 6px 12px rgba(0,0,0,.35);
-      padding:10px 0 10px 10px;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      box-sizing:border-box;
-      position:relative;
-      justify-content:center;
+    }
+    .boss-pattern-card-back {
+      border-color:#ffffff;
+      background-color:#7a7a7a;
+      background-image: url("img/boss_pattern_bg/reverse.png");
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+      transform: rotateY(180deg);
     }
     .boss-pattern-card + .boss-pattern-card {
       margin-left:-202px;
@@ -1068,15 +1125,20 @@
       image-rendering: pixelated;
     }
     .boss-attack-card {
-      border:2px solid #e7c240;
+      aspect-ratio:auto;
+      width:336px;
+      max-width:100%;
+      --badnik-card-border: 2px;
+    }
+    .boss-attack-card .badnik-card-front {
+      position:relative;
+      inset:auto;
+      border-color:#e7c240;
       background:#1b130d;
       display:flex;
       flex-direction:column;
       gap:6px;
-      aspect-ratio:auto;
       padding:10px;
-      width:336px;
-      max-width:100%;
     }
     .boss-attack-card.suppressed { opacity:.65; cursor:not-allowed; }
     .boss-attack-header {
@@ -1229,27 +1291,62 @@
       width:336px;
       max-width:100%;
       aspect-ratio: 7 / 5;
-      border:8px solid var(--badnik-path-color, #101010);
       border-radius:14px;
-      overflow:hidden;
-      display:grid;
-      grid-template-columns: 56px 16px 1fr;
-      background:#111;
       box-shadow: 0 6px 12px rgba(0,0,0,.35);
       cursor:pointer;
+      position:relative;
+      perspective:1200px;
+      --badnik-card-border: 8px;
+    }
+    .badnik-card-inner {
+      position:relative;
+      width:100%;
+      height:100%;
+      transform-style:preserve-3d;
       transition: transform 0.35s ease;
       transform-origin: center;
       will-change: transform;
     }
-    .badnik-card.flipped {
-      transform: rotate(180deg);
+    .badnik-card.flipped .badnik-card-inner {
+      transform: rotateY(180deg);
     }
-    .badnik-card.flip-anim {
+    .badnik-card.flip-anim .badnik-card-inner {
       animation: badnikFlip 0.35s ease;
     }
+    .badnik-card.flip-in .badnik-card-inner {
+      animation: badnikFlipIn var(--badnik-flip-duration, 420ms) ease-in-out;
+      animation-delay: var(--badnik-flip-delay, 0ms);
+      animation-fill-mode: both;
+    }
     @keyframes badnikFlip {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(180deg); }
+      from { transform: rotateY(0deg); }
+      to { transform: rotateY(180deg); }
+    }
+    @keyframes badnikFlipIn {
+      from { transform: rotateY(180deg); }
+      to { transform: rotateY(0deg); }
+    }
+    .badnik-card-face {
+      position:absolute;
+      inset:0;
+      border:var(--badnik-card-border) solid var(--badnik-path-color, #101010);
+      border-radius:14px;
+      overflow:hidden;
+      backface-visibility:hidden;
+      box-sizing:border-box;
+    }
+    .badnik-card-front {
+      display:grid;
+      grid-template-columns: 56px 16px 1fr;
+      background:#111;
+    }
+    .badnik-card-back {
+      border-color:#fbb040;
+      background-image: url("img/badniks/reverse.png");
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+      transform: rotateY(180deg);
     }
     #badnikView {
       display:flex;
@@ -2067,6 +2164,8 @@ function readCharacterSelections(playerCount) {
    (from the four images you provided)
    ======================= */
 const BIG_RING_AMOUNT = 5; // Reference value for Big Ring rewards (Bonus Stage trigger).
+const BADNIK_DRAW_FLIP_DELAY = 120;
+const BADNIK_DRAW_FLIP_DURATION = 420;
 
 const BADNIK_TYPES = [
   { id:"moto_bug", name:"Moto Bug", image:"img/badniks/moto_bug.png" },
@@ -3944,7 +4043,8 @@ function beginBossFight(state) {
     hitDiceByRoute: {},
     hitThisTurn: false,
     defeated: false,
-    attackCards: createBossAttackInstances(bossCfg)
+    attackCards: createBossAttackInstances(bossCfg),
+    dealAnimation: null
   };
   for (const route of state.bossFight.routes) {
     while (route.cards.length < bossLevel) {
@@ -3953,10 +4053,43 @@ function beginBossFight(state) {
       route.cards.push(card);
     }
   }
+  startBossDealAnimation(state);
   const p = getActivePlayer(state);
   attachBossAttackCardsToPlayer(state, p, state.bossFight.attackCards);
   log(state, "Boss Fight begins!");
   return state;
+}
+
+function startBossDealAnimation(state) {
+  const boss = state?.bossFight;
+  if (!boss?.routes?.length) return;
+  const totalCards = boss.routes.reduce((sum, route) => sum + (route.cards?.length || 0), 0);
+  if (!totalCards) return;
+  const dealStagger = 120;
+  const dealDuration = 240;
+  const flipDuration = 420;
+  const flipStagger = 520;
+  const flipGap = 140;
+  const dealTotal = Math.max(0, totalCards - 1) * dealStagger + dealDuration + flipGap;
+  const totalMs = dealTotal + Math.max(0, boss.routes.length - 1) * flipStagger + flipDuration;
+  const token = uuid();
+  boss.dealAnimation = {
+    active: true,
+    token,
+    dealStagger,
+    dealDuration,
+    flipDuration,
+    flipStagger,
+    dealTotal,
+    totalMs
+  };
+  if (typeof setTimeout === "function" && typeof render === "function") {
+    setTimeout(() => {
+      if (STATE?.bossFight?.dealAnimation?.token !== token) return;
+      STATE.bossFight.dealAnimation.active = false;
+      render();
+    }, totalMs + 60);
+  }
 }
 
 function refillBossPatternRoutes(state) {
@@ -4445,6 +4578,24 @@ function drawBadnik(state, targetPlayer) {
   }
   const b = initBadnikState(state.badnikDeck.shift());
   b.drawnTurn = Number.isFinite(p.turnsTaken) ? p.turnsTaken : 0;
+  const activePlayer = state.players?.[state.activePlayer];
+  const isActiveTarget = activePlayer && activePlayer.id === p.id;
+  if (isActiveTarget) {
+    b.flipped = true;
+    b.flipIn = true;
+    const token = uuid();
+    b.flipToken = token;
+    if (typeof setTimeout === "function" && typeof render === "function") {
+      setTimeout(() => {
+        if (!p.badniks?.includes(b)) return;
+        if (b.flipToken !== token) return;
+        b.flipped = false;
+        b.flipIn = false;
+        b.flipToken = null;
+        render();
+      }, BADNIK_DRAW_FLIP_DELAY + BADNIK_DRAW_FLIP_DURATION);
+    }
+  }
   p.badniks.push(b);
   log(state, `${p.name} draws Badnik: ${getBadnikDisplayName(b)}`);
 }
@@ -5184,7 +5335,10 @@ function renderActBoard(viewEl, { routes, cardGradient, chevronGradient, idPrefi
 
 function renderBossPatternBoard(viewEl, boss) {
   if (!viewEl || !boss) return;
-  const routesHtml = boss.routes.map(route => {
+  const dealAnim = boss?.dealAnimation;
+  const dealing = !!dealAnim?.active;
+  let dealIndex = 0;
+  const routesHtml = boss.routes.map((route, routeIndex) => {
     const locked = boss.routeLocks?.[route.id];
     const cards = route.cards || [];
     const cardsHtml = cards.length
@@ -5211,6 +5365,11 @@ function renderBossPatternBoard(viewEl, boss) {
           const smallConnectorHtml = buildBossPatternConnectorHtml(4, "", "small");
           const bumperConnectorHtml = buildBossPatternConnectorHtml(1, "", "bumper");
           const bgImage = card.background || null;
+          const dealStyle = dealing
+            ? `--boss-deal-index:${dealIndex++};--boss-route-index:${routeIndex};`
+            : "";
+          const bgStyle = bgImage ? `--boss-pattern-bg:url('${bgImage}');` : "";
+          const cardStyle = `z-index:${zIndex};${bgStyle}${dealStyle}`;
           const buildLaneHtml = (laneChallenges, rewardConnectorHtml) => {
             if (!laneChallenges.length) return "";
             const bumperTight = laneChallenges.length > 1 && laneChallenges.every(ch => !!ch.bumper);
@@ -5232,16 +5391,21 @@ function renderBossPatternBoard(viewEl, boss) {
           const topLaneHtml = buildLaneHtml(topChallenges, topConnectorHtml);
           const bottomLaneHtml = buildLaneHtml(bottomChallenges, bottomConnectorHtml);
           return `
-            <div class="${classes.join(" ")}" style="z-index:${zIndex};${bgImage ? `--boss-pattern-bg:url('${bgImage}');` : ""}">
-              <div class="boss-pattern-lane top">
-                <div class="boss-pattern-path-row">
-                  ${topLaneHtml}
+            <div class="${classes.join(" ")}" style="${cardStyle}">
+              <div class="boss-pattern-card-inner">
+                <div class="boss-pattern-card-face boss-pattern-card-front">
+                  <div class="boss-pattern-lane top">
+                    <div class="boss-pattern-path-row">
+                      ${topLaneHtml}
+                    </div>
+                  </div>
+                  <div class="boss-pattern-lane bottom">
+                    <div class="boss-pattern-path-row">
+                      ${bottomLaneHtml}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div class="boss-pattern-lane bottom">
-                <div class="boss-pattern-path-row">
-                  ${bottomLaneHtml}
-                </div>
+                <div class="boss-pattern-card-face boss-pattern-card-back"></div>
               </div>
             </div>
           `;
@@ -5254,7 +5418,11 @@ function renderBossPatternBoard(viewEl, boss) {
       </div>
     `;
   }).join("");
-  viewEl.innerHTML = `<div class="boss-pattern-board">${routesHtml}</div>`;
+  const dealStyle = dealing
+    ? ` style="--boss-deal-stagger:${dealAnim.dealStagger}ms;--boss-deal-duration:${dealAnim.dealDuration}ms;--boss-flip-duration:${dealAnim.flipDuration}ms;--boss-flip-stagger:${dealAnim.flipStagger}ms;--boss-deal-total:${dealAnim.dealTotal}ms;"`
+    : "";
+  const boardClass = `boss-pattern-board${dealing ? " dealing" : ""}`;
+  viewEl.innerHTML = `<div class="${boardClass}"${dealStyle}>${routesHtml}</div>`;
 
   const challenges = viewEl.querySelectorAll(".boss-pattern-challenge.clickable");
   challenges.forEach(chEl => {
@@ -6909,15 +7077,20 @@ function buildBossAttackCardHtml(b, index) {
   const suppressedClass = b.suppressedThisTurn ? " suppressed" : "";
   return `
     <div class="badnik-card boss-attack-card${suppressedClass}" data-badnik-index="${index}">
-      <div class="boss-attack-header">
-        <span>${escapeHtml(b.name || "Boss Attack")}</span>
-        <span>${sideLabel}</span>
+      <div class="badnik-card-inner">
+        <div class="badnik-card-face badnik-card-front">
+          <div class="boss-attack-header">
+            <span>${escapeHtml(b.name || "Boss Attack")}</span>
+            <span>${sideLabel}</span>
+          </div>
+          <div class="boss-attack-body">
+            <div><b>Attacks</b>: ${escapeHtml(attacksLabel)}</div>
+            <div><b>Ability</b>: ${abilityText || "none"}</div>
+          </div>
+          ${b.suppressedThisTurn ? `<div class="boss-attack-suppressed">Cleared this turn: attacks and ability ignored.</div>` : ""}
+        </div>
+        <div class="badnik-card-face badnik-card-back"></div>
       </div>
-      <div class="boss-attack-body">
-        <div><b>Attacks</b>: ${escapeHtml(attacksLabel)}</div>
-        <div><b>Ability</b>: ${abilityText || "none"}</div>
-      </div>
-      ${b.suppressedThisTurn ? `<div class="boss-attack-suppressed">Cleared this turn: attacks and ability ignored.</div>` : ""}
     </div>
   `;
 }
@@ -6940,42 +7113,51 @@ function buildBadnikCardHtml(b, zoneId, index) {
   const hitsTaken = Number.isFinite(b.hitsTaken) ? b.hitsTaken : 0;
   const flippedClass = b.flipped ? " flipped" : "";
   const flipAnimClass = b.flipAnim ? " flip-anim" : "";
+  const flipInClass = b.flipIn ? " flip-in" : "";
+  const flipInStyle = b.flipIn
+    ? `--badnik-flip-delay:${BADNIK_DRAW_FLIP_DELAY}ms;--badnik-flip-duration:${BADNIK_DRAW_FLIP_DURATION}ms;`
+    : "";
   if (b.flipAnim) b.flipAnim = false;
   return `
-    <div class="badnik-card${flippedClass}${flipAnimClass}" data-badnik-index="${index}" data-badnik-hits="${hitsTaken}" data-badnik-hits-required="${hitsRequired}" style="--badnik-art: url('${artSrc}'); --badnik-panel-base: ${panelColor};">
-      <div class="badnik-attack-col">
-      <div class="badnik-attack-dice">
-        <div class="badnik-attack-top">${attackTop}</div>
-        ${attackRest ? `<div class="badnik-attack-overlap">${attackRest}</div>` : ""}
-      </div>
-      ${hasAttacks ? buildBadnikConnectorHtml("vertical", 7) : ""}
-      ${hasAttacks ? `
-      <div class="badnik-sonic">
-        <img src="img/sonic_damage.png" alt="Sonic damage">
-      </div>` : ""}
-    </div>
-      <div class="badnik-hatch"></div>
-      <div class="badnik-main">
-        <div class="badnik-name">${escapeHtml(displayName)}</div>
-        <div class="badnik-right">
-          ${destroyChip ? `
-            <div class="badnik-right-row" data-badnik-mode="destroy">
-              ${destroyChip}
-              ${buildBadnikConnectorHtml("horizontal", 8)}
-              <div class="badnik-animal">
-                <img src="img/animal_flicky.png" alt="Animal token">
-              </div>
-            </div>
-          ` : ""}
-          ${avoidChip ? `
-            <div class="badnik-right-row" data-badnik-mode="avoid">
-              ${avoidChip}
-              ${buildBadnikConnectorHtml("horizontal", 8)}
-            </div>
-          ` : ""}
+    <div class="badnik-card${flippedClass}${flipAnimClass}${flipInClass}" data-badnik-index="${index}" data-badnik-hits="${hitsTaken}" data-badnik-hits-required="${hitsRequired}" style="--badnik-art: url('${artSrc}'); --badnik-panel-base: ${panelColor};${flipInStyle}">
+      <div class="badnik-card-inner">
+        <div class="badnik-card-face badnik-card-front">
+          <div class="badnik-attack-col">
+          <div class="badnik-attack-dice">
+            <div class="badnik-attack-top">${attackTop}</div>
+            ${attackRest ? `<div class="badnik-attack-overlap">${attackRest}</div>` : ""}
+          </div>
+          ${hasAttacks ? buildBadnikConnectorHtml("vertical", 7) : ""}
+          ${hasAttacks ? `
+          <div class="badnik-sonic">
+            <img src="img/sonic_damage.png" alt="Sonic damage">
+          </div>` : ""}
         </div>
-        <div class="badnik-ability">${abilityText}</div>
-        <div class="badnik-zone">${escapeHtml(zone)}</div>
+          <div class="badnik-hatch"></div>
+          <div class="badnik-main">
+            <div class="badnik-name">${escapeHtml(displayName)}</div>
+            <div class="badnik-right">
+              ${destroyChip ? `
+                <div class="badnik-right-row" data-badnik-mode="destroy">
+                  ${destroyChip}
+                  ${buildBadnikConnectorHtml("horizontal", 8)}
+                  <div class="badnik-animal">
+                    <img src="img/animal_flicky.png" alt="Animal token">
+                  </div>
+                </div>
+              ` : ""}
+              ${avoidChip ? `
+                <div class="badnik-right-row" data-badnik-mode="avoid">
+                  ${avoidChip}
+                  ${buildBadnikConnectorHtml("horizontal", 8)}
+                </div>
+              ` : ""}
+            </div>
+            <div class="badnik-ability">${abilityText}</div>
+            <div class="badnik-zone">${escapeHtml(zone)}</div>
+          </div>
+        </div>
+        <div class="badnik-card-face badnik-card-back"></div>
       </div>
     </div>
   `;
