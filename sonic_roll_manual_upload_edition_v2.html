@@ -53,6 +53,31 @@
     .badge.buddy-flight { background:#e7c240; border-color:#caa62c; color:#2d2d2d; }
     .buddy-flight-value { font-weight:700; }
     .muted { color:#b0b8e8; }
+    .zone-icon-picker { display:flex; flex-direction:column; gap:6px; min-width:260px; }
+    .zone-icon-title { font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:#b8c6ff; }
+    .zone-icon-row { display:flex; gap:8px; align-items:center; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px; }
+    .zone-icon-row::-webkit-scrollbar { height:6px; }
+    .zone-icon-row::-webkit-scrollbar-thumb { background:#2a3b6d; border-radius:999px; }
+    .zone-icon-btn {
+      border:1px solid var(--border-default);
+      background:#0f1733;
+      border-radius:12px;
+      padding:6px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-width:56px;
+      min-height:56px;
+    }
+    .zone-icon-btn img {
+      display:block;
+      width:64px;
+      height:48px;
+      image-rendering: pixelated;
+    }
+    .zone-icon-btn.selected { border-color:#7cb6ff; box-shadow: 0 0 0 2px rgba(124,182,255,.35); background:#15234a; }
+    .zone-icon-name { font-size:12px; color:#e8ecff; min-height:16px; }
     .log { max-height: 300px; overflow:auto; font-size: 13px; line-height:1.35; }
     .log-power-up-deck { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .log-power-up-label { color:#b0b8e8; }
@@ -270,8 +295,8 @@
     .player-setup-row { display:flex; align-items:center; gap:8px; }
     .player-setup-row select { min-width:150px; }
     .portrait {
-      width:32px;
-      height:32px;
+      width:18px;
+      height:21px;
       display:inline-block;
       object-fit:contain;
       image-rendering: pixelated;
@@ -1815,17 +1840,17 @@
         <label class="pill tiny">Seed
           <input id="seed" value="" size="10" />
         </label>
-        <label class="pill tiny">Zone
-          <select id="zoneSelect"></select>
-        </label>
+        <div class="zone-icon-picker">
+          <div class="zone-icon-title">Zone</div>
+          <div id="zoneIconRow" class="zone-icon-row"></div>
+          <div id="zoneIconName" class="zone-icon-name"></div>
+        </div>
       </div>
 
       <div class="hr"></div>
 
       <h2>Characters</h2>
       <div id="playerSetup" class="player-setup tiny"></div>
-      <div class="tiny muted">Each character can only be used once per game.</div>
-
       <div class="hr"></div>
 
       <div class="row modal-actions">
@@ -2127,27 +2152,50 @@ function renderCharacterSelectors() {
 }
 
 function renderZoneSelector() {
-  const select = document.getElementById("zoneSelect");
-  if (!select) return;
-  select.innerHTML = "";
-  for (const zone of Object.values(CONFIG.zones)) {
-    const opt = document.createElement("option");
-    opt.value = zone.id;
-    opt.textContent = zone.name;
-    select.appendChild(opt);
-  }
+  const row = document.getElementById("zoneIconRow");
+  const nameEl = document.getElementById("zoneIconName");
+  if (!row) return;
+  row.innerHTML = "";
+  const zones = Object.values(CONFIG.zones);
   if (!CONFIG.zones[PRE_GAME_ZONE]) {
-    PRE_GAME_ZONE = Object.keys(CONFIG.zones)[0];
+    PRE_GAME_ZONE = zones[0]?.id;
   }
-  select.value = PRE_GAME_ZONE;
-  select.addEventListener("change", () => {
-    PRE_GAME_ZONE = select.value;
-  });
+  const iconMap = {
+    green_hill: "img/level_icons/green_hill.png",
+    stardust_speedway: "img/level_icons/stardust_speedway.png",
+    lava_reef: "img/level_icons/lava_reef.png",
+    chemical_plant: "img/level_icons/chemcial_plant.png"
+  };
+  const applySelection = (zoneId) => {
+    PRE_GAME_ZONE = zoneId;
+    const zone = CONFIG.zones[zoneId];
+    if (nameEl) nameEl.textContent = zone?.name || "";
+    row.querySelectorAll(".zone-icon-btn").forEach(btn => {
+      btn.classList.toggle("selected", btn.dataset.zoneId === zoneId);
+    });
+  };
+  for (const zone of zones) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "zone-icon-btn";
+    btn.dataset.zoneId = zone.id;
+    const iconSrc = iconMap[zone.id];
+    if (iconSrc) {
+      const img = document.createElement("img");
+      img.src = iconSrc;
+      img.alt = zone.name;
+      btn.appendChild(img);
+    } else {
+      btn.textContent = getZoneInitials(zone.id);
+    }
+    btn.addEventListener("click", () => applySelection(zone.id));
+    row.appendChild(btn);
+  }
+  if (PRE_GAME_ZONE) applySelection(PRE_GAME_ZONE);
 }
 
 function readZoneSelection() {
-  const select = document.getElementById("zoneSelect");
-  return select?.value || PRE_GAME_ZONE || Object.keys(CONFIG.zones)[0];
+  return PRE_GAME_ZONE || Object.keys(CONFIG.zones)[0];
 }
 
 function readCharacterSelections(playerCount) {
