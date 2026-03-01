@@ -1201,7 +1201,10 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      background:#0f1733;
+      background: var(--act-lane-bg, none), #0f1733;
+      background-repeat:no-repeat;
+      background-position:center;
+      background-size:cover;
       border:1px solid rgba(255,255,255,.08);
       border-radius:12px;
       padding:8px;
@@ -5360,7 +5363,14 @@ function getCardAvailableChallenges(card) {
     .filter(Boolean);
 }
 
-function renderActBoard(viewEl, { routes, cardGradient, chevronGradient, idPrefix = "act" }) {
+function getActBoardLaneBackground(zoneId, routeName) {
+  const key = String(routeName || "").trim().toLowerCase();
+  if (!zoneId) return null;
+  if (!["top", "middle", "bottom"].includes(key)) return null;
+  return `img/act_board_bg/${zoneId}_${key}.png`;
+}
+
+function renderActBoard(viewEl, { routes, cardGradient, chevronGradient, idPrefix = "act", zoneId = null }) {
   if (!viewEl) return;
   const actGradient = buildGradientCss(cardGradient);
   viewEl.style.background = actGradient || "";
@@ -5370,8 +5380,10 @@ function renderActBoard(viewEl, { routes, cardGradient, chevronGradient, idPrefi
     <div class="act-board-lanes">
       ${routes.map((route, index) => {
         const gradId = `${idPrefix}-arrow-${route.name.toLowerCase()}-${index}`;
+        const laneBg = getActBoardLaneBackground(zoneId, route.name);
+        const laneStyle = laneBg ? ` style="--act-lane-bg: url('${laneBg}');"` : "";
         return `
-        <div class="act-lane">
+        <div class="act-lane"${laneStyle}>
           <div class="act-lane-arrow">
             <svg viewBox="0 0 110 82" aria-hidden="true">
               <defs>
@@ -8034,7 +8046,8 @@ function render() {
         routes,
         cardGradient: s.actBoard?.cardGradient,
         chevronGradient: actChevron,
-        idPrefix: "act"
+        idPrefix: "act",
+        zoneId: s.zoneId
       });
     }
   }
@@ -8141,7 +8154,8 @@ function render() {
         routes,
         cardGradient: gradient,
         chevronGradient,
-        idPrefix: "secret"
+        idPrefix: "secret",
+        zoneId: s.zoneId
       });
     }
   } else if (secretRow) {
