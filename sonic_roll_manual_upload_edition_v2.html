@@ -28,13 +28,13 @@
 
     .flip-scale-up-ver {
       -webkit-animation-name: flip-scale-up-ver;
-      -webkit-animation-duration: var(--flip-duration, 0.5s);
+      -webkit-animation-duration: var(--flip-duration, 0.75s);
       -webkit-animation-timing-function: var(--flip-ease, linear);
       -webkit-animation-fill-mode: both;
       -webkit-animation-direction: var(--flip-direction, normal);
       -webkit-animation-delay: var(--flip-delay, 0ms);
       animation-name: flip-scale-up-ver;
-      animation-duration: var(--flip-duration, 0.5s);
+      animation-duration: var(--flip-duration, 0.75s);
       animation-timing-function: var(--flip-ease, linear);
       animation-fill-mode: both;
       animation-direction: var(--flip-direction, normal);
@@ -96,7 +96,6 @@
 
     .card {
       background: #121a33;
-      border: 1px solid #23305a;
       border-radius: 14px;
       padding: 12px;
       box-shadow: 0 8px 25px rgba(0, 0, 0, .25);
@@ -2185,10 +2184,6 @@
       display: block;
     }
 
-    .act-board .act-reward-circle img {
-      image-rendering: pixelated;
-    }
-
     .act-lane .act-reward-circle {
       position: absolute;
       left: 60%;
@@ -3208,13 +3203,9 @@
       return selections;
     }
 
-    /* =======================
-       Dashboard-accurate config
-       (from the four images you provided)
-       ======================= */
     const BIG_RING_AMOUNT = 5; // Reference value for Big Ring rewards (Bonus Stage trigger).
-    const BADNIK_DRAW_FLIP_DELAY = 120;
-    const BADNIK_DRAW_FLIP_DURATION = 420;
+    const BADNIK_DRAW_FLIP_DELAY = 200;
+    const BADNIK_DRAW_FLIP_DURATION = 2000;
 
     const BADNIK_TYPES = [
       { id: "moto_bug", name: "Moto Bug", image: "img/badniks/moto_bug.png" },
@@ -6157,7 +6148,11 @@
         return `<div class="act-reward-circle"><span class="act-reward-text">${label}</span></div>`;
       }
       if (reward.type === "add_dice") {
-        return `<div class="act-reward-circle"><span class="act-reward-text">ADD DICE</span></div>`;
+        return `
+      <div class="act-reward-circle">
+        <img src="img/add_die.png" alt="Add Die">
+      </div>
+    `;
       }
       if (reward.type === "lose_die") {
         return `
@@ -6204,7 +6199,7 @@
       } else if (reward.type === "lose_die") {
         content = `<img src="img/lose_die.png" alt="Lose Die">`;
       } else if (reward.type === "add_dice") {
-        content = `<span class="boss-pattern-reward-text">ADD</span>`;
+        content = `<img src="img/add_die.png" alt="Add Die">`;
       } else {
         content = `<span class="boss-pattern-reward-text">${escapeHtml(formatRewardLabel(reward))}</span>`;
       }
@@ -8194,7 +8189,7 @@
         flipVars.push(`--flip-ease:ease-in-out`);
       } else if (b.flipAnim) {
         flipClass = " flip-scale-up-ver";
-        flipVars.push("--flip-duration:350ms");
+        flipVars.push("--flip-duration:750ms");
         flipVars.push("--flip-ease:ease");
       }
       const flipStyle = flipVars.length ? ` style="${flipVars.join(";")}"` : "";
@@ -8884,7 +8879,7 @@
         const tip = s.bossFight?.active
           ? "Tip: click a Boss Pattern/Hit space or Badnik card to preselect."
           : "Tip: click a Zone/Badnik card to preselect.";
-        spendPanel.innerHtml = `Select a die and click "Spend Die" to choose a target.<br />${tip}`;
+        spendPanel.innerHTML = `Select a die and click "Spend Die" to choose a target.<br />${tip}`;
       } else {
         const die = p.dicePool.find(d => d.id === spendUi.dieId);
         const dieLabel = die ? `${die.color.toUpperCase()}-${die.value}` : "Unknown";
@@ -9072,7 +9067,7 @@
           const zoneNameShort = zoneName.replace(/\bzone\b/i, "").replace(/\s+/g, " ").trim() || zoneName;
           const revealFlip = cardData && !cardData.revealed;
           const flipClass = revealFlip ? " flip-scale-up-ver" : "";
-          const flipDelayMs = 400 + (routeIndex * 120);
+          const flipDelayMs = 500 + (routeIndex * 180);
           const flipStyle = revealFlip
             ? ` style="--flip-duration:0.7s;--flip-delay:${flipDelayMs}ms;--flip-direction:reverse;--flip-ease:ease;"`
             : "";
